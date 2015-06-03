@@ -15,17 +15,32 @@ namespace mg = foundation::memory_globals;
 namespace ss = foundation::string_stream;
 using foundation::Allocator;
 
-ss::Buffer read_file(FILE* f)
+ss::Buffer read_file(FILE* f, Allocator& a)
 {
     using namespace ss;
-    Allocator& alloc = mg::default_allocator();
-    Buffer text = Buffer(alloc);
+    Buffer text = Buffer(a);
     char c = fgetc(f);
     while (c != EOF) {
         text << c;
         c = fgetc(f);
     }
     return text;
+}
+
+// ~1 kb file
+char* read_file_cstring(FILE* f, Allocator& a)
+{
+    using namespace ss;
+    char* buf = (char*) a.allocate(1025, 4);
+    int i = 0;
+
+    char c = fgetc(f);
+    while (c != EOF) {
+        buf[i++] = c;
+        c = fgetc(f);
+    }
+    buf[i] = 0;
+    return buf;
 }
 
 
@@ -41,17 +56,25 @@ struct Student {
 int main(int argc, char** argv)
 {
     using namespace ss;
-    mg::init();
 
     if (argc != 2) {
         fprintf(stderr, "Expected a file name\n");
         return 1;
     }
+    
+    mg::init();
     {
         FILE* f = fopen(argv[1], "r");
-        Buffer text = std::move(read_file(f));
+        /*
+        Buffer text = std::move(read_file(f), mg::default_scratch_allocator());
         fclose(f);
         printf("%s\n", c_str(text));
+        */
+        foundation::TempAllocator2048 ta;
+        char* text = read_file_cstring(f, ta);
+        fclose(f);
+        printf("%s\n", text);
+        ta.deallocate(text);
     }
     mg::shutdown();
     return 0;
