@@ -7,12 +7,17 @@
 
 namespace scanner {
 
-Scanner::Scanner(Array<char>&& text, int mode, Allocator& token_text_allocator)
-    : _text(std::move(text)), _token_text(token_text_allocator),  mode(mode),
-    line(1), col(1), offset(0), _token_start(-1) {}
+Scanner::Scanner(Array<char>&& text, int mode)
+    : _text(std::move(text)), mode(mode),
+    line(1), col(1), offset(0), token_start(-1), current_tok(INVALID) {}
 
-double _current_float;
-int _current_int;
+Scanner::Scanner(Scanner&& sc)
+    : _text(std::move(sc._text)), mode(sc.mode),
+    line(sc.line), col(sc.col), offset(sc.offset),
+    token_start(sc.token_start), current_tok(sc.current_tok) {}
+
+
+#define SET_TOK(s, tok) do { (s).current_tok = tok; return tok; } while (0)
 
 int next(Scanner& s)
 {
@@ -21,7 +26,7 @@ int next(Scanner& s)
 
     p += s.offset;
     if (p == e) {
-        return EOFS;
+        SET_TOK(s, EOFS);
     }
     if (!(s.mode & SCAN_SPACES)) {
         while (p != e && (*p == ' ' || *p == '\t' || *p == '\n')) {
@@ -34,13 +39,18 @@ int next(Scanner& s)
             ++s.col;
         }
         if (p == e) {
-            return EOFS;
+            SET_TOK(s, EOFS);
         }
     }
     if (*p == '"' && (s.mode & SCAN_STRINGS)) {
-        s._token_start = p - array::begin(s._text);
+        s.token_start = p - array::begin(s._text);
         do {
-            if (*p == '\n') {
+            if (*p == '\\') {
+                ++p;
+                ++s.offset;
+                ++s.col;
+                if (p == e) { break; }
+            } else if (*p == '\n') {
                 ++s.line;
                 s.col = 0;
             }
@@ -53,43 +63,43 @@ int next(Scanner& s)
         }
         ++s.col;
         ++s.offset;
-        return STRING;
+        SET_TOK(s, STRING);
     }
     if (*p >= '0' && *p <= '9' && (s.mode & (SCAN_INTS | SCAN_FLOATS))) {
         const char* endp;
         int ret = INT;
-        s._token_start = p - array::begin(s._text);
-        _current_int = (int) strtol(p, (char**)&endp, 0);
+        s.token_start = p - array::begin(s._text);
+        s.current_int = strtol(p, (char**)&endp, 0);
         if (endp != e && *endp == '.' && (s.mode & SCAN_FLOATS)) {
-            _current_float = strtod(p, (char**)&endp);
+            s.current_float = strtod(p, (char**)&endp);
             ret = FLOAT;
         }
         s.offset = endp - array::begin(s._text);
         s.col += endp - p;
-        return ret;
+        SET_TOK(s, ret);
     }
     if (((*p >= 'A' &&  *p <= 'Z') || (*p >= 'a' && *p <= 'z') || (*p == '_'))
             && (s.mode & SCAN_IDENTS)) {
-        s._token_start = p - array::begin(s._text);
+        s.token_start = p - array::begin(s._text);
         do {
             ++p;
             ++s.offset;
             ++s.col;
         } while (p != e && ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z')
                     || (*p == '_') || (*p >= '0' && *p <= '9')));
-        return IDENT;
+        SET_TOK(s, IDENT);
     }
     if (*p == '\n') {
         ++s.line;
         s.col = 0;
     }
-    s._token_start = p - array::begin(s._text);
+    s.token_start = p - array::begin(s._text);
     ++s.offset;
     ++s.col;
     if (*p == ' ' || *p == '\t' || *p == '\n') {
-        return SPACE;
+        SET_TOK(s, SPACE);
     }
-    return p[-1];
+    SET_TOK(s, *p);
 }
 
 char char_token[] = "INVALID";
@@ -120,21 +130,48 @@ const char* desc(int token)
     }
 }
 
-Buffer token_text(Scanner& s)
+void token_text(Scanner& s, Buffer& b)
 {
-    array::clear(s._token_text);
-    for (int i = s._token_start; i < s.offset; ++i) {
-        s._token_text << s._text[i];
+    for (int i = s.token_start; i < s.offset; ++i) {
+        b << s._text[i];
     }
-    return s._token_text;
 }
 
-float current_float() {
-    return _current_float;
+char* token_text(Scanner& s, Allocator& a)
+{
+    uint32_t length = s.offset - s.token_start;
+    char* buf = (char*) a.allocate(length + 1, 4); // Aligning to 4 bytes in case scratch allocator is used
+    memcpy(buf, c_str(s._text) + s.token_start, length);
+    buf[length] = 0;
+    return buf;
 }
 
-int current_int() {
-    return _current_int;
+void string_token(Buffer& b, Buffer& raw)
+{
+    for (const char* i = c_str(raw) + 1; *i; ++i) {
+        if (i[0] == '\\') {
+            char c = i[1];
+            switch (c) {
+            case 'n':
+                b << '\n'; break;
+            case 't':
+                b << '\t'; break;
+            case 'r':
+                b << '\r'; break;
+            case '"':
+                b << '"'; break;
+            case '\\':
+                b << '\\'; break;
+            default:
+                b << '\\';
+            }
+            ++i;
+        } else if (i[0] == '"') {
+            break;
+        } else {
+            b << i[0];
+        }
+    }
 }
 
 } // namespace scanner

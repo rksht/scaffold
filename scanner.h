@@ -1,3 +1,5 @@
+#pragma once
+
 #include "memory.h"
 #include "array.h"
 #include "string_stream.h"
@@ -29,26 +31,33 @@ enum Modes {
 const int DEFAULT_MODE = SCAN_INTS | SCAN_FLOATS | SCAN_STRINGS | SCAN_IDENTS;
 
 /// Contains the current state of the scanner
-struct Scanner
-{
+struct Scanner {
     Buffer _text;
-    Buffer _token_text;
     int mode;
     int line;
     int col;
     int offset;
-    int _token_start;
+    int token_start;
+    int current_tok;
+    long current_int;
+    double current_float;
 
-    Scanner(Buffer&& text, int mode=DEFAULT_MODE,
-            Allocator& token_text_allocator=default_allocator());
+    Scanner(Buffer &&text, int mode = DEFAULT_MODE);
+
+    Scanner(Scanner &&sc);
 };
 
 /// Returns the next token id
-int next(Scanner& s);
+int next(Scanner &s);
 /// Returns a description of the given token id
-const char* desc(int token);
-/// Returns a buffer containing the current token text. Call this after
-/// calling [next].
-Buffer token_text(Scanner& s);
+const char *desc(int token);
+/// Fills the buffer with the current token text
+void token_text(Scanner &s, Buffer &b);
+/// Overload of token_text that returns a null terminated c-string
+char *token_text(Scanner &s, Allocator &a);
+/// A function that takes takes a buffer and a raw string token text
+/// and stores the in-memory representation of the string in the buffer.
+/// Call this on the token for the STRING type
+void string_token(Buffer &b, Buffer &raw);
 
 } // namespace scanner

@@ -8,7 +8,7 @@ CXXFLAGS = -std=c++11 -g -Wall
 CFLAGS = -g -Wall
 
 # Foundation library
-FOUNDATION_HEADERS := types.h array.h queue.h hash.h memory.h memory_types.h murmur_hash.h string_stream.h math_types.h temp_allocator.h
+FOUNDATION_HEADERS := types.h array.h queue.h hash.h memory.h memory_types.h murmur_hash.h string_stream.h math_types.h temp_allocator.h pod_hash.h
 FOUNDATION_OBJECTS := memory.o string_stream.o murmur_hash.o
 FOUNDATION_LIB := libfoundation.a
 
@@ -20,12 +20,16 @@ ARGPARSE_LIB := libargparse.a
 SCANNER_OBJECT := scanner.o
 SCANNER_LIB := libscanner.a
 
-LIBS = 
+# Library command line
+LIBS = -L `pwd` -lscanner -lfoundation -largparse
 
-LIBS += $(FOUNDATION_LIB) $(ARGPARSE_LIB) $(SCANNER_LIB)
+# Names of the library archives
+LIBNAMES += $(SCANNER_LIB) $(FOUNDATION_LIB) $(ARGPARSE_LIB)
+
+# Build the libraries
 
 $(FOUNDATION_OBJECTS): %.o: %.cpp $(FOUNDATION_HEADERS)
-	$(CXX) -c $(CXXFLAGS) $< -o $@
+	$(CXX) -c  $(CXXFLAGS) $< -o $@
 
 $(FOUNDATION_LIB): $(FOUNDATION_OBJECTS)
 	ar -rcs -o $(FOUNDATION_LIB) $?
@@ -42,27 +46,39 @@ $(ARGPARSE_LIB): $(ARGPARSE_OBJECT)
 $(SCANNER_OBJECT): scanner.cpp scanner.h
 	$(CXX) -c $(CXXFLAGS) scanner.cpp -o scanner.o
 
-$(SCANNER_LIB): $(SCANNER_OBJECT)
+$(SCANNER_LIB): $(SCANNER_OBJECT) $(FOUNDATION_LIB)
 	ar -rcs -o $(SCANNER_LIB) $(SCANNER_OBJECT)
 
 
-# Edit and assign to these variables
-APP = scan_test
-##APP_HEADERS :=
-APP_OBJECTS := scan_test.o
+# Build the app
 
-## LDFLAGS := -lpthread
+# Edit these variables
+#APP := pod_hash_test
+#APP_HEADERS := pod_hash.h
+#APP_OBJECTS := pod_hash_test.o
+
+#APP := iloctests
+#APP_HEADERS := ilocparse.h ilocparseop.inc.h iloctypes.h iloc.h
+#APP_OBJECTS := ilocparse.o iloctests.o
+
+APP := pod_hash_test
+APP_HEADERS := pod_hash.h
+APP_OBJECTS := pod_hash_test.o
+
+# Extra compiler and linker flags
+## CXXFLAGS +=
+## LDFLAGS += -lpthread
 
 $(APP): $(APP_OBJECTS)
 	$(CXX) $(CXXFLAGS) -o $(APP) $(APP_OBJECTS) $(LIBS) $(LDFLAGS)
 
-$(APP_OBJECTS): %.o: %.cpp $(APP_HEADERS) $(LIBS)
+$(APP_OBJECTS): %.o: %.cpp $(APP_HEADERS) $(LIBNAMES)
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 .PHONY: clean clobber
 
 clean:
-	rm -rf foundation_test $(APP_NAME) *.o *.a
+	rm -rf foundation_test $(APP_NAME) *.o *.so
 
 clobber:
 	rm -rf *.o
