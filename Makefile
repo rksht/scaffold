@@ -4,7 +4,7 @@ CXX = clang++
 CC = clang
 
 # Edit these flags if needed
-CXXFLAGS = -std=c++11 -g -Wall
+CXXFLAGS = -std=c++11 -g -Wall -fsanitize=address
 CFLAGS = -g -Wall
 
 # Foundation library
@@ -20,11 +20,15 @@ ARGPARSE_LIB := libargparse.a
 SCANNER_OBJECT := scanner.o
 SCANNER_LIB := libscanner.a
 
+# Scanner code
+JSON_OBJECT := json.o
+JSON_LIB := libjson.a
+
 # Library command line
-LIBS = -L `pwd` -lscanner -lfoundation -largparse
+LIBS = -L `pwd`  -ljson -lscanner -lfoundation -largparse
 
 # Names of the library archives
-LIBNAMES += $(SCANNER_LIB) $(FOUNDATION_LIB) $(ARGPARSE_LIB)
+LIBNAMES += $(JSON_LIB) $(SCANNER_LIB) $(FOUNDATION_LIB) $(ARGPARSE_LIB)
 
 # Build the libraries
 
@@ -49,6 +53,12 @@ $(SCANNER_OBJECT): scanner.cpp scanner.h
 $(SCANNER_LIB): $(SCANNER_OBJECT) $(FOUNDATION_LIB)
 	ar -rcs -o $(SCANNER_LIB) $(SCANNER_OBJECT)
 
+$(JSON_OBJECT): json.cpp json.h $(SCANNER_OBJECT) $(FOUNDATION_LIB)
+	$(CXX) -c $(CXXFLAGS) json.cpp -o json.o
+
+$(JSON_LIB): $(JSON_OBJECT) $(FOUNDATION_LIB) $(SCANNER_LIB)
+	ar -rcs -o $(JSON_LIB) $(JSON_OBJECT)
+
 
 # Build the app
 
@@ -61,9 +71,13 @@ $(SCANNER_LIB): $(SCANNER_OBJECT) $(FOUNDATION_LIB)
 #APP_HEADERS := ilocparse.h ilocparseop.inc.h iloctypes.h iloc.h
 #APP_OBJECTS := ilocparse.o iloctests.o
 
-APP := pod_hash_test
-APP_HEADERS := pod_hash.h
-APP_OBJECTS := pod_hash_test.o
+#APP := pod_hash_test
+#APP_HEADERS := pod_hash.h
+#APP_OBJECTS := pod_hash_test.o
+
+APP := json_test
+APP_HEADERS := 
+APP_OBJECTS := json_test.o
 
 # Extra compiler and linker flags
 ## CXXFLAGS +=

@@ -17,7 +17,7 @@ uint64_t Data_hash(const Data* d)
     return murmur_hash_64(d, sizeof(Data), 0xDEADBEEF);
 }
 
-bool operator==(const Data& d1, const Data& d2)
+bool Data_equal(const Data& d1, const Data& d2)
 {
     return d1.id == d2.id && d1.hp == d2.hp && d1.mp == d2.mp;
 }
@@ -26,12 +26,11 @@ int main()
 {
     Data D1 = {100lu, 100lu, 100lu};
     Data D2 = {201lu, 202lu, 203lu};
-    Data D3 = {90lu, 90lu, 90lu};
 
     memory_globals::init();
     {
         pod_hash::Hash<Data, uint64_t> h(memory_globals::default_allocator(),
-                memory_globals::default_allocator(), Data_hash);
+                memory_globals::default_allocator(), Data_hash, Data_equal);
         assert(pod_hash::has(h, D1) == false);
         pod_hash::set(h, D1, 0x10lu);
         assert(pod_hash::has(h, D1) == true);

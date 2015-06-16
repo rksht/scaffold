@@ -15,10 +15,13 @@ namespace fo = foundation;
 /// Type of hashing function
 template <typename K> using HashFunc = uint64_t (*)(const K *key_p);
 
-/// A hash that works on POD types. operator== must be defined for the key
-/// type [K] The elements are copied using operator= and memcpy, so ideally
-/// there should be no user-defined operator= doing tricky stuff for the key
-/// and value types
+/// Type of equal operator function - operator== can't be used as it doesn't
+/// work on non-class or non-enumerator types.
+template <typename K> using EqualFunc = bool (*)(const K &k1, const K &k2);
+
+/// A hash that works on POD types, that is, the hashes as well as the values
+/// are copied using memcpy. Destructor for the keys or the values are not
+/// called when the data structure is deleted.
 template <typename K, typename V> struct Hash {
     struct Entry {
         K key;
@@ -29,10 +32,12 @@ template <typename K, typename V> struct Hash {
     fo::Array<uint32_t> _hashes;
     fo::Array<Entry> _entries;
     HashFunc<K> _hash_func;
+    EqualFunc<K> _equal_func;
 
     Hash(fo::Allocator &hash_alloc, fo::Allocator &entry_alloc,
-         HashFunc<K> hash_func)
-        : _hashes(hash_alloc), _entries(entry_alloc), _hash_func(hash_func) {}
+         HashFunc<K> hash_func, EqualFunc<K> equal_func)
+        : _hashes(hash_alloc), _entries(entry_alloc), _hash_func(hash_func),
+          _equal_func(equal_func) {}
 
     Hash(Hash &&other)
         : _hashes(std::move(other._hashes)),
@@ -68,7 +73,7 @@ FindResult find(const Hash<K, V> &h, const K &key) {
     fr.hash_i = h._hash_func(&key) % fo::array::size(h._hashes);
     fr.entry_i = h._hashes[fr.hash_i];
     while (fr.entry_i != END_OF_LIST) {
-        if (h._entries[fr.entry_i].key == key) { // operator== on K
+        if (h._equal_func(h._entries[fr.entry_i].key, key)) {
             return fr;
         }
         fr.entry_prev = fr.entry_i;
@@ -123,8 +128,8 @@ template <typename K, typename V> uint32_t make(Hash<K, V> &h, const K &key) {
 /// the already allocated values
 template <typename K, typename V>
 void rehash(Hash<K, V> &h, uint32_t new_size) {
-    Hash<K, V> nh(*h._hashes._allocator, *h._entries._allocator,
-                  h._hash_func); // a new hash table
+    Hash<K, V> nh(*h._hashes._allocator, *h._entries._allocator, h._hash_func,
+                  h._equal_func); // a new hash table
     fo::array::resize(nh._hashes, new_size);
     fo::array::reserve(nh._entries, fo::array::size(h._entries));
     for (uint32_t i = 0; i < new_size; ++i) {
@@ -136,7 +141,7 @@ void rehash(Hash<K, V> &h, uint32_t new_size) {
     }
 
     Hash<K, V> empty(*h._hashes._allocator, *h._entries._allocator,
-                     h._hash_func);
+                     h._hash_func, h._equal_func);
     h.~Hash<K, V>();
     memcpy(&h, &nh, sizeof(Hash<K, V>));
     memcpy(&nh, &empty, sizeof(Hash<K, V>));

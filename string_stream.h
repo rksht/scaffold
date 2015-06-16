@@ -38,6 +38,9 @@ Buffer &repeat(Buffer &b, uint32_t count, char c);
 /// at the end of the returned string. You don't have to explicitly add it
 /// to the buffer.
 const char *c_str(Buffer &b);
+
+/// Transfer the Buffer to an owning char*
+char* c_str(Buffer &&b);
 }
 
 namespace string_stream_internal {
@@ -89,6 +92,18 @@ inline const char *c_str(Buffer &b) {
     array::push_back(b, '\0');
     array::pop_back(b);
     return array::begin(b);
+}
+
+inline char* c_str(Buffer &&b) {
+    // Ensure there is a \0 at the end of the buffer.
+    Buffer b1(std::move(b));
+    array::push_back(b1, '\0');
+    array::pop_back(b1);
+    char* s = b1._data;
+    b1._data = nullptr;
+    b1._size = 0;
+    b1._capacity = 0;
+    return s;
 }
 }
 }

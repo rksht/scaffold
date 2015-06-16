@@ -17,7 +17,7 @@ Scanner::Scanner(Scanner&& sc)
     token_start(sc.token_start), current_tok(sc.current_tok) {}
 
 
-#define SET_TOK(s, tok) do { (s).current_tok = tok; return tok; } while (0)
+#define SET_TOK_AND_RET(s, tok) do { (s).current_tok = tok; return tok; } while (0)
 
 int next(Scanner& s)
 {
@@ -26,7 +26,7 @@ int next(Scanner& s)
 
     p += s.offset;
     if (p == e) {
-        SET_TOK(s, EOFS);
+        SET_TOK_AND_RET(s, EOFS);
     }
     if (!(s.mode & SCAN_SPACES)) {
         while (p != e && (*p == ' ' || *p == '\t' || *p == '\n')) {
@@ -39,7 +39,7 @@ int next(Scanner& s)
             ++s.col;
         }
         if (p == e) {
-            SET_TOK(s, EOFS);
+            SET_TOK_AND_RET(s, EOFS);
         }
     }
     if (*p == '"' && (s.mode & SCAN_STRINGS)) {
@@ -63,7 +63,7 @@ int next(Scanner& s)
         }
         ++s.col;
         ++s.offset;
-        SET_TOK(s, STRING);
+        SET_TOK_AND_RET(s, STRING);
     }
     if (*p >= '0' && *p <= '9' && (s.mode & (SCAN_INTS | SCAN_FLOATS))) {
         const char* endp;
@@ -76,7 +76,7 @@ int next(Scanner& s)
         }
         s.offset = endp - array::begin(s._text);
         s.col += endp - p;
-        SET_TOK(s, ret);
+        SET_TOK_AND_RET(s, ret);
     }
     if (((*p >= 'A' &&  *p <= 'Z') || (*p >= 'a' && *p <= 'z') || (*p == '_'))
             && (s.mode & SCAN_IDENTS)) {
@@ -87,7 +87,7 @@ int next(Scanner& s)
             ++s.col;
         } while (p != e && ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z')
                     || (*p == '_') || (*p >= '0' && *p <= '9')));
-        SET_TOK(s, IDENT);
+        SET_TOK_AND_RET(s, IDENT);
     }
     if (*p == '\n') {
         ++s.line;
@@ -97,9 +97,9 @@ int next(Scanner& s)
     ++s.offset;
     ++s.col;
     if (*p == ' ' || *p == '\t' || *p == '\n') {
-        SET_TOK(s, SPACE);
+        SET_TOK_AND_RET(s, SPACE);
     }
-    SET_TOK(s, *p);
+    SET_TOK_AND_RET(s, *p);
 }
 
 char char_token[] = "INVALID";
