@@ -107,6 +107,8 @@ class Array : public Value {
         }
     }
 
+    fo::Array<Value*>& get_array() { return _arr; }
+
     Value *const *cbegin() const { return fo::array::begin(_arr); }
 
     Value *const *cend() const { return fo::array::end(_arr); }
@@ -124,6 +126,8 @@ class String : public Value {
 
     ss::Buffer &get_buffer() { return _buf; }
 
+    const char* get_cstr() { return ss::c_str(_buf); }
+
     void visit(VisitorIF &v) { v.visit(*this); }
 };
 
@@ -133,6 +137,8 @@ class Number : public Value {
 
   public:
     Number(double num) : _num(num) {}
+
+    double get_number() const { return _num; }
 
     void visit(VisitorIF &v) { v.visit(*this); }
 };

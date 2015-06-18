@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <iostream>
 
 #include "memory.h"
 #include "scanner.cpp"
@@ -6,6 +7,7 @@
 
 namespace ss = foundation::string_stream;
 namespace mg = foundation::memory_globals;
+namespace fo = foundation;
 
 ss::Buffer read_file(FILE *f) {
     using namespace ss;
@@ -18,6 +20,57 @@ ss::Buffer read_file(FILE *f) {
     }
     return text;
 }
+
+#include "array.h"
+
+template <typename StreamTy>
+class PrintVisitor : public json::VisitorIF {
+private:
+    StreamTy& _stream;
+public:
+    PrintVisitor(StreamTy& stream) : _stream(stream) {}
+
+    void visit(json::Object& ob) override;
+    void visit(json::Array& arr) override;
+    void visit(json::Number& num) override;
+    void visit(json::String& str) override;
+};
+
+template <typename StreamTy>
+void PrintVisitor<StreamTy>::visit(json::Number& num) {
+    _stream << num.get_number();
+}
+
+template <typename StreamTy>
+void PrintVisitor<StreamTy>::visit(json::String& str) {
+    _stream << str.get_cstr();
+}
+
+template <typename StreamTy>
+void PrintVisitor<StreamTy>::visit(json::Array& arr) {
+    _stream << "[";
+    for (auto it = arr.cbegin(); it != arr.cend(); it++) {
+        (*it)->visit(*this);
+        if (it == arr.cend() - 1) continue;
+        _stream << ", ";
+    }
+    _stream << "]";
+}
+
+template <typename StreamTy>
+void PrintVisitor<StreamTy>::visit(json::Object& ob) {
+    _stream << "{";
+    for (auto it = ob.cbegin(); it != ob.cend(); it++) {
+        _stream << it->key;
+        _stream << ": ";
+        it->value->visit(*this);
+        if (it == ob.cend() - 1) continue;
+        _stream << ", ";
+    }
+    _stream << "}";
+}
+
+
 
 int main(int argc, char **argv) {
     mg::init();
@@ -40,6 +93,10 @@ int main(int argc, char **argv) {
         scanner::Scanner s(std::move(text));
         json::Object *ob = json::Parser(std::move(s)).parse();
         json::Object ob1(std::move(*ob));
+
+        PrintVisitor<decltype(std::cout)> pv(std::cout);
+        pv.visit(ob1);
+
         MAKE_DELETE(OBJECT_ALLOCATOR, Object, ob);
     }
 
