@@ -2,7 +2,6 @@
 * Foundation library by Bitsquid
 * argparse by Cofyc
 
-
 And some additions by me
 * A usual scanner for usual tokenizing.
 * A json loader.
