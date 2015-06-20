@@ -4,7 +4,7 @@ CXX = clang++
 CC = clang
 
 # Edit these flags if needed
-CXXFLAGS = -std=c++11 -g -Wall -fsanitize=address
+CXXFLAGS = -std=c++11 -g -Wall
 CFLAGS = -g -Wall
 
 # Foundation library

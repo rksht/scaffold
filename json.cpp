@@ -3,17 +3,17 @@
 namespace json {
 
 // cstring hash
-unsigned long cstr_hash(char *const *s) {
+unsigned long _cstr_hash(char *const *s) {
     unsigned l = strlen(*s);
     return (unsigned long)fo::murmur_hash_64(*s, l, 0xDEADBEEF);
 }
 
 // cstring equal
-bool cstr_equal(char *const &s1, char *const &s2) {
+bool _cstr_equal(char *const &s1, char *const &s2) {
     return strcmp(s1, s2) == 0;
 }
 
-Value *Parser::error(const char *fmt, ...) {
+Value *Parser::_error(const char *fmt, ...) {
     ss::Buffer text(mg::default_allocator());
     scanner::token_text(_sc, text);
     fprintf(stderr, "Parse error: %s (at line[%d]:%d:%d)  ", ss::c_str(text),
@@ -30,19 +30,19 @@ Value *Parser::error(const char *fmt, ...) {
 Object *Parser::parse() {
     int t = scanner::next(_sc);
     if (t != '{') {
-        return static_cast<Object *>(error("%s", "Expected '{' for object"));
+        return static_cast<Object *>(_error("%s", "Expected '{' for object"));
     }
-    return static_cast<Object *>(object());
+    return static_cast<Object *>(_object());
 }
 
-Value *Parser::number() {
+Value *Parser::_number() {
     double n = _sc.current_tok == scanner::INT ? (double)_sc.current_int
                                                : _sc.current_float;
     scanner::next(_sc);
     return MAKE_NEW(OBJECT_ALLOCATOR, Number, n);
 }
 
-Value *Parser::string() {
+Value *Parser::_string() {
     ss::Buffer str(OBJECT_ALLOCATOR);
     ss::Buffer src(OBJECT_ALLOCATOR);
     scanner::token_text(_sc, src);
@@ -52,7 +52,7 @@ Value *Parser::string() {
     return string;
 }
 
-char *Parser::key_string() {
+char *Parser::_key_string() {
     ss::Buffer str(OBJECT_ALLOCATOR);
     ss::Buffer src(OBJECT_ALLOCATOR);
     scanner::token_text(_sc, src);
@@ -61,14 +61,14 @@ char *Parser::key_string() {
     return ss::c_str(std::move(str));
 }
 
-Value *Parser::array() {
+Value *Parser::_array() {
     Array *arr = MAKE_NEW(OBJECT_ALLOCATOR, Array);
     if (scanner::next(_sc) == ']') {
         scanner::next(_sc);
         return arr;
     }
     while (true) {
-        Value *v = value();
+        Value *v = _value();
         if (!v) {
             return nullptr;
         }
@@ -80,39 +80,39 @@ Value *Parser::array() {
             scanner::next(_sc);
             break;
         } else {
-            return error("%s", "Expected ',' or ']' while parsing array");
+            return _error("%s", "Expected ',' or ']' while parsing array");
         }
     }
     return arr;
 }
 
-std::pair<char *, Value *> Parser::key_val_pair() {
-    char *key = key_string();
+std::pair<char *, Value *> Parser::_key_val_pair() {
+    char *key = _key_string();
     if (_sc.current_tok != ':') {
-        error("%s", "Expected :");
+        _error("%s", "Expected :");
         return std::pair<char *, Value *>(nullptr, nullptr);
     }
     scanner::next(_sc);
-    Value *val = value();
+    Value *val = _value();
     return std::pair<char *, Value *>(key, val);
 }
 
-Value *Parser::object() {
+Value *Parser::_object() {
     int token = scanner::next(_sc);
     if (token == '}') {
         scanner::next(_sc);
-        return MAKE_NEW(OBJECT_ALLOCATOR, Object);
+        return MAKE_NEW(OBJECT_ALLOCATOR, Object, true);
     }
     if (token != scanner::STRING) {
-        return error("%s", "Expected a string while parsing json key");
+        return _error("%s", "Expected a string while parsing json key");
     }
-    Object *ob = MAKE_NEW(OBJECT_ALLOCATOR, Object);
+    Object *ob = MAKE_NEW(OBJECT_ALLOCATOR, Object, true);
     while (true) {
-        std::pair<char *, Value *> key_val = key_val_pair();
+        std::pair<char *, Value *> key_val = _key_val_pair();
         if (key_val.first == nullptr) {
             return nullptr;
         }
-        ob->_add_key_value(key_val.first, key_val.second);
+        ob->add_key_value(key_val.first, key_val.second);
         if (_sc.current_tok == '}') {
             scanner::next(_sc);
             break;
@@ -123,26 +123,26 @@ Value *Parser::object() {
         }
         // Error
         ob->~Object();
-        return error("%s", "Expected ',' or '}' at end of key value pair");
+        return _error("%s", "Expected ',' or '}' at end of key value pair");
     }
     return ob;
 }
 
-Value *Parser::value() {
+Value *Parser::_value() {
     switch (_sc.current_tok) {
     case scanner::INT:
     case scanner::FLOAT:
-        return number();
+        return _number();
     case scanner::STRING:
-        return string();
+        return _string();
     case '[':
-        return array();
+        return _array();
     case '{':
-        return object();
+        return _object();
     case scanner::EOFS:
-        return error("%s", "Unexpected end of string");
+        return _error("%s", "Unexpected end of string");
     }
-    return error("%s", "Unexpected token");
+    return _error("%s", "Unexpected token");
 }
 
 } // ns json

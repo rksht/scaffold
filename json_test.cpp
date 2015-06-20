@@ -23,6 +23,7 @@ ss::Buffer read_file(FILE *f) {
 
 #include "array.h"
 
+// A printing visitor for json values
 template <typename StreamTy>
 class PrintVisitor : public json::VisitorIF {
 private:
@@ -70,8 +71,6 @@ void PrintVisitor<StreamTy>::visit(json::Object& ob) {
     _stream << "}";
 }
 
-
-
 int main(int argc, char **argv) {
     mg::init();
 
@@ -85,6 +84,8 @@ int main(int argc, char **argv) {
         }
     }
 
+    PrintVisitor<decltype(std::cout)> pv(std::cout);
+
     {
         ss::Buffer text(std::move(read_file(f)));
         if (f != stdin) {
@@ -93,12 +94,37 @@ int main(int argc, char **argv) {
         scanner::Scanner s(std::move(text));
         json::Object *ob = json::Parser(std::move(s)).parse();
         json::Object ob1(std::move(*ob));
-
-        PrintVisitor<decltype(std::cout)> pv(std::cout);
         pv.visit(ob1);
-
         MAKE_DELETE(OBJECT_ALLOCATOR, Object, ob);
+        std::cout << std::endl;
     }
 
+    {
+        // Building a json value 
+        // {"name": "Yennefer", "designation": "Sorceress",
+        // "attrs": [90, 90, 80]}
+        json::Object ob(true);
+
+        using namespace ss;
+
+        Buffer name(OBJECT_ALLOCATOR);
+        name << "name";
+
+        Buffer designation(OBJECT_ALLOCATOR);
+        designation << "designation";
+
+        Buffer attrs(OBJECT_ALLOCATOR);
+        attrs << "attrs";
+
+        ob.add_key_value(c_str(std::move(name)), MAKE_NEW(OBJECT_ALLOCATOR, json::String, "Yennefer"));
+        ob.add_key_value(c_str(std::move(designation)), MAKE_NEW(OBJECT_ALLOCATOR, json::String, "Sorceress"));
+        auto arr = MAKE_NEW(OBJECT_ALLOCATOR, json::Array);
+        fo::array::push_back(arr->get_array(), static_cast<json::Value*>(MAKE_NEW(OBJECT_ALLOCATOR, json::Number, 90)));
+        fo::array::push_back(arr->get_array(), static_cast<json::Value*>(MAKE_NEW(OBJECT_ALLOCATOR, json::Number, 90)));
+        fo::array::push_back(arr->get_array(), static_cast<json::Value*>(MAKE_NEW(OBJECT_ALLOCATOR, json::Number, 80)));
+        ob.add_key_value(c_str(std::move(attrs)), arr);
+        pv.visit(ob);
+        std::cout << std::endl;
+    }
     mg::shutdown();
 }

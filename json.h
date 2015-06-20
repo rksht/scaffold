@@ -8,6 +8,10 @@
 #include <utility>
 #include <stdio.h>
 
+// This is a very simple json loader. But the getters for the objects don't
+// return non-const references, so it can be used to make up a json value
+// using the usual array, hash, string_stream, etc. functions.
+
 namespace json {
 
 namespace fo = foundation;
@@ -17,12 +21,13 @@ namespace ss = fo::string_stream;
 // The allocator
 #define OBJECT_ALLOCATOR (mg::default_allocator())
 
-class Value;
+// The json values
 class Object;
 class Number;
 class String;
 class Array;
 
+// Visitor interface class
 class VisitorIF {
   public:
     virtual void visit(Object &ob) = 0;
@@ -31,6 +36,7 @@ class VisitorIF {
     virtual void visit(Array &a) = 0;
 };
 
+// A json value
 class Value {
   public:
     virtual ~Value() {}
@@ -41,23 +47,26 @@ class Value {
 class Parser;
 
 // cstring hash
-unsigned long cstr_hash(char *const *s);
+unsigned long _cstr_hash(char *const *s);
 // cstring equal
-bool cstr_equal(char *const &s1, char *const &s2);
+bool _cstr_equal(char *const &s1, char *const &s2);
 
 class Object : public Value {
+  public: 
+    using map_type = pod_hash::Hash<char *, Value *>;
+
   private:
-    pod_hash::Hash<char *, Value *> _map;
+    map_type _map;
+    bool _keys_owned; // Are the keys of the map owned by the Object
 
     friend class Parser;
 
   public:
-    using map_type = pod_hash::Hash<char *, Value *>;
 
-    Object()
-        : _map(OBJECT_ALLOCATOR, OBJECT_ALLOCATOR, cstr_hash, cstr_equal) {}
+    Object(bool keys_owned)
+        : _map(OBJECT_ALLOCATOR, OBJECT_ALLOCATOR, _cstr_hash, _cstr_equal), _keys_owned(keys_owned) {}
 
-    Object(Object &&other) : _map(std::move(other._map)) {}
+    Object(Object &&other) : _map(std::move(other._map)), _keys_owned(other._keys_owned) {}
 
     ~Object() {
         // Moved or not.
@@ -67,26 +76,28 @@ class Object : public Value {
         // Delete all the keys and call destructor on the values
         for (map_type::Entry const *ep = pod_hash::cbegin(_map);
              ep != pod_hash::cend(_map); ep++) {
-            OBJECT_ALLOCATOR.deallocate(
-                ep->key); // Just a char pointer, no destructor for it
+            // Just a char pointer, no destructor for it
+            printf("Shall deallocate: %s\n", ep->key);
+            if (_keys_owned) OBJECT_ALLOCATOR.deallocate(ep->key);
             MAKE_DELETE(OBJECT_ALLOCATOR, Value, ep->value);
         }
     }
 
-  private:
-    // Returns false if key already exists, otherwise returns false.
-    bool _add_key_value(char *key, Value *value) {
+  public:
+    // Returns the map
+    map_type& get_map() { return _map; }
+    // For iterating the map directly
+    const map_type::Entry *cbegin() const { return pod_hash::cbegin(_map); }
+    const map_type::Entry *cend() const { return pod_hash::cend(_map); }
+
+    // Returns false if key already exists, otherwise adds the given value and returns true.
+    bool add_key_value(char *key, Value *value) {
         if (pod_hash::has(_map, key)) {
             return false;
         }
         pod_hash::set(_map, key, value);
         return true;
     }
-
-  public:
-    const map_type::Entry *cbegin() { return pod_hash::cbegin(_map); }
-
-    const map_type::Entry *cend() { return pod_hash::cend(_map); }
 
     void visit(VisitorIF &v) override { v.visit(*this); }
 };
@@ -107,7 +118,7 @@ class Array : public Value {
         }
     }
 
-    fo::Array<Value*>& get_array() { return _arr; }
+    fo::Array<Value *> &get_array() { return _arr; }
 
     Value *const *cbegin() const { return fo::array::begin(_arr); }
 
@@ -124,9 +135,14 @@ class String : public Value {
   public:
     String(ss::Buffer &&buf) : _buf(std::move(buf)) {}
 
+    String(const char* cstr) : _buf(OBJECT_ALLOCATOR) {
+        using namespace ss;
+        _buf << cstr;
+    }
+
     ss::Buffer &get_buffer() { return _buf; }
 
-    const char* get_cstr() { return ss::c_str(_buf); }
+    const char *get_cstr() { return ss::c_str(_buf); }
 
     void visit(VisitorIF &v) { v.visit(*this); }
 };
@@ -138,7 +154,7 @@ class Number : public Value {
   public:
     Number(double num) : _num(num) {}
 
-    double get_number() const { return _num; }
+    double& get_number() { return _num; }
 
     void visit(VisitorIF &v) { v.visit(*this); }
 };
@@ -151,15 +167,15 @@ class Parser {
     Parser(scanner::Scanner &&sc) : _sc(std::move(sc)) {}
 
   private:
-    Value *number();
-    Value *string();
-    char *key_string();
-    Value *array();
-    std::pair<char *, Value *> key_val_pair();
-    Value *object();
-    Value *value();
+    Value *_number();
+    Value *_string();
+    char *_key_string();
+    Value *_array();
+    std::pair<char *, Value *> _key_val_pair();
+    Value *_object();
+    Value *_value();
 
-    Value *error(const char *fmt, ...);
+    Value *_error(const char *fmt, ...);
 
   public:
     Object *parse();
