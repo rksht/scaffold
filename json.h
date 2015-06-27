@@ -1,3 +1,5 @@
+#pragma once
+
 #include "memory.h"
 #include "scanner.h"
 #include "pod_hash.h"
@@ -77,7 +79,6 @@ class Object : public Value {
         for (map_type::Entry const *ep = pod_hash::cbegin(_map);
              ep != pod_hash::cend(_map); ep++) {
             // Just a char pointer, no destructor for it
-            printf("Shall deallocate: %s\n", ep->key);
             if (_keys_owned) OBJECT_ALLOCATOR.deallocate(ep->key);
             MAKE_DELETE(OBJECT_ALLOCATOR, Value, ep->value);
         }
