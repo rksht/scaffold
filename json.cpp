@@ -1,17 +1,8 @@
 #include "json.h"
 
+
 namespace json {
 
-// cstring hash
-unsigned long _cstr_hash(char *const *s) {
-    unsigned l = strlen(*s);
-    return (unsigned long)fo::murmur_hash_64(*s, l, 0xDEADBEEF);
-}
-
-// cstring equal
-bool _cstr_equal(char *const &s1, char *const &s2) {
-    return strcmp(s1, s2) == 0;
-}
 
 Value *Parser::_error(const char *fmt, ...) {
     ss::Buffer text(mg::default_allocator());

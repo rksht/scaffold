@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <iostream>
+#include <sstream>
 
 #include "memory.h"
 #include "scanner.cpp"
 #include "json.h"
+#define CATCH_CONFIG_MAIN
+#include "catch.hpp"
 
 namespace ss = foundation::string_stream;
 namespace mg = foundation::memory_globals;
@@ -44,7 +47,7 @@ void PrintVisitor<StreamTy>::visit(json::Number& num) {
 
 template <typename StreamTy>
 void PrintVisitor<StreamTy>::visit(json::String& str) {
-    _stream << str.get_cstr();
+    _stream << "\"" << str.get_cstr() << "\"";
 }
 
 template <typename StreamTy>
@@ -53,7 +56,7 @@ void PrintVisitor<StreamTy>::visit(json::Array& arr) {
     for (auto it = arr.cbegin(); it != arr.cend(); it++) {
         (*it)->visit(*this);
         if (it == arr.cend() - 1) continue;
-        _stream << ", ";
+        _stream << ",";
     }
     _stream << "]";
 }
@@ -62,15 +65,35 @@ template <typename StreamTy>
 void PrintVisitor<StreamTy>::visit(json::Object& ob) {
     _stream << "{";
     for (auto it = ob.cbegin(); it != ob.cend(); it++) {
-        _stream << it->key;
-        _stream << ": ";
+        _stream << "\"" << it->key << "\"";
+        _stream << ":";
         it->value->visit(*this);
         if (it == ob.cend() - 1) continue;
-        _stream << ", ";
+        _stream << ",";
     }
     _stream << "}";
 }
 
+TEST_CASE( "Loaded json correctly", "[json loading]") {
+    mg::init();
+
+    std::ostringstream out;
+    PrintVisitor<std::ostringstream> pv(out);
+    {
+        using namespace ss;
+        Buffer text(mg::default_allocator());
+        text << "{\"name\": \"Yennefer\", \"designation\": \"Sorceress\",\"attrs\": [90, 90, 80]}";
+        json::Object& ob = *json::Parser(std::move(scanner::Scanner(std::move(text)))).parse();
+        pv.visit(ob);
+        REQUIRE( out.str() == "{\"name\":\"Yennefer\",\"designation\":\"Sorceress\",\"attrs\":[90,90,80]}");
+        MAKE_DELETE(OBJECT_ALLOCATOR, Object, &ob);
+    }
+
+    mg::shutdown();
+}
+
+
+/*
 int main(int argc, char **argv) {
     mg::init();
 
@@ -84,21 +107,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    PrintVisitor<decltype(std::cout)> pv(std::cout);
-
-    {
-        ss::Buffer text(std::move(read_file(f)));
-        if (f != stdin) {
-            fclose(f);
-        }
-        scanner::Scanner s(std::move(text));
-        json::Object *ob = json::Parser(std::move(s)).parse();
-        json::Object ob1(std::move(*ob));
-        pv.visit(ob1);
-        MAKE_DELETE(OBJECT_ALLOCATOR, Object, ob);
-        std::cout << std::endl;
-    }
-
+    std::ostringstream out;
     {
         // Building a json value 
         // {"name": "Yennefer", "designation": "Sorceress",
@@ -128,3 +137,4 @@ int main(int argc, char **argv) {
     }
     mg::shutdown();
 }
+*/

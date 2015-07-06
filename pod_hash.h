@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <type_traits>
 
 namespace pod_hash {
 
@@ -42,6 +43,8 @@ template <typename K, typename V> struct Hash {
     Hash(Hash &&other)
         : _hashes(std::move(other._hashes)),
           _entries(std::move(other._entries)), _hash_func(other._hash_func) {}
+
+    Hash(const Hash& other) = delete;
 };
 
 namespace _internal {
@@ -246,10 +249,10 @@ const V &set_default(Hash<K, V> &h, const K &key, const V &deffault) {
     return h._entries[fr.entry_i].value;
 }
 
-/// Returns the value associated with the given key if the key exists,
+/// Returns reference to value associated with the given key if the key exists,
 /// otherwise returns deffault. Does not add any entry to the table.
 template <typename K, typename V>
-const V &get_default(Hash<K, V> &h, const K &key, const V &deffault) {
+const V &get_default(const Hash<K, V> &h, const K &key, const V &deffault) {
     _internal::FindResult fr = _internal::find(h, key);
     if (fr.entry_i == _internal::END_OF_LIST) {
         return deffault;
@@ -257,18 +260,14 @@ const V &get_default(Hash<K, V> &h, const K &key, const V &deffault) {
     return h._entries[fr.entry_i].value;
 }
 
-/// Returns a copy of the key given - useful when the given key and the
-/// existing key are equal by operator== but point to different objects.
-/// For example:
-///     struct K { char* name };
-///     K k1 = {"Hey"};
-///     K k2; k2 = malloc(4);
-///     memcpy(k2.name, k1.name, 4);
-/// Now operator== on K might just look at the whole cstring name and return
-/// true if they are the same value. But the two strings point to different
-/// objects(memory).
 template <typename K, typename V>
-K get_key(Hash<K, V> &h, const K &key, const K &deffault) {
+inline V& get(Hash<K, V>& h, const K& key) {
+    return get_default(h, key, V());
+}
+
+/// Returns a const reference to the key. Use when using the hash as a set.
+template <typename K, typename V>
+K const &get_key(const Hash<K, V> &h, K const &key, K const &deffault) {
     _internal::FindResult fr = _internal::find(h, key);
     if (fr.entry_i == _internal::END_OF_LIST) {
         return deffault;
