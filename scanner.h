@@ -10,6 +10,7 @@ using namespace foundation;
 using namespace memory_globals;
 using namespace string_stream;
 
+
 const int INT = -1;
 const int FLOAT = -2;
 const int STRING = -3;
@@ -17,7 +18,8 @@ const int IDENT = -4;
 const int SPACE = -5;
 const int COMMENT = -6;
 const int EOFS = -7;
-const int INVALID = -8;
+const int ESCAPE = -8;
+const int INVALID = -9;
 
 enum Modes {
     SCAN_INTS = 1 << -INT,
@@ -26,9 +28,11 @@ enum Modes {
     SCAN_IDENTS = 1 << -IDENT,
     SCAN_SPACES = 1 << -SPACE,
     SCAN_COMMENTS = 1 << -COMMENT,
+    SCAN_ESCAPES = 1 << -ESCAPE, // This will inteprete escape codes all throughout the string
 };
 
 const int DEFAULT_MODE = SCAN_INTS | SCAN_FLOATS | SCAN_STRINGS | SCAN_IDENTS;
+const int WHOLESTRING_MODE = SCAN_SPACES | SCAN_ESCAPES;
 
 /// Contains the current state of the scanner
 struct Scanner {

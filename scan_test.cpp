@@ -6,10 +6,9 @@
 namespace ss = foundation::string_stream;
 namespace mg = foundation::memory_globals;
 
-ss::Buffer read_file(FILE* f)
-{
+ss::Buffer read_file(FILE *f) {
     using namespace ss;
-    foundation::Allocator& alloc = mg::default_allocator();
+    foundation::Allocator &alloc = mg::default_allocator();
     Buffer text = Buffer(alloc);
     char c = fgetc(f);
     while (c != EOF) {
@@ -19,21 +18,25 @@ ss::Buffer read_file(FILE* f)
     return text;
 }
 
-
-int main()
-{
+int main(int argc, char **argv) {
     mg::init();
 
     {
+        int mode = argc == 2
+                       ? argv[1][0] == 'D' ? scanner::DEFAULT_MODE
+                                           : scanner::WHOLESTRING_MODE
+                       : scanner::WHOLESTRING_MODE;
         ss::Buffer text(std::move(read_file(stdin)));
-        scanner::Scanner s(std::move(text));
+        scanner::Scanner s(std::move(text), mode);
 
         int token = scanner::next(s);
 
         while (token != scanner::EOFS) {
-            ss::Buffer token_text = scanner::token_text(s);
-            printf("%s %d:%d - %s\n", scanner::desc(token), s.line, s.col,
-                    ss::c_str(token_text));
+            ss::Buffer token_text(mg::default_allocator());
+            scanner::token_text(s, token_text);
+            printf("(%s %d:%d - %s - [%c])", scanner::desc(token), s.line, s.col,
+                   ss::c_str(token_text), token);
+            printf("------\n");
             token = scanner::next(s);
         }
     }

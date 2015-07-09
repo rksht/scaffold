@@ -1,5 +1,3 @@
-# For now just use a in-directory build. It's simple.
-
 CXX = clang++
 CC = clang
 
@@ -7,14 +5,23 @@ CC = clang
 CXXFLAGS = -std=c++11 -g -Wall
 CFLAGS = -g -Wall
 
+SRC_DIR := /home/snyp/text/code/C++/scaffold
+
 # Foundation library
-FOUNDATION_HEADERS := types.h array.h queue.h hash.h memory.h memory_types.h murmur_hash.h string_stream.h math_types.h temp_allocator.h pod_hash.h
-FOUNDATION_OBJECTS := memory.o string_stream.o murmur_hash.o
+FOUNDATION_HEADERS := types.h array.h queue.h hash.h memory.h memory_types.h murmur_hash.h \
+  string_stream.h math_types.h temp_allocator.h pod_hash.h pod_hash_usuals.h
+
+FOUNDATION_HEADERS := $(patsubst %,$(SRC_DIR)/%,$(FOUNDATION_HEADERS))
+
+FOUNDATION_SOURCES := memory.cpp string_stream.cpp murmur_hash.cpp pod_hash_usuals.cpp
+
+FOUNDATION_OBJECTS := $(patsubst %.cpp,%.o,$(FOUNDATION_SOURCES))
+
+FOUNDATION_SOURCES := $(patsubst %,$(SRC_DIR)/%,$(FOUNDATION_SOURCES))
+
 FOUNDATION_LIB := libfoundation.a
 
-# Argparse library
-ARGPARSE_OBJECT := argparse.o
-ARGPARSE_LIB := libargparse.a
+$(info $(FOUNDATION_OBJECTS))
 
 # Scanner code
 SCANNER_OBJECT := scanner.o
@@ -25,59 +32,49 @@ JSON_OBJECT := json.o
 JSON_LIB := libjson.a
 
 # Library command line
-LIBS = -L `pwd`  -ljson -lscanner -lfoundation -largparse
+LIBS = -L `pwd` -ljson -lscanner -lfoundation -largparse
 
 # Names of the library archives
 LIBNAMES += $(JSON_LIB) $(SCANNER_LIB) $(FOUNDATION_LIB) $(ARGPARSE_LIB)
 
 # Build the libraries
 
-$(FOUNDATION_OBJECTS): %.o: %.cpp $(FOUNDATION_HEADERS)
-	$(CXX) -c  $(CXXFLAGS) $< -o $@
+$(FOUNDATION_OBJECTS): %.o: $(SRC_DIR)/%.cpp $(FOUNDATION_HEADERS)
+	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 $(FOUNDATION_LIB): $(FOUNDATION_OBJECTS)
 	ar -rcs -o $(FOUNDATION_LIB) $?
 
-foundation_test: foundation_test.cpp $(FOUNDATION_HEADERS) $(FOUNDATION_LIB)
+foundation_test: $(SRC_DIR)/foundation_test.cpp $(FOUNDATION_HEADERS) $(FOUNDATION_LIB)
 	$(CXX) $(CXXFLAGS) -o foundation_test foundation_test.cpp $(FOUNDATION_LIB)
 
-$(ARGPARSE_OBJECT): argparse.c argparse.h
-	$(CC) -c $(CFLAGS) argparse.c -o argparse.o
-
-$(ARGPARSE_LIB): $(ARGPARSE_OBJECT)
-	ar -rcs -o $(ARGPARSE_LIB) $(ARGPARSE_OBJECT)
-
-$(SCANNER_OBJECT): scanner.cpp scanner.h
-	$(CXX) -c $(CXXFLAGS) scanner.cpp -o scanner.o
+$(SCANNER_OBJECT): $(SRC_DIR)/scanner.cpp $(SRC_DIR)/scanner.h
+	$(CXX) -c $(CXXFLAGS) $(SRC_DIR)/scanner.cpp -o $@
 
 $(SCANNER_LIB): $(SCANNER_OBJECT) $(FOUNDATION_LIB)
-	ar -rcs -o $(SCANNER_LIB) $(SCANNER_OBJECT)
+	ar -rcs -o $@ $(SCANNER_OBJECT)
 
-$(JSON_OBJECT): json.cpp json.h $(SCANNER_OBJECT) $(FOUNDATION_LIB)
-	$(CXX) -c $(CXXFLAGS) json.cpp -o json.o
+$(JSON_OBJECT): $(SRC_DIR)/json.cpp $(SRC_DIR)/json.h $(SCANNER_OBJECT) $(FOUNDATION_LIB)
+	$(CXX) -c $(CXXFLAGS) $(SRC_DIR)/scanner.cpp -o $@
 
 $(JSON_LIB): $(JSON_OBJECT) $(FOUNDATION_LIB) $(SCANNER_LIB)
-	ar -rcs -o $(JSON_LIB) $(JSON_OBJECT)
-
+	ar -rcs -o $@ $(JSON_OBJECT)
 
 # Build the app
-
 # Edit these variables
-#APP := pod_hash_test
-#APP_HEADERS := pod_hash.h
-#APP_OBJECTS := pod_hash_test.o
-
-#APP := iloctests
-#APP_HEADERS := ilocparse.h ilocparseop.inc.h iloctypes.h iloc.h
-#APP_OBJECTS := ilocparse.o iloctests.o
-
-#APP := pod_hash_test
-#APP_HEADERS := pod_hash.h
-#APP_OBJECTS := pod_hash_test.o
-
-APP := json_test
+APP :=  scan_test
 APP_HEADERS := 
-APP_OBJECTS := json_test.o
+APP_SOURCES  := scan_test.cpp
+
+# Prepend build dir
+APP_OBJECTS := $(patsubst %.cpp,%.o,$(APP_SOURCES))
+APP_SOURCES := $(patsubst %,$(SRC_DIR)/%,$(APP_SOURCES))
+APP :=  $(APP)
+
+$(info FOUNDATION_OBJECTS = $(FOUNDATION_OBJECTS))
+$(info SCANNER_OBJECT = $(SCANNER_OBJECT))
+$(info JSON_OBJECT = $(JSON_OBJECT))
+$(info APP_OBJECTS = $(APP_OBJECTS))
 
 # Extra compiler and linker flags
 ## CXXFLAGS +=
@@ -86,7 +83,7 @@ APP_OBJECTS := json_test.o
 $(APP): $(APP_OBJECTS)
 	$(CXX) $(CXXFLAGS) -o $(APP) $(APP_OBJECTS) $(LIBS) $(LDFLAGS)
 
-$(APP_OBJECTS): %.o: %.cpp $(APP_HEADERS) $(LIBNAMES)
+$(APP_OBJECTS): %.o: $(SRC_DIR)/%.cpp $(APP_HEADERS) $(LIBNAMES)
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 .PHONY: clean clobber

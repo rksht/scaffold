@@ -3,6 +3,7 @@
 #include "pod_hash.h"
 #include "memory.h"
 #include "murmur_hash.h"
+#include "pod_hash_usuals.h"
 
 using namespace foundation;
 
@@ -60,6 +61,17 @@ int main()
         for (uint64_t i = 0; i < 1000; ++i) {
             Data d = {i, i, i};
             assert(pod_hash::has(h, d) == false);
+        }
+
+        pod_hash::Hash<char, uint64_t> h1(memory_globals::default_allocator(),
+                memory_globals::default_allocator(), _char_hash, _char_equal);
+
+        for (char i = 'a'; i < 'z'; ++i) {
+            pod_hash::set(h1, i, (uint64_t) (i * i));
+        }
+
+        for (char i = 'a'; i < 'z'; ++i) {
+            pod_hash::remove(h1, i);
         }
     }
     memory_globals::shutdown();
