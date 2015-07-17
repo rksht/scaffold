@@ -27,54 +27,56 @@ ss::Buffer read_file(FILE *f) {
 #include "array.h"
 
 // A printing visitor for json values
-template <typename StreamTy>
-class PrintVisitor : public json::VisitorIF {
-private:
-    StreamTy& _stream;
-public:
-    PrintVisitor(StreamTy& stream) : _stream(stream) {}
+template <typename StreamTy> class PrintVisitor : public json::VisitorIF {
+  private:
+    StreamTy &_stream;
 
-    void visit(json::Object& ob) override;
-    void visit(json::Array& arr) override;
-    void visit(json::Number& num) override;
-    void visit(json::String& str) override;
+  public:
+    PrintVisitor(StreamTy &stream) : _stream(stream) {}
+
+    void visit(json::Object &ob) override;
+    void visit(json::Array &arr) override;
+    void visit(json::Number &num) override;
+    void visit(json::String &str) override;
 };
 
 template <typename StreamTy>
-void PrintVisitor<StreamTy>::visit(json::Number& num) {
+void PrintVisitor<StreamTy>::visit(json::Number &num) {
     _stream << num.get_number();
 }
 
 template <typename StreamTy>
-void PrintVisitor<StreamTy>::visit(json::String& str) {
+void PrintVisitor<StreamTy>::visit(json::String &str) {
     _stream << "\"" << str.get_cstr() << "\"";
 }
 
 template <typename StreamTy>
-void PrintVisitor<StreamTy>::visit(json::Array& arr) {
+void PrintVisitor<StreamTy>::visit(json::Array &arr) {
     _stream << "[";
     for (auto it = arr.cbegin(); it != arr.cend(); it++) {
         (*it)->visit(*this);
-        if (it == arr.cend() - 1) continue;
+        if (it == arr.cend() - 1)
+            continue;
         _stream << ",";
     }
     _stream << "]";
 }
 
 template <typename StreamTy>
-void PrintVisitor<StreamTy>::visit(json::Object& ob) {
+void PrintVisitor<StreamTy>::visit(json::Object &ob) {
     _stream << "{";
     for (auto it = ob.cbegin(); it != ob.cend(); it++) {
         _stream << "\"" << it->key << "\"";
         _stream << ":";
         it->value->visit(*this);
-        if (it == ob.cend() - 1) continue;
+        if (it == ob.cend() - 1)
+            continue;
         _stream << ",";
     }
     _stream << "}";
 }
 
-TEST_CASE( "Loaded json correctly", "[json loading]") {
+TEST_CASE("Loaded json correctly", "[json loading]") {
     mg::init();
 
     std::ostringstream out;
@@ -82,16 +84,18 @@ TEST_CASE( "Loaded json correctly", "[json loading]") {
     {
         using namespace ss;
         Buffer text(mg::default_allocator());
-        text << "{\"name\": \"Yennefer\", \"designation\": \"Sorceress\",\"attrs\": [90, 90, 80]}";
-        json::Object& ob = *json::Parser(std::move(scanner::Scanner(std::move(text)))).parse();
+        text << "{\"name\": \"Yennefer\", \"designation\": "
+                "\"Sorceress\",\"attrs\": [90, 90, 80]}";
+        json::Parser p(std::move(scanner::Scanner(std::move(text))));
+        json::Object &ob = *p.parse();
         pv.visit(ob);
-        REQUIRE( out.str() == "{\"name\":\"Yennefer\",\"designation\":\"Sorceress\",\"attrs\":[90,90,80]}");
+        REQUIRE(out.str() == "{\"name\":\"Yennefer\",\"designation\":"
+                             "\"Sorceress\",\"attrs\":[90,90,80]}");
         MAKE_DELETE(OBJECT_ALLOCATOR, Object, &ob);
     }
 
     mg::shutdown();
 }
-
 
 /*
 int main(int argc, char **argv) {
@@ -109,7 +113,7 @@ int main(int argc, char **argv) {
 
     std::ostringstream out;
     {
-        // Building a json value 
+        // Building a json value
         // {"name": "Yennefer", "designation": "Sorceress",
         // "attrs": [90, 90, 80]}
         json::Object ob(true);
@@ -125,12 +129,17 @@ int main(int argc, char **argv) {
         Buffer attrs(OBJECT_ALLOCATOR);
         attrs << "attrs";
 
-        ob.add_key_value(c_str(std::move(name)), MAKE_NEW(OBJECT_ALLOCATOR, json::String, "Yennefer"));
-        ob.add_key_value(c_str(std::move(designation)), MAKE_NEW(OBJECT_ALLOCATOR, json::String, "Sorceress"));
+        ob.add_key_value(c_str(std::move(name)), MAKE_NEW(OBJECT_ALLOCATOR,
+json::String, "Yennefer"));
+        ob.add_key_value(c_str(std::move(designation)),
+MAKE_NEW(OBJECT_ALLOCATOR, json::String, "Sorceress"));
         auto arr = MAKE_NEW(OBJECT_ALLOCATOR, json::Array);
-        fo::array::push_back(arr->get_array(), static_cast<json::Value*>(MAKE_NEW(OBJECT_ALLOCATOR, json::Number, 90)));
-        fo::array::push_back(arr->get_array(), static_cast<json::Value*>(MAKE_NEW(OBJECT_ALLOCATOR, json::Number, 90)));
-        fo::array::push_back(arr->get_array(), static_cast<json::Value*>(MAKE_NEW(OBJECT_ALLOCATOR, json::Number, 80)));
+        fo::array::push_back(arr->get_array(),
+static_cast<json::Value*>(MAKE_NEW(OBJECT_ALLOCATOR, json::Number, 90)));
+        fo::array::push_back(arr->get_array(),
+static_cast<json::Value*>(MAKE_NEW(OBJECT_ALLOCATOR, json::Number, 90)));
+        fo::array::push_back(arr->get_array(),
+static_cast<json::Value*>(MAKE_NEW(OBJECT_ALLOCATOR, json::Number, 80)));
         ob.add_key_value(c_str(std::move(attrs)), arr);
         pv.visit(ob);
         std::cout << std::endl;

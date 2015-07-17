@@ -3,6 +3,7 @@
 
 namespace json {
 
+// Class Parser function implementation
 
 Value *Parser::_error(const char *fmt, ...) {
     ss::Buffer text(mg::default_allocator());

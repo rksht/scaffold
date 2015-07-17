@@ -11,11 +11,6 @@
 #include <utility>
 #include <stdio.h>
 
-// This is a very simple json loader. But the getters for the objects
-// return non-const references to the data structures used, so it can be used to
-// make up a json value using the usual array, hash, string_stream, etc.
-// functions.
-
 namespace json {
 
 namespace fo = foundation;
@@ -43,12 +38,28 @@ class VisitorIF {
 // A json value
 class Value {
   public:
+    enum ValueKind {
+        OBJECT,
+        ARRAY,
+        STRING,
+        NUMBER,
+    };
+
+    const ValueKind _kind;
+
+  public:
+    Value(ValueKind kind) : _kind(kind) {}
+
     virtual ~Value() {}
 
     virtual void visit(VisitorIF &v) = 0;
 };
 
 class Parser;
+
+// The JSON types are subclasses of `Value`. Each has a member function of the
+// form `get_xxx` for the accessing the inner data structure. There is also a
+// `get` function for object and array that return a pointer to a (const) value.
 
 class Object : public Value {
   public:
@@ -62,12 +73,14 @@ class Object : public Value {
 
   public:
     Object(bool keys_owned)
-        : _map(OBJECT_ALLOCATOR, OBJECT_ALLOCATOR, pod_hash::usual_hash<char*>,
-               pod_hash::usual_equal<char*>),
+        : Value(ValueKind::OBJECT),
+          _map(OBJECT_ALLOCATOR, OBJECT_ALLOCATOR, pod_hash::usual_hash<char *>,
+               pod_hash::usual_equal<char *>),
           _keys_owned(keys_owned) {}
 
     Object(Object &&other)
-        : _map(std::move(other._map)), _keys_owned(other._keys_owned) {}
+        : Value(ValueKind::OBJECT), _map(std::move(other._map)),
+          _keys_owned(other._keys_owned) {}
 
     ~Object() {
         // Moved or not.
@@ -85,11 +98,17 @@ class Object : public Value {
     }
 
   public:
-    // Returns the map
+    // Get the map
     map_type &get_map() { return _map; }
+
     // For iterating the map directly
     const map_type::Entry *cbegin() const { return pod_hash::cbegin(_map); }
     const map_type::Entry *cend() const { return pod_hash::cend(_map); }
+
+    Value const *get(const char *key) const {
+        return pod_hash::get_default(_map, const_cast<char *>(key),
+                                     (Value *)nullptr);
+    }
 
     // Returns false if key already exists, otherwise adds the given value and
     // returns true.
@@ -111,7 +130,7 @@ class Array : public Value {
     friend class Parser;
 
   public:
-    Array() : _arr(OBJECT_ALLOCATOR) {}
+    Array() : Value(ValueKind::ARRAY), _arr(OBJECT_ALLOCATOR) {}
 
     ~Array() {
         for (Value **vp = fo::array::begin(_arr); vp != fo::array::end(_arr);
@@ -121,6 +140,8 @@ class Array : public Value {
     }
 
     fo::Array<Value *> &get_array() { return _arr; }
+
+    Value const *get(int i) { return _arr[i]; }
 
     Value *const *cbegin() const { return fo::array::begin(_arr); }
 
@@ -135,16 +156,17 @@ class String : public Value {
     friend class Parser;
 
   public:
-    String(ss::Buffer &&buf) : _buf(std::move(buf)) {}
+    String(ss::Buffer &&buf) : Value(ValueKind::STRING), _buf(std::move(buf)) {}
 
-    String(const char *cstr) : _buf(OBJECT_ALLOCATOR) {
+    String(const char *cstr)
+        : Value(ValueKind::STRING), _buf(OBJECT_ALLOCATOR) {
         using namespace ss;
         _buf << cstr;
     }
 
     ss::Buffer &get_buffer() { return _buf; }
 
-    const char *get_cstr() { return ss::c_str(_buf); }
+    char const *get_cstr() { return ss::c_str(_buf); }
 
     void visit(VisitorIF &v) { v.visit(*this); }
 };
@@ -154,7 +176,7 @@ class Number : public Value {
     double _num;
 
   public:
-    Number(double num) : _num(num) {}
+    Number(double num) : Value(ValueKind::NUMBER), _num(num) {}
 
     double &get_number() { return _num; }
 
