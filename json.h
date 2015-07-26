@@ -45,10 +45,10 @@ class Value {
         NUMBER,
     };
 
-    const ValueKind _kind;
+    const ValueKind kind;
 
   public:
-    Value(ValueKind kind) : _kind(kind) {}
+    Value(ValueKind kind) : kind(kind) {}
 
     virtual ~Value() {}
 
@@ -58,8 +58,7 @@ class Value {
 class Parser;
 
 // The JSON types are subclasses of `Value`. Each has a member function of the
-// form `get_xxx` for the accessing the inner data structure. There is also a
-// `get` function for object and array that return a pointer to a (const) value.
+// form `get for the accessing the inner data structure.
 
 class Object : public Value {
   public:
@@ -98,20 +97,12 @@ class Object : public Value {
     }
 
   public:
-    // Get the map
-    map_type &get_map() { return _map; }
 
-    // For iterating the map directly
-    const map_type::Entry *cbegin() const { return pod_hash::cbegin(_map); }
-    const map_type::Entry *cend() const { return pod_hash::cend(_map); }
+    /// Returns reference to the inner map
+    map_type &get() { return _map; }
 
-    Value const *get(const char *key) const {
-        return pod_hash::get_default(_map, const_cast<char *>(key),
-                                     (Value *)nullptr);
-    }
-
-    // Returns false if key already exists, otherwise adds the given value and
-    // returns true.
+    /// Returns false if key already exists, otherwise adds the given value and
+    /// returns true.
     bool add_key_value(char *key, Value *value) {
         if (pod_hash::has(_map, key)) {
             return false;
@@ -139,13 +130,8 @@ class Array : public Value {
         }
     }
 
-    fo::Array<Value *> &get_array() { return _arr; }
-
-    Value const *get(int i) { return _arr[i]; }
-
-    Value *const *cbegin() const { return fo::array::begin(_arr); }
-
-    Value *const *cend() const { return fo::array::end(_arr); }
+    /// Returns reference to the inner array
+    fo::Array<Value *> &get() { return _arr; }
 
     void visit(VisitorIF &v) override { v.visit(*this); }
 };
@@ -164,9 +150,8 @@ class String : public Value {
         _buf << cstr;
     }
 
-    ss::Buffer &get_buffer() { return _buf; }
-
-    char const *get_cstr() { return ss::c_str(_buf); }
+    /// Returns reference to the inner buffer
+    ss::Buffer &get() { return _buf; }
 
     void visit(VisitorIF &v) { v.visit(*this); }
 };
@@ -178,7 +163,8 @@ class Number : public Value {
   public:
     Number(double num) : Value(ValueKind::NUMBER), _num(num) {}
 
-    double &get_number() { return _num; }
+    /// Returns reference to the inner number
+    double &get() { return _num; }
 
     void visit(VisitorIF &v) { v.visit(*this); }
 };

@@ -42,20 +42,20 @@ template <typename StreamTy> class PrintVisitor : public json::VisitorIF {
 
 template <typename StreamTy>
 void PrintVisitor<StreamTy>::visit(json::Number &num) {
-    _stream << num.get_number();
+    _stream << num.get();
 }
 
 template <typename StreamTy>
 void PrintVisitor<StreamTy>::visit(json::String &str) {
-    _stream << "\"" << str.get_cstr() << "\"";
+    _stream << "\"" << ss::c_str(str.get()) << "\"";
 }
 
 template <typename StreamTy>
 void PrintVisitor<StreamTy>::visit(json::Array &arr) {
     _stream << "[";
-    for (auto it = arr.cbegin(); it != arr.cend(); it++) {
+    for (auto it = fo::array::begin(arr.get()); it != fo::array::end(arr.get()); it++) {
         (*it)->visit(*this);
-        if (it == arr.cend() - 1)
+        if (it == fo::array::end(arr.get()) - 1)
             continue;
         _stream << ",";
     }
@@ -65,11 +65,11 @@ void PrintVisitor<StreamTy>::visit(json::Array &arr) {
 template <typename StreamTy>
 void PrintVisitor<StreamTy>::visit(json::Object &ob) {
     _stream << "{";
-    for (auto it = ob.cbegin(); it != ob.cend(); it++) {
+    for (auto it = pod_hash::cbegin(ob.get()); it != pod_hash::cend(ob.get()); it++) {
         _stream << "\"" << it->key << "\"";
         _stream << ":";
         it->value->visit(*this);
-        if (it == ob.cend() - 1)
+        if (it == pod_hash::cend(ob.get()) - 1)
             continue;
         _stream << ",";
     }
