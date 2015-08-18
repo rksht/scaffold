@@ -133,6 +133,7 @@ template <typename K, typename V>
 void rehash(Hash<K, V> &h, uint32_t new_size) {
     Hash<K, V> nh(*h._hashes._allocator, *h._entries._allocator, h._hash_func,
                   h._equal_func); // a new hash table
+    fo::array::clear(h._hashes); // Don't need the previous hashes.
     fo::array::resize(nh._hashes, new_size);
     fo::array::reserve(nh._entries, fo::array::size(h._entries));
     for (uint32_t i = 0; i < new_size; ++i) {
@@ -239,7 +240,7 @@ template <typename K, typename V> bool has(Hash<K, V> &h, const K &key) {
 /// Returns the value associated with the given key if the key exists, otherwise
 /// creates a new entry and sets its value to deffault and returns it.
 template <typename K, typename V>
-const V &set_default(Hash<K, V> &h, const K &key, const V &deffault) {
+V &set_default(Hash<K, V> &h, const K &key, const V &deffault) {
     _internal::FindResult fr = _internal::find(h, key);
     if (fr.entry_i == _internal::END_OF_LIST) {
         const uint32_t ei = _internal::make(h, key);
@@ -252,7 +253,7 @@ const V &set_default(Hash<K, V> &h, const K &key, const V &deffault) {
 /// Returns reference to value associated with the given key if the key exists,
 /// otherwise returns deffault. Does not add any entry to the table.
 template <typename K, typename V>
-const V &get_default(const Hash<K, V> &h, const K &key, const V &deffault) {
+V &get_default(const Hash<K, V> &h, const K &key, V &deffault) {
     _internal::FindResult fr = _internal::find(h, key);
     if (fr.entry_i == _internal::END_OF_LIST) {
         return deffault;
