@@ -5,7 +5,7 @@ CC = clang
 CXXFLAGS = -std=c++11 -g -Wall
 CFLAGS = -g -Wall
 
-SRC_DIR := /home/snyp/text/code/C++/scaffold
+SRC_DIR := /home/snyp/gits/scaffold
 
 # Foundation library
 FOUNDATION_HEADERS := types.h array.h queue.h hash.h memory.h memory_types.h murmur_hash.h \
