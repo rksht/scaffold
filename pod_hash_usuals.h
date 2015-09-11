@@ -20,7 +20,8 @@ namespace pod_hash {
 // char* strings
 template <> uint64_t usual_hash(char *const *s);
 template <> bool usual_equal(char *const &s1, char *const &s2);
+
 // char
 template <> uint64_t usual_hash(char const *s);
 template <> bool usual_equal(char const &s1, char const &s2);
-}
+} // namespace pod_hash
