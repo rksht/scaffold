@@ -1,9 +1,7 @@
 #pragma once
 
-#include <string.h>
-#include <stdint.h>
+#include <memory> // std::move
 #include <assert.h>
-#include <memory>
 
 /// Namespace rbt contains a non-owning red-black tree implementation.
 namespace rbt {
@@ -20,21 +18,28 @@ const int RIGHT = 1;
 /// operator=(k1, k2) returns false). The tree does not own the nodes and will
 /// not free them. So don't forget to walk the tree and free the nodes!
 template <typename K, typename V> struct RBNode {
+    /// Color of node
     RBColor _color;
+    /// The parent node
     RBNode<K, V> *_parent;
+    /// The two kid nodes
     RBNode<K, V> *_kids[2];
 
-    K _key; // Key
-    V _val; // Value
+    /// Key
+    K _key;
+    /// Value
+    V _val;
 
-    RBNode(const K &key, const V &val) : _key(key), _val(val) {}
+    RBNode(const K &key, const V &val)
+        : _color(BLACK), _parent(nullptr), _kids{nullptr, nullptr}, _key(key),
+          _val(val) {}
 
     RBNode(K &&key, V &&val) : _key(std::move(key)), _val(std::move(val)) {}
 
     RBNode(const RBNode<K, V> &other) = delete;
 };
 
-// The nil node shared by any and every `RBT<K, V>`
+// The nil node shared by any and every instance `RBT<K, V>`
 extern struct Nil {
     RBColor _color;
     Nil *_parent;
@@ -62,9 +67,9 @@ template <typename K, typename V> struct RBT {
         _root = nullptr;
     }
 
-    /// No copying please. That would require the tree to own the nodes hence
-    /// have knowledge of how to allocate and deallocate nodes - which it does
-    /// not.
+    /// No copy construction. That would require the tree to own the nodes
+    /// hence have knowledge of how to allocate and deallocate nodes - which
+    /// it does not.
     RBT(const RBT<K, V> &other) = delete;
 
     /// Move constructor

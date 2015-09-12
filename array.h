@@ -36,13 +36,12 @@ template <typename T> void resize(Array<T> &a, uint32_t new_size);
 template <typename T> void clear(Array<T> &a);
 /// Reallocates the array to the specified capacity.
 template <typename T> void set_capacity(Array<T> &a, uint32_t new_capacity);
-/// Makes sure that the array has at least the specified capacity.
-/// (If not, the array is grown.)
+/// Makes sure that the array has at least the specified capacity. (If not,
+/// the array is grown.)
 template <typename T> void reserve(Array<T> &a, uint32_t new_capacity);
 /// Grows the array using a geometric progression formula, so that the
-/// ammortized
-/// cost of push_back() is O(1). If a min_capacity is specified, the array will
-/// grow to at least that capacity.
+/// ammortized cost of push_back() is O(1). If a min_capacity is specified,
+/// the array will grow to at least that capacity.
 template <typename T> void grow(Array<T> &a, uint32_t min_capacity = 0);
 /// Trims the array so that its capacity matches its size.
 template <typename T> void trim(Array<T> &a);
@@ -92,6 +91,11 @@ template <typename T> inline void trim(Array<T> &a) {
 template <typename T> void resize(Array<T> &a, uint32_t new_size) {
     if (new_size > a._capacity)
         grow(a, new_size);
+
+#ifdef ARRAY_ZERO_MEM
+    // If that pp flag is defined, zero fill the remaining memory.
+    memset(&a._data[new_size], 0, a.size - a.new_size);
+#endif
     a._size = new_size;
 }
 

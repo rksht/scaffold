@@ -13,8 +13,8 @@ struct Data {
     uint64_t mp;
 };
 
-uint64_t Data_hash(const Data *d) {
-    return murmur_hash_64(d, sizeof(Data), 0xDEADBEEF);
+uint64_t Data_hash(const Data &d) {
+    return murmur_hash_64(&d, sizeof(Data), 0xDEADBEEF);
 }
 
 bool Data_equal(const Data &d1, const Data &d2) {

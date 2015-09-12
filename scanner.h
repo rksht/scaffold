@@ -31,7 +31,11 @@ enum Modes {
     SCAN_ESCAPES = 1 << -ESCAPE, // This will inteprete escape codes all throughout the string
 };
 
+/// This default mode is like scanning most simple languages
 const int DEFAULT_MODE = SCAN_INTS | SCAN_FLOATS | SCAN_STRINGS | SCAN_IDENTS;
+
+/// This mode treats the whole text as if being inside a string literal. It
+/// scans characters one by one and also interpretes escape codes.
 const int WHOLESTRING_MODE = SCAN_SPACES | SCAN_ESCAPES;
 
 /// Contains the current state of the scanner

@@ -16,11 +16,11 @@ namespace pod_hash {
 namespace fo = foundation;
 
 /// Type of hashing function
-template <typename K> using HashFunc = uint64_t (*)(const K *key_p);
+template <typename K> using HashFunc = uint64_t (*)(K const &key);
 
 /// Type of equal operator function - operator== can't be used as it doesn't
 /// work on non-class or non-enumerator types.
-template <typename K> using EqualFunc = bool (*)(const K &k1, const K &k2);
+template <typename K> using EqualFunc = bool (*)(K const &k1, K const &k2);
 
 /// Hash<K, V>.
 template <typename K, typename V> struct Hash {
@@ -115,7 +115,7 @@ FindResult find(const Hash<K, V> &h, const K &key) {
         return fr;
     }
 
-    fr.hash_i = h._hash_func(&key) % fo::array::size(h._hashes);
+    fr.hash_i = h._hash_func(key) % fo::array::size(h._hashes);
     fr.entry_i = h._hashes[fr.hash_i];
     while (fr.entry_i != END_OF_LIST) {
         if (h._equal_func(h._entries[fr.entry_i].key, key)) {
