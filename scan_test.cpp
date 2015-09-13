@@ -32,11 +32,11 @@ int main(int argc, char **argv) {
         int token = scanner::next(s);
 
         while (token != scanner::EOFS) {
-            ss::Buffer token_text(mg::default_allocator());
-            scanner::token_text(s, token_text);
-            printf("(%s %d:%d - %s - [%c])", scanner::desc(token), s.line, s.col,
-                   ss::c_str(token_text), token);
+            sds text = scanner::get_token_text(s);
+            printf("(%s\t%d\t%d\t%s\t[%c])\n", scanner::desc(token), s.line, s.col,
+                   text, token);
             printf("------\n");
+            sdsfree(text);
             token = scanner::next(s);
         }
     }

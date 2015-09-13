@@ -170,19 +170,25 @@ const char *desc(int token) {
     }
 }
 
-void token_text(Scanner &s, Buffer &b) {
+void token_text(const Scanner &s, Buffer &b) {
     for (int i = s.token_start; i < s.offset; ++i) {
         b << s._text[i];
     }
 }
 
-char *token_text(Scanner &s, Allocator &a) {
+char *token_text(const Scanner &s, Allocator &a) {
     uint32_t length = s.offset - s.token_start;
     char *buf = (char *)a.allocate(
         length + 1, 4); // Aligning to 4 bytes in case scratch allocator is used
     memcpy(buf, c_str(s._text) + s.token_start, length);
     buf[length] = 0;
     return buf;
+}
+
+sds get_token_text(const Scanner &s) {
+    const int length = s.offset - s.token_start;
+    sds str = sdsnewlen(NULL, length);
+    return sdscpylen(str, c_str(s._text) + s.token_start, length);
 }
 
 void string_token(Buffer &b, Buffer &raw) {

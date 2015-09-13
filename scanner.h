@@ -3,6 +3,7 @@
 #include "memory.h"
 #include "array.h"
 #include "string_stream.h"
+#include "sds.h"
 
 namespace scanner {
 
@@ -40,7 +41,7 @@ const int WHOLESTRING_MODE = SCAN_SPACES | SCAN_ESCAPES;
 
 /// Contains the current state of the scanner
 struct Scanner {
-    Buffer _text;
+    mutable Buffer _text;
     int mode;
     int line;
     int col;
@@ -60,9 +61,12 @@ int next(Scanner &s);
 /// Returns a description of the given token id
 const char *desc(int token);
 /// Fills the buffer with the current token text
-void token_text(Scanner &s, Buffer &b);
+void token_text(const Scanner &s, Buffer &b);
 /// Overload of token_text that returns a null terminated c-string
-char *token_text(Scanner &s, Allocator &a);
+char *token_text(const Scanner &s, Allocator &a);
+
+sds get_token_text(const Scanner &s);
+
 /// A function that takes takes a buffer and a raw string token text
 /// and stores the in-memory representation of the string in the buffer.
 /// Call this on the token for the STRING type

@@ -16,30 +16,38 @@ struct Student {
     long mana;
     char c;
 
-    Student (long id, long mana, char c)
-        : id(id), mana(mana), c(c) {}
+    Student(long id, long mana, char c) : id(id), mana(mana), c(c) {}
 };
 
-
-int main(int argc, char** argv)
-{
+int main() {
     init();
     {
         const int nr_objects = (2 * 1024 * 1024) / sizeof(Student);
-        printf("Size = %f kbytes\n", (float)nr_objects * sizeof(Student) / 1024);
-        Array<Student*> students(default_allocator());
-        Student* student_p;
+        printf("Size = %f kbytes\n",
+               (float)nr_objects * sizeof(Student) / 1024);
+        Array<Student *> students(default_allocator());
+        Student *student_p;
         for (int i = 0; i < nr_objects; ++i) {
-            student_p = MAKE_NEW(default_arena_allocator(), Student, i, i, i % 128);
+            student_p =
+                MAKE_NEW(default_arena_allocator(), Student, i, i, i % 128);
             array::push_back(students, student_p);
         }
-        printf("Total allocated: %d bytes\n", default_arena_allocator().total_allocated());
+        printf("Total allocated: %u bytes\n",
+               default_arena_allocator().total_allocated());
         int j = 0;
-        for (Student** i = array::begin(students); i != array::end(students); ++i) {
-            if ((*i)->id != (*i)->mana && (*i)->c  == j % 128) {
-                printf("%li %li %c - at %d\n", (*i)->id, (*i)->mana, (*i)->c, j);
+        for (Student **i = array::begin(students); i != array::end(students);
+             ++i) {
+            if ((*i)->id != (*i)->mana && (*i)->c == j % 128) {
+                printf("%li %li %c at %d, size = %u\n", (*i)->id, (*i)->mana,
+                       (*i)->c, j,
+                       default_arena_allocator().allocated_size(*i));
                 fflush(stdout);
                 assert(0);
+            } else {
+                uint32_t size = default_arena_allocator().allocated_size(*i);
+                assert(size == sizeof(Student));
+                printf("%li %li %c at %d, size = %u\n", (*i)->id, (*i)->mana,
+                       (*i)->c, j, size);
             }
             ++j;
         }

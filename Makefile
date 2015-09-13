@@ -2,18 +2,18 @@ CXX = clang++
 CC = clang
 
 # Edit these flags if needed
-CXXFLAGS = -std=c++11 -g -Wall
+CXXFLAGS = -std=c++14 -O3 -Wall
 CFLAGS = -g -Wall
 
 SRC_DIR := /home/snyp/gits/scaffold
 
 # Foundation library
 FOUNDATION_HEADERS := types.h array.h queue.h hash.h memory.h memory_types.h murmur_hash.h \
-  string_stream.h math_types.h temp_allocator.h pod_hash.h pod_hash_usuals.h
+  string_stream.h math_types.h temp_allocator.h pod_hash.h pod_hash_usuals.h sds.h
 
 FOUNDATION_HEADERS := $(patsubst %,$(SRC_DIR)/%,$(FOUNDATION_HEADERS))
 
-FOUNDATION_SOURCES := memory.cpp string_stream.cpp murmur_hash.cpp pod_hash_usuals.cpp
+FOUNDATION_SOURCES := memory.cpp string_stream.cpp murmur_hash.cpp pod_hash_usuals.cpp sds.cpp
 
 FOUNDATION_OBJECTS := $(patsubst %.cpp,%.o,$(FOUNDATION_SOURCES))
 
@@ -61,13 +61,13 @@ $(JSON_LIB): $(JSON_OBJECT) $(FOUNDATION_LIB) $(SCANNER_LIB)
 
 # Build the app
 # Edit these variables
-##APP :=  scan_test
-##APP_HEADERS := 
-##APP_SOURCES  := scan_test.cpp
-
-APP := json_test
+APP :=  scan_test
 APP_HEADERS := 
-APP_SOURCES  := json_test.cpp
+APP_SOURCES  := scan_test.cpp
+
+##APP := json_test
+##APP_HEADERS := 
+##APP_SOURCES  := json_test.cpp
 # Prepend build dir
 APP_OBJECTS := $(patsubst %.cpp,%.o,$(APP_SOURCES))
 APP_SOURCES := $(patsubst %,$(SRC_DIR)/%,$(APP_SOURCES))

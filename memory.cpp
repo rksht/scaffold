@@ -253,7 +253,7 @@ class ArenaAllocator : public Allocator {
         uint32_t pad_size;
 
         if (size % alignof(_Header) != 0) {
-            printf("Size not equal to align of header\n");
+            printf("Size requested is not a multiple of the alignment of header\n");
             int mod = size % alignof(_Header);
             if (mod) {
                 size += alignof(_Header) - mod;
