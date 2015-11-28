@@ -2,7 +2,7 @@ CXX = clang++
 CC = clang
 
 # Edit these flags if needed
-CXXFLAGS = -std=c++14 -O3 -Wall
+CXXFLAGS = -std=c++14 -ggdb -fsanitize=address -Wall
 CFLAGS = -g -Wall
 
 SRC_DIR := /home/snyp/gits/scaffold
@@ -61,12 +61,12 @@ $(JSON_LIB): $(JSON_OBJECT) $(FOUNDATION_LIB) $(SCANNER_LIB)
 
 # Build the app
 # Edit these variables
-APP :=  scan_test
-APP_HEADERS := 
-APP_SOURCES  := scan_test.cpp
+APP :=  rbt_test
+APP_HEADERS :=
+APP_SOURCES  := rbt_test.cpp
 
 ##APP := json_test
-##APP_HEADERS := 
+##APP_HEADERS :=
 ##APP_SOURCES  := json_test.cpp
 # Prepend build dir
 APP_OBJECTS := $(patsubst %.cpp,%.o,$(APP_SOURCES))

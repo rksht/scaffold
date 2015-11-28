@@ -1,5 +1,6 @@
 #pragma once
 
+#include "memory.h"
 #include <memory> // std::move
 #include <assert.h>
 
@@ -39,18 +40,6 @@ template <typename K, typename V> struct RBNode {
     RBNode(const RBNode<K, V> &other) = delete;
 };
 
-// The nil node shared by any and every instance `RBT<K, V>`
-extern struct Nil {
-    RBColor _color;
-    Nil *_parent;
-    Nil *_kids[2];
-} g_nil_node;
-
-/// Returns a pointer to the nil node cast to `RBNode<K, V>*`
-template <typename K, typename V> static inline RBNode<K, V> *NilNode() {
-    return reinterpret_cast<RBNode<K, V> *>(&g_nil_node);
-}
-
 /// RBT<K, V> represents a red black tree.
 template <typename K, typename V> struct RBT {
     /// The pointer to root
@@ -59,12 +48,34 @@ template <typename K, typename V> struct RBT {
     /// Number of nodes in the tree
     size_t _nr_nodes;
 
+    /// Pointer to the nil node
+    struct Nil {
+        RBColor _color;
+        Nil *_parent;
+        Nil *_kids[2];
+    } * _nil;
+
+    /// The allocator that allocates the nil node
+    foundation::Allocator *_nil_alloc;
+
     /// Constructor
-    RBT() : _root(NilNode<K, V>()), _nr_nodes(0) {}
+    RBT(foundation::Allocator &a) {
+        _nil = (Nil *)a.allocate(sizeof(Nil), alignof(Nil));
+        _nil->_color = BLACK;
+        _nil->_parent = nullptr;
+        _nil->_kids[0] = nullptr;
+        _nil->_kids[1] = nullptr;
+        _root = nil_node();
+        _nr_nodes = 0;
+        _nil_alloc = &a;
+    }
 
     ~RBT() {
-        // On deletion, just set these to nullptr to catch any error
+        if (_nil != nullptr) {
+            _nil_alloc->deallocate(_nil);
+        }
         _root = nullptr;
+        _nil = nullptr;
     }
 
     /// No copy construction. That would require the tree to own the nodes
@@ -75,7 +86,9 @@ template <typename K, typename V> struct RBT {
     /// Move constructor
     RBT(RBT<K, V> &&other) {
         _root = other._root;
+        _nil = other._nil;
         other._root = nullptr;
+        other._nil = nullptr;
     }
 
     /// Insert a node
@@ -87,6 +100,11 @@ template <typename K, typename V> struct RBT {
 
     /// Returns a pointer to the node with the given key
     RBNode<K, V> *get_node(const K &key);
+
+    /// Casts `Nil *` to `RBNode<K, V> *`
+    RBNode<K, V> *nil_node() {
+        return reinterpret_cast<RBNode<K, V> *>(_nil);
+    }
 
   private:
     /// Transplants the given node `n2` to the given node `n1`'s position
@@ -109,13 +127,13 @@ template <typename K, typename V> struct RBT {
 namespace rbt {
 template <typename K, typename V>
 static inline bool is_root(RBT<K, V> *t, RBNode<K, V> *n) {
-    return n->_parent == NilNode<K, V>();
+    return n->_parent == t->nil_node();
 }
 
 template <typename K, typename V>
 RBNode<K, V> *RBT<K, V>::get_node(const K &key) {
     auto cur = _root;
-    while (cur != NilNode<K, V>()) {
+    while (cur != nil_node()) {
         if (cur->_key == key) {
             return cur;
         }
@@ -141,19 +159,19 @@ void RBT<K, V>::_graft(RBNode<K, V> *n1, RBNode<K, V> *n2) {
 }
 
 template <typename K, typename V> void RBT<K, V>::insert(RBNode<K, V> *n) {
-    if (_root == NilNode<K, V>()) {
+    if (_root == nil_node()) {
         _root = n;
         n->_color = BLACK;
-        n->_parent = NilNode<K, V>();
-        n->_kids[LEFT] = NilNode<K, V>();
-        n->_kids[RIGHT] = NilNode<K, V>();
+        n->_parent = nil_node();
+        n->_kids[LEFT] = nil_node();
+        n->_kids[RIGHT] = nil_node();
         return;
     }
 
     RBNode<K, V> *cur = _root;
     RBNode<K, V> *par = _root;
     int dir = LEFT;
-    while (cur != NilNode<K, V>()) {
+    while (cur != nil_node()) {
         assert(cur != nullptr);
         par = cur;
         assert(n->_key != cur->_key);
@@ -167,8 +185,8 @@ template <typename K, typename V> void RBT<K, V>::insert(RBNode<K, V> *n) {
     }
     n->_color = RED;
     n->_parent = par;
-    n->_kids[LEFT] = NilNode<K, V>();
-    n->_kids[RIGHT] = NilNode<K, V>();
+    n->_kids[LEFT] = nil_node();
+    n->_kids[RIGHT] = nil_node();
     par->_kids[dir] = n;
     ++_nr_nodes;
 
@@ -209,11 +227,11 @@ template <int left, int right>
 void RBT<K, V>::_rotate(RBNode<K, V> *x) {
     auto y = x->_kids[right];
     x->_kids[right] = y->_kids[left];
-    if (y->_kids[left] != NilNode<K, V>()) {
+    if (y->_kids[left] != nil_node()) {
         y->_kids[left]->_parent = x;
     }
     y->_parent = x->_parent;
-    if (x->_parent == NilNode<K, V>()) {
+    if (x->_parent == nil_node()) {
         _root = y;
     } else if (x == x->_parent->_kids[left]) {
         x->_parent->_kids[left] = y;
@@ -229,16 +247,16 @@ RBNode<K, V> *RBT<K, V>::remove(RBNode<K, V> *n) {
     auto y = n;
     RBColor orig_color = n->_color;
     RBNode<K, V> *x;
-    if (n->_kids[LEFT] == NilNode<K, V>()) {
+    if (n->_kids[LEFT] == nil_node()) {
         x = n->_kids[RIGHT];
         _graft(n, n->_kids[RIGHT]);
-    } else if (n->_kids[RIGHT] == NilNode<K, V>()) {
+    } else if (n->_kids[RIGHT] == nil_node()) {
         x = n->_kids[LEFT];
         _graft(n, n->_kids[RIGHT]);
     } else {
         // minimum of n->_kids[RIGHT]
         auto min = n->_kids[RIGHT];
-        while (min->_kids[LEFT] != NilNode<K, V>()) {
+        while (min->_kids[LEFT] != nil_node()) {
             min = min->_kids[LEFT];
         }
         y = min;
