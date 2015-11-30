@@ -16,7 +16,7 @@ flags = [
     '-std=c++11',
     '-x', 'c++',
     '-isystem', '/usr/local/include',
-    '-I', 'include'
+    '-I', 'src',
     '-I.'
 ]
 
