@@ -253,7 +253,8 @@ class ArenaAllocator : public Allocator {
         uint32_t pad_size;
 
         if (size % alignof(_Header) != 0) {
-            printf("Size requested is not a multiple of the alignment of header\n");
+            printf("Size requested is not a multiple of the alignment of "
+                   "header\n");
             int mod = size % alignof(_Header);
             if (mod) {
                 size += alignof(_Header) - mod;
@@ -326,13 +327,13 @@ struct MemoryGlobals {
     ScratchAllocator *default_scratch_allocator;
     ArenaAllocator *default_arena_allocator;
 
-    MemoryGlobals()
-        : default_allocator(0), default_scratch_allocator(0),
+    constexpr MemoryGlobals()
+        : buffer{0}, default_allocator(0), default_scratch_allocator(0),
           default_arena_allocator(0) {}
 };
 
 MemoryGlobals _memory_globals;
-}
+} // anon namespace
 
 namespace foundation {
 namespace memory_globals {
@@ -366,5 +367,6 @@ void shutdown() {
     _memory_globals.default_allocator->~MallocAllocator();
     _memory_globals = MemoryGlobals();
 }
-}
-}
+} //namespace memory_globals
+} //namespace foundation
+

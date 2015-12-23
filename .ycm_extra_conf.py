@@ -13,9 +13,10 @@ flags = [
     '-Werror',
     '-Wno-variadic-macros',
     '-fexceptions',
-    '-std=c++11',
+    '-std=c++14',
     '-x', 'c++',
     '-isystem', '/usr/local/include',
+    '-isystem', '/usr/include/c++/5.3.0',
     '-I', 'src',
     '-I.'
 ]
