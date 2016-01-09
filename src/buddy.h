@@ -11,27 +11,23 @@
 #include <stdio.h>
 #include <cassert>
 
-#ifdef BUDDY_DEBUG
-#include <iostream>
-#endif
-
 /// A "buddy allocator"
 
 namespace foundation {
 
-// Right now there are 2 problems - how to know the size of the buddy the user
-// is requesting to deallocate(). How to efficiently find adjacent free
+// The two main problems are: How to know the size of the buddy the user
+// is requesting to deallocate(), and how to efficiently find adjacent free
 // buddies of a level that can satisfy a size to allocate.
-
+//
 // The largest number of buddies that can be 'unfree' at any instant is 2 **
 // (num_levels - 1). Now, each of these buddies is mapped onto a unique
 // address in the buffer. So using this addresses as indices we need 2 **
 // (num_buddies - 1) indices to uniquely identify the _start_ position of a
 // buddy.
-
+//
 // But not the level from where this buddy was allocated - Remember, the size
 // of the allocated buddy is just a function of the level and it is one- to-
-// one. As a buddy with index 0 can have sizes (buffer_size >> l) for any
+// one. As a buddy with index 0 can have size (buffer_size >> l) for any
 // level l = 0 to (num_levels - 1). To store the level l of the a buddy whose
 // index is i, we use a bitset (SmallIntArray) and set all of the indices'
 // level to 0 on initialization and set the level for buddy i to the proper l
@@ -39,10 +35,14 @@ namespace foundation {
 // corresponding index i from the pointer passed and the level from the
 // bitset.
 
+namespace _internal {
+
+/// Wrapper class to contain the definition of a header struct that is the
+/// same for any instance of the `BuddyAllocator` templace class
 class BuddyHeader {
   protected:
-    /// The type for headers used to thread the free buddies, and storing the
-    /// size of a buddy
+    /// The type for headers used to thread the free buddies of a level as a
+    /// doubly linked list.
     struct Header {
         Header *_next;
         Header *_prev;
@@ -76,9 +76,11 @@ class BuddyHeader {
         bool is_meaningless() { return _next == nullptr && _prev == nullptr; }
     };
 };
+} // namespace internal
 
+/// The implementation proper of the `BuddyAllocator` class template
 template <uint64_t buffer_size, uint32_t num_levels = 32>
-class BuddyAllocator : public Allocator, public BuddyHeader {
+class BuddyAllocator : public Allocator, public _internal::BuddyHeader {
   private:
     /// Returns the size of any buddy that resides at the given `level`
     static inline constexpr uint64_t _buddy_size_at_level(uint32_t level) {
@@ -174,10 +176,12 @@ class BuddyAllocator : public Allocator, public BuddyHeader {
         int level = _last_level;
         while (true) {
             const uint64_t buddy_size = _buddy_size_at_level((uint32_t)level);
-            // Not big enough buddies or none free, either way, need to go to
-            // upper level
+            // Either buddies are not big enough  or none are free, either
+            // way, need to go to upper level
             if (buddy_size < size || _free_lists[level] == nullptr) {
                 --level;
+                assert(level >= 0 && "Size of memory requested is larger than "
+                                     "the whole buffer size");
                 continue;
             }
 
@@ -205,9 +209,10 @@ class BuddyAllocator : public Allocator, public BuddyHeader {
 
     /// Deallocation implementation
     void deallocate(void *p) override {
-        // Correspondig header pointer - make it meaningless for confidence
+        // Corresponding header pointer - make it meaningless for confidence
         Header *h = (Header *)p;
         h->destroy();
+
         // Get the index of the buddy as known from the address and then the
         // level and size of this buddy
         uint64_t idx = _buddy_index(p);
@@ -248,8 +253,7 @@ class BuddyAllocator : public Allocator, public BuddyHeader {
     }
 
   private:
-    /// Allocates the buffer and initializes the bottom free list. Sets all
-    /// upper free lists to denote them as empty.
+    /// Allocates the buffer and sets up the free lists.
     void _initialize() {
         _mem = _backing->allocate(buffer_size, _buddy_alignment);
         _total_allocated = 0;
@@ -317,6 +321,7 @@ class BuddyAllocator : public Allocator, public BuddyHeader {
 
     void _push_free(Header *h, int level) {
         assert(h->is_meaningless() && "Must be meaningless");
+
         h->_next = _free_lists[level];
         h->_prev = nullptr;
         if (_free_lists[level] != nullptr) {

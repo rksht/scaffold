@@ -4,9 +4,9 @@
 #include <array>
 #include "string.h"
 
-/// A data type that holds `num_int` packed integers which are representable
-/// with `bits_per_int` bits. Uses 32 bit unsigned to store the "small"
-/// integers, so `bits_per_int` must be <= 32
+/// A data type that holds `num_int` packed unsigned integers which are
+/// representable with `bits_per_int` bits. Uses 32 bit unsigned to store the
+/// "small" integers, so `bits_per_int` must be <= 32
 template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
   private:
     static_assert(bits_per_int <= 32,
@@ -42,11 +42,13 @@ template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
         memset(_words.data(), 0, sizeof(uint32_t) * _words.size());
     }
 
-    unsigned get(unsigned idx) const {
+    /// Returns the `idx`-th integer
+    uint32_t get(unsigned idx) const {
         const unsigned offset = idx % _ints_per_word;
         return (_word(idx) & _mask(offset)) >> (offset * bits_per_int);
     }
 
+    /// Sets the `idx`-th integer
     void set(unsigned idx, uint32_t the_int) {
         const unsigned offset = idx % _ints_per_word;
         uint32_t word = _word(idx) & ~(_mask(offset));
