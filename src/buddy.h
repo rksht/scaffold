@@ -65,6 +65,7 @@ class BuddyHeader {
                     _next->_prev = nullptr;
                 }
             }
+            destroy();
         }
 
         /// Make the header meaninglesss
@@ -116,8 +117,7 @@ class BuddyAllocator : public Allocator, public _internal::BuddyHeader {
     std::bitset<(1 << _last_level)> _index_allocated;
 
     /// Level at which the buddy - denoted by its index - is residing
-    SmallIntArray<log2_ceil(num_levels), 1 << _last_level>
-        _current_level_of_index;
+    SmallIntArray<log2_ceil(num_levels), 1 << _last_level> _level_of_index;
 
     /// To support total_allocated() call
     uint64_t _total_allocated;
@@ -148,6 +148,12 @@ class BuddyAllocator : public Allocator, public _internal::BuddyHeader {
     BuddyAllocator(Allocator &backing_allocator)
         : _backing(&backing_allocator), _mem(nullptr) {
         _initialize();
+
+        printf("Buddy allocator initialized - _min_buddy_size = %lu, "
+               "_min_buddy_size_power = %lu, num_levels = %u, num_indices = "
+               "%u\n--\n",
+               _min_buddy_size, _min_buddy_size_power, num_levels,
+               1 << _last_level);
     }
 
     ~BuddyAllocator() {
@@ -159,19 +165,27 @@ class BuddyAllocator : public Allocator, public _internal::BuddyHeader {
 
     uint32_t allocated_size(void *p) override {
         const uint64_t idx = _buddy_index(p);
-        const uint32_t level = _current_level_of_index.get(idx);
+        const uint32_t level = _level_of_index.get(idx);
         return _buddy_size_at_level(level);
     }
 
     /// Allocation implementation
     void *allocate(uint32_t size, uint32_t align) override {
         (void)align; // unused
+        printf("Size = %u, ", size);
         size = clip_to_power_of_2(size);
+        printf("Size = %u, \n", size);
         assert(size >= _min_buddy_size &&
                "Cannot allocate a buddy size smaller than the min");
 
         assert(_buddy_alignment % align == 0 &&
                "Aligned looser than _buddy_alignment");
+
+        if (size > buffer_size) {
+            printf("Warning - size of memory requested is larger than buffer "
+                   "size(=%lu)\n",
+                   buffer_size);
+        }
 
         int level = _last_level;
         while (true) {
@@ -185,30 +199,44 @@ class BuddyAllocator : public Allocator, public _internal::BuddyHeader {
                 continue;
             }
 
-            // GOT IT!
-            if (buddy_size == size) {
-                void *addr = (void *)_free_lists[level];
-                const uint64_t index = _buddy_index(addr);
-
-                _index_allocated[index] = 1;
-                _pop_free(level);
-                _total_allocated += size;
-                return addr;
-            }
-
             // OK, at least 1 free and buddy size is actually a greater power of
             // 2, break it in half and put the buddies in the lower level just
             // below, and check the lower level
             if (buddy_size > size) {
+                printf("BuddyAllocator - Break - level - %d\n", level);
                 Header *h = _break_free(level);
                 (void)h;
                 ++level;
+            } else if (buddy_size == size) {
+                // Got the buddy with the exact size
+                void *addr = (void *)_free_lists[level];
+                const uint64_t index = _buddy_index(addr);
+
+#if 0
+                if (_level_of_index.get(index) != level) {
+                    printf("Bad level? %d Index = %lu\n", level, index);
+                    assert(0);
+                }
+#endif
+
+                _index_allocated[index] = true;
+                _pop_free(level);
+                _total_allocated += size;
+                printf("BuddyAllocator - Allocated - Level - %u, Index - %u "
+                       "(Size = %u)\n--\n",
+                       level, index, size);
+                assert(addr >= _mem);
+                return addr;
             }
         }
     }
 
     /// Deallocation implementation
     void deallocate(void *p) override {
+        if (p == nullptr) {
+            return;
+        }
+
         // Corresponding header pointer - make it meaningless for confidence
         Header *h = (Header *)p;
         h->destroy();
@@ -216,11 +244,15 @@ class BuddyAllocator : public Allocator, public _internal::BuddyHeader {
         // Get the index of the buddy as known from the address and then the
         // level and size of this buddy
         uint64_t idx = _buddy_index(p);
-        int level = (int)_current_level_of_index.get(idx);
+        const int this_level = (int)_level_of_index.get(idx);
+        int level = this_level;
+
+        _index_allocated[idx] = false;
 
         _total_allocated -= _buddy_size_at_level((uint32_t)level);
 
         while (level > 0) {
+            printf("%d iteration\n", this_level - level + 1);
             uint64_t size = _buddy_size_at_level((uint32_t)level);
 
             // Check if the adjacent levels can be repeatedly merged
@@ -229,33 +261,57 @@ class BuddyAllocator : public Allocator, public _internal::BuddyHeader {
             // If the buddy's index is even then buddy to right is the candidate
             // for merging, otherwise it's the one to the left
             if (idx % 2 == 0) {
-                m = h + size;
+                m = (Header *)((char *)h + size);
             } else {
-                m = h - size;
+                m = (Header *)((char *)h - size);
+                h = m;
             }
             // Is it free and also at the same level? If so, merge the two and
             // put the resulting buddy in the upper level. Remember that h is
-            // never in the free list as buddy corresponding with h was
-            // allocated!
+            // not in the free list in the first round of the loop as buddy
+            // corresponding with h was allocated.
             const uint32_t adj_idx = _buddy_index(m);
+            printf("BuddyAllocator - Try to merge (Level - %d), indexes - (%u, "
+                   "%u)\n",
+                   level, idx, adj_idx);
+            fflush(stdout);
             if (!_index_allocated[adj_idx] &&
-                _current_level_of_index.get((int)adj_idx) == (uint32_t)level) {
+                _level_of_index.get(adj_idx) == (uint32_t)level) {
+                printf(
+                    "BuddyAllocator - Merge (Level - %d), indexes - (%u, %u)\n",
+                    level, idx, adj_idx);
+
+                // Remove both the buddies from the lists
                 m->remove_self_from_list(_free_lists, level);
-                _push_free(h, level - 1);
-                h = m < h ? m : h;
+                if (level < this_level) {
+                    h->remove_self_from_list(_free_lists, level);
+                }
+                // The new level
+                --level;
+                _push_free(h, level);
+                _level_of_index.set(idx, (uint32_t)level);
+                _level_of_index.set(adj_idx, (uint32_t)level);
                 idx = _buddy_index((void *)h);
             } else {
                 // Could not merge with any - break out
-                _push_free(h, level);
+                h->destroy();
+                _push_free(h, (uint32_t)level);
+                _index_allocated[idx] = false;
                 break;
             }
         }
+        printf("BuddyAllocator - Deallocated(Prev level = %i, New level = %i "
+               "Index - %u)\n--\n",
+               this_level, level, idx);
     }
+
+    void print_level_map() { _level_of_index.print(); }
 
   private:
     /// Allocates the buffer and sets up the free lists.
     void _initialize() {
         _mem = _backing->allocate(buffer_size, _buddy_alignment);
+        assert(_mem != nullptr && "backing allocator failed?!");
         _total_allocated = 0;
 
 // No need to do this as
@@ -265,7 +321,7 @@ class BuddyAllocator : public Allocator, public _internal::BuddyHeader {
         const uint64_t num_buddies = 1 << (num_levels - 1);
         for (uint64_t i = 0; i < num_buddies; ++i) {
             _index_allocated[i] = 0;
-            _current_level_of_index[i] = 0;
+            _level_of_index[i] = 0;
         }
 #endif
 
@@ -287,6 +343,7 @@ class BuddyAllocator : public Allocator, public _internal::BuddyHeader {
     /// Returns index of the buddy i.e the offset in units of `min_buddy_size`
     /// chunks
     uint32_t _buddy_index(void *p) {
+        assert(p >= _mem);
         const uint64_t diff = (char *)p - (char *)_mem;
         return uint32_t(diff >> _min_buddy_size_power);
     }
@@ -295,31 +352,29 @@ class BuddyAllocator : public Allocator, public _internal::BuddyHeader {
     /// (ensured by the assertion in `allocate`). Updates the `free_list` and
     /// returns pointer to the first of the two resulting headers.
     Header *_break_free(uint32_t level) {
+        const uint32_t new_level = level + 1;
+
         Header *h_level = _free_lists[level];
         Header *h1 = h_level;
         Header *h2 =
-            (Header *)((char *)h_level + (_buddy_size_at_level(level) >> 1));
+            (Header *)((char *)h_level + (_buddy_size_at_level(new_level)));
 
-#if 0
-        printf("h2 - h1 = %lu at level - %u to %u -- while buddy size at next "
-               "lev is %lu\n",
-               (uint8_t *)h2 - (uint8_t *)h1, level, level + 1,
-               _buddy_size_at_level(level) >> 1);
-#endif
+        _pop_free(level);
+        _level_of_index.set(_buddy_index((void *)h1), new_level);
+        _level_of_index.set(_buddy_index((void *)h2), new_level);
 
-        _current_level_of_index.set(_buddy_index((void *)h1), level + 1);
-        _current_level_of_index.set(_buddy_index((void *)h2), level + 1);
+        assert(_level_of_index.get(_buddy_index((void *)h1)) == new_level);
 
         // `_push_free` will assert this
         h1->destroy();
         h2->destroy();
 
-        _push_free(h2, level + 1);
-        _push_free(h1, level + 1);
+        _push_free(h2, new_level);
+        _push_free(h1, new_level);
         return h1;
     }
 
-    void _push_free(Header *h, int level) {
+    void _push_free(Header *h, uint32_t level) {
         assert(h->is_meaningless() && "Must be meaningless");
 
         h->_next = _free_lists[level];
@@ -330,7 +385,7 @@ class BuddyAllocator : public Allocator, public _internal::BuddyHeader {
         _free_lists[level] = h;
     }
 
-    void _pop_free(int level) {
+    void _pop_free(uint32_t level) {
         if (_free_lists[level] != nullptr) {
             _free_lists[level] = _free_lists[level]->_next;
             if (_free_lists[level] != nullptr) {

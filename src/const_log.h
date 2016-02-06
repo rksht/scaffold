@@ -15,13 +15,31 @@ inline constexpr uint32_t clip_to_power_of_2(uint32_t x) {
     return x + 1;
 }
 
-inline constexpr uint32_t log2_ceil(uint32_t n) {
+inline constexpr uint32_t log2_floor(uint32_t n) {
     uint32_t i = 0;
-    while (n > 0) {
-        n = n >> 1;
+    while (n > 1) {
+        n = n / 2;
         ++i;
     }
     return i;
+}
+
+constexpr uint64_t t[6] = {0xFFFFFFFF00000000ull, 0x00000000FFFF0000ull,
+                           0x000000000000FF00ull, 0x00000000000000F0ull,
+                           0x000000000000000Cull, 0x0000000000000002ull};
+
+inline constexpr int log2_ceil(uint64_t x) {
+    uint64_t y = (((x & (x - 1)) == 0) ? 0 : 1);
+    uint64_t j = 32;
+
+    for (uint32_t i = 0; i < 6; i++) {
+        int k = (((x & t[i]) == 0) ? 0 : j);
+        y += k;
+        x >>= k;
+        j >>= 1;
+    }
+
+    return y;
 }
 
 /// Returns `ceil(a/b)`

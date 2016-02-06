@@ -4,6 +4,8 @@
 
 #include <new>
 #include <iostream>
+#include <random>
+#include <set>
 
 constexpr uint32_t BUFFER_SIZE = 1 << 20;   // 1 MB
 constexpr uint32_t SMALLEST_SIZE = 2 << 10; // 2 KB
@@ -11,13 +13,14 @@ constexpr uint32_t NUM_INDICES = BUFFER_SIZE / SMALLEST_SIZE;
 constexpr uint32_t NUM_LEVELS = log2_ceil(NUM_INDICES) + 1;
 
 template <uint32_t bytes>
-using block = std::array<uint32_t, SMALLEST_SIZE / sizeof(uint32_t)>;
+using Block = std::array<uint32_t, bytes / sizeof(uint32_t)>;
 
-using smallest_block = block<SMALLEST_SIZE>;
+using SmallestBlock = Block<SMALLEST_SIZE>;
 
-using block_8KB = block<BUFFER_SIZE / (1 << 13)>;
+using Block_8KB = Block<8 << 10>;
 
-template <typename RandomIter> void fill_ints(RandomIter beg, RandomIter end) {
+template <typename ForwardIter>
+void fill_ints(ForwardIter beg, ForwardIter end) {
     int x = 0;
     for (auto i = beg; i != end; i++, x++) {
         *i = x;
@@ -42,20 +45,66 @@ int main() {
     {
         using BA = foundation::BuddyAllocator<1 << 20, 10>;
         BA ba(foundation::memory_globals::default_allocator());
-        std::cout << "SIZE OF SMALLEST ARRAY = " << sizeof(smallest_block)
+        std::cout << "SIZE OF SMALLEST ARRAY = " << sizeof(SmallestBlock)
                   << std::endl;
 
-        smallest_block &p1 = *((smallest_block *)ba.allocate(
-            sizeof(smallest_block), alignof(smallest_block)));
-        new (&p1) smallest_block();
-        fill_ints(p1.begin(), p1.end());
+        std::default_random_engine dre;
+        std::uniform_int_distribution<int> d(1, 10);
 
-        block_8KB &p2 = *((block_8KB *)ba.allocate(sizeof(block_8KB), alignof(block_8KB)));
-        new(&p2) block_8KB();
-        fill_ints(p1.begin(), p2.end());
+        std::set<void *> allocateds;
 
-        ba.deallocate(&p1);
-        ba.deallocate(&p2);
+        for (int i = 0; i < 10000; ++i) {
+            if (d(dre) < 3) {
+                SmallestBlock &p1 = *((SmallestBlock *)ba.allocate(
+                    sizeof(SmallestBlock), alignof(SmallestBlock)));
+                new (&p1) SmallestBlock();
+
+                allocateds.insert((void *)&p1);
+
+                //ba.print_level_map();
+            }
+
+            int r = d(dre);
+            if (3 <= r < 6) {
+                for (void *p : allocateds) {
+                    if (d(dre) > 4) {
+                        ba.deallocate(p);
+                        allocateds.erase(p);
+                        //ba.print_level_map();
+                        break;
+                    }
+                }
+            }
+
+            r = d(dre);
+
+            if (r < 8) {
+                Block_8KB &p2 = *((Block_8KB *)ba.allocate(sizeof(Block_8KB),
+                                                           alignof(Block_8KB)));
+                new (&p2) Block_8KB();
+                allocateds.insert((void *)&p2);
+                //ba.print_level_map();
+            }
+
+            r = d(dre);
+
+            if (3 <= r < 6) {
+                for (void *p : allocateds) {
+                    if (d(dre) > 4) {
+                        ba.deallocate(p);
+                        allocateds.erase(p);
+                        //ba.print_level_map();
+                        break;
+                    }
+                }
+            }
+        }
+        printf("Remaining - %u\n", ba.total_allocated());
+
+        for (void *p : allocateds) {
+            printf("Removing - %p\n", p);
+            ba.deallocate(p);
+        }
     }
     foundation::memory_globals::shutdown();
 }
