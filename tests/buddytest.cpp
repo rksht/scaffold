@@ -6,6 +6,7 @@
 #include <iostream>
 #include <random>
 #include <set>
+#include <time.h>
 
 constexpr uint32_t BUFFER_SIZE = 1 << 20;   // 1 MB
 constexpr uint32_t SMALLEST_SIZE = 2 << 10; // 2 KB
@@ -27,20 +28,12 @@ void fill_ints(ForwardIter beg, ForwardIter end) {
     }
 }
 
-#if 0
-TEST_CASE("ALLOCATE SMALLEST AMOUNTS", "[allocate_smallest_buddies]") {
-    foundation::memory_globals::init();
-    {
-        SECTION("Initialized OK and then deleted OK") {
-            foundation::BuddyAllocator<1 << 20, 10> ba(
-                foundation::memory_globals::default_allocator());
-        }
-    }
-    foundation::memory_globals::shutdown();
-}
-#endif
+int main(int argc, char **argv) {
+    uint64_t seed =
+        argc == 2 ? strtoull(argv[1], nullptr, 10) : (uint64_t)time(nullptr);
 
-int main() {
+    log_info("Seed = %lu", seed);
+
     foundation::memory_globals::init();
     {
         using BA = foundation::BuddyAllocator<1 << 20, 10>;
@@ -48,7 +41,7 @@ int main() {
         std::cout << "SIZE OF SMALLEST ARRAY = " << sizeof(SmallestBlock)
                   << std::endl;
 
-        std::default_random_engine dre;
+        std::default_random_engine dre(seed);
         std::uniform_int_distribution<int> d(1, 10);
 
         std::set<void *> allocateds;
@@ -61,16 +54,16 @@ int main() {
 
                 allocateds.insert((void *)&p1);
 
-                //ba.print_level_map();
+                // ba.print_level_map();
             }
 
             int r = d(dre);
-            if (3 <= r < 6) {
+            if (3 <= r && r < 8) {
                 for (void *p : allocateds) {
                     if (d(dre) > 4) {
                         ba.deallocate(p);
                         allocateds.erase(p);
-                        //ba.print_level_map();
+                        // ba.print_level_map();
                         break;
                     }
                 }
@@ -78,28 +71,29 @@ int main() {
 
             r = d(dre);
 
-            if (r < 8) {
+            if (r >= 8) {
                 Block_8KB &p2 = *((Block_8KB *)ba.allocate(sizeof(Block_8KB),
                                                            alignof(Block_8KB)));
                 new (&p2) Block_8KB();
                 allocateds.insert((void *)&p2);
-                //ba.print_level_map();
+                // ba.print_level_map();
             }
 
             r = d(dre);
 
-            if (3 <= r < 6) {
+            if (3 <= r && r < 6) {
                 for (void *p : allocateds) {
                     if (d(dre) > 4) {
                         ba.deallocate(p);
                         allocateds.erase(p);
-                        //ba.print_level_map();
+                        // ba.print_level_map();
                         break;
                     }
                 }
             }
         }
         printf("Remaining - %u\n", ba.total_allocated());
+        printf("But have - %lu remaining blocks to free\n", allocateds.size());
 
         for (void *p : allocateds) {
             printf("Removing - %p\n", p);

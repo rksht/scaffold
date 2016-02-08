@@ -2,6 +2,8 @@
 #include "catch.hpp"
 #include "smallintarray.h"
 
+using foundation::SmallIntArray;
+
 TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
     SmallIntArray<4, 512> smallints;
     smallints.set(0, 9);

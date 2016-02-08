@@ -2,12 +2,17 @@
 
 #include "const_log.h"
 #include "string.h"
+#include "debug.h"
+#include "string_stream.h"
 #include <array>
 #include <stdio.h>
+
+namespace foundation {
 
 /// A data type that holds `num_int` packed unsigned integers which are
 /// representable with `bits_per_int` bits. Uses 32 bit unsigned to store the
 /// "small" integers, so `bits_per_int` must be <= 32
+
 template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
   private:
     static_assert(bits_per_int <= 32,
@@ -79,7 +84,7 @@ template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
     /// Ctor - sets all to 0
     SmallIntArray() {
         memset(_words.data(), 0, sizeof(uint32_t) * _words.size());
-        printf("Initialized small ints with %u bits\n", bits_per_int);
+        log_info("Initialized small ints with %u bits\n", bits_per_int);
     }
 
     /// Returns the `idx`-th integer
@@ -104,8 +109,23 @@ template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
 
     void print() const {
         int n = 0;
+        using namespace string_stream;
+
+        Buffer b(memory_globals::default_allocator());
+
         for (auto i = this->begin(), e = this->end(); i != e; ++i) {
-            printf("%d = %u\n", n++, *i);
+            b << n << " = " << *i << "\t";
+            tab(b, 8);
+            ++n;
+            if (array::size(b) >= 80) {
+                ::printf("%s\n", c_str(b));
+                array::clear(b);
+            }
+        }
+        if (array::size(b) != 0) {
+            ::printf("%s\n", c_str(b));
         }
     }
 };
+
+}
