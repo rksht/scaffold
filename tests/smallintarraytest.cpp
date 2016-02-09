@@ -5,6 +5,7 @@
 using foundation::SmallIntArray;
 
 TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
+    foundation::memory_globals::init();
     SmallIntArray<4, 512> smallints;
     smallints.set(0, 9);
     smallints.set(90, 12);
@@ -56,4 +57,26 @@ TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
     SECTION("total size") {
         printf("Sizeof(smallints) = %zu\n", sizeof(smallints));
     }
+
+    SmallIntArray<4, 10000> ints;
+    SECTION("smallintarray range set") {
+        ints.set_range(100, 1000, 9);
+        ints.set_range(1000, 2000, 8);
+        for (int i = 100; i < 1000; ++i) {
+            REQUIRE(ints.get(i) == 9);
+        }
+        for (int i = 1000; i < 2000; ++i) {
+            REQUIRE(ints.get(i) == 8);
+        }
+        ints.set_range(101, 102, 7);
+        for (int i = 101; i < 102; ++i) {
+            REQUIRE(ints.get(i) == 7);
+        }
+        REQUIRE(ints.get(100) == 9);
+        for (int i = 102; i < 1000; ++i) {
+            REQUIRE(ints.get(i) == 9);
+        }
+        ints.print();
+    }
+    foundation::memory_globals::shutdown();
 }

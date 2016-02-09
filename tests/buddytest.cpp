@@ -92,13 +92,10 @@ int main(int argc, char **argv) {
                 }
             }
         }
-        printf("Remaining - %u\n", ba.total_allocated());
-        printf("But have - %lu remaining blocks to free\n", allocateds.size());
-
         for (void *p : allocateds) {
-            printf("Removing - %p\n", p);
             ba.deallocate(p);
         }
     }
     foundation::memory_globals::shutdown();
+    printf("Seed = %lu\n", seed);
 }

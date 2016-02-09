@@ -5,14 +5,15 @@
 #include "debug.h"
 #include "string_stream.h"
 #include <array>
+#include <algorithm>
 #include <stdio.h>
+#include <assert.h>
 
 namespace foundation {
 
 /// A data type that holds `num_int` packed unsigned integers which are
 /// representable with `bits_per_int` bits. Uses 32 bit unsigned to store the
 /// "small" integers, so `bits_per_int` must be <= 32
-
 template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
   private:
     static_assert(bits_per_int <= 32,
@@ -84,7 +85,6 @@ template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
     /// Ctor - sets all to 0
     SmallIntArray() {
         memset(_words.data(), 0, sizeof(uint32_t) * _words.size());
-        log_info("Initialized small ints with %u bits\n", bits_per_int);
     }
 
     /// Returns the `idx`-th integer
@@ -98,6 +98,53 @@ template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
         const unsigned offset = idx % _ints_per_word;
         uint32_t word = _word(idx) & ~(_mask(offset));
         _word(idx) = word | (the_int << (offset * bits_per_int));
+    }
+
+    /// Sets the given range of indices to a given integer
+    void set_range(unsigned begin_idx, unsigned end_idx, uint32_t the_int) {
+        if (begin_idx >= end_idx) {
+            return;
+        }
+
+        // The word at which begin_idx is located in
+        const unsigned begin_word_pos = begin_idx / _ints_per_word;
+        // The offset in that word where `begin_idx` is located in
+        const unsigned begin_word_offset = begin_idx % _ints_per_word;
+        // ditto for `end_idx`
+        const unsigned end_word_pos = end_idx / _ints_per_word;
+        /*const unsigned end_word_offset = end_idx % _ints_per_word;*/
+
+        // If begin and end are in the same word, or two consecutive words set
+        // them one by one
+        if ((int64_t)end_word_pos - (int64_t)begin_word_pos <= 1) {
+            for (unsigned idx = begin_idx; idx < end_idx; ++idx) {
+                set(idx, the_int);
+            }
+            return;
+        }
+
+        // Otherwise set the begin word and end words first...
+        for (unsigned idx = begin_idx,
+                      e = begin_idx + (_ints_per_word - begin_word_offset);
+             idx < e; ++idx) {
+            set(idx, the_int);
+        }
+
+        for (unsigned idx = end_word_pos * _ints_per_word; idx < end_idx;
+             ++idx) {
+            set(idx, the_int);
+        }
+
+        // Calculate the word once and set all the middle words
+        uint32_t n = 0;
+        for (unsigned offset = 0; offset < _ints_per_word; ++offset) {
+            n = (n & ~(_mask(offset))) | (the_int << (offset * bits_per_int));
+        }
+
+        for (unsigned word_pos = begin_word_pos + 1; word_pos < end_word_pos;
+             ++word_pos) {
+            _words[word_pos] = n;
+        }
     }
 
     /// A forward const iterator
@@ -127,5 +174,4 @@ template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
         }
     }
 };
-
 }
