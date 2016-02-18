@@ -7,9 +7,6 @@
 /// Namespace rbt contains a non-owning red-black tree implementation.
 namespace rbt {
 
-/// Call this before using anything in namespace rbt
-void init();
-
 enum RBColor { BLACK = 0, RED };
 const int LEFT = 0;
 const int RIGHT = 1;
