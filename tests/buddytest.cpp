@@ -1,6 +1,4 @@
 #include "buddy.h"
-#define CATCH_CONFIG_MAIN
-// #include "catch.hpp"
 
 #include <new>
 #include <iostream>
@@ -19,14 +17,6 @@ using Block = std::array<uint32_t, bytes / sizeof(uint32_t)>;
 using SmallestBlock = Block<SMALLEST_SIZE>;
 
 using Block_8KB = Block<8 << 10>;
-
-template <typename ForwardIter>
-void fill_ints(ForwardIter beg, ForwardIter end) {
-    int x = 0;
-    for (auto i = beg; i != end; i++, x++) {
-        *i = x;
-    }
-}
 
 int main(int argc, char **argv) {
     uint64_t seed =

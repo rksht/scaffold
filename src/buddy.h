@@ -16,9 +16,9 @@
 
 namespace foundation {
 
-// The two main problems are: How to know the size of the buddy the user
-// is requesting to deallocate(), and how to efficiently find adjacent free
-// buddies of a level that can satisfy a size to allocate.
+// How to know the size of the buddy the user is requesting to deallocate(),
+// and how to efficiently find adjacent free buddies of a level that can
+// satisfy a size to allocate:
 //
 // The largest number of buddies that can be 'unfree' at any instant is 2 **
 // (num_levels - 1). Now, each of these buddies is mapped onto a unique
