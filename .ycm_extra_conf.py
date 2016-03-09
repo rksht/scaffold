@@ -18,6 +18,8 @@ flags = [
     '-isystem', '/usr/local/include',
     '-isystem', '/usr/include/c++/5.3.0',
     '-I', 'src',
+    '-I', 'submodules/jeayeson/include',
+    '-I', 'submodules/seasocks/src/main/c',
     '-I.'
 ]
 

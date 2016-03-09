@@ -1,10 +1,15 @@
-## A set of C++ utitilities including
+## A set of C++ utilities into the mix.
 
-* Foundation library by Bitsquid
+* Foundation library by Bitsquid plays a big part which resides in the top
+  level.
 
-And some additions by me
+* A scanner for tokenizing input.
 
-* A usual scanner for usual tokenizing.
-* A json loader.
-* An arena allocator.
-* A POD-key hash based on foundation's hash.
+* Some more allocators.
+
+* Some more data structures.
+
+Then there's more in submodules/ directory which contains third-party projects
+I'm using.
+
+(README is kind of in progress)
