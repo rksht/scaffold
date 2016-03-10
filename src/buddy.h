@@ -4,13 +4,15 @@
 #include "memory.h"
 #include "const_log.h"
 #include "smallintarray.h"
+#include "jeayeson/jeayeson.hpp"
 
 #include <stdint.h>
 #include <limits>
 #include <bitset>
+#include <map>
 #include <string.h>
 #include <stdio.h>
-#include <cassert>
+#include <assert.h>
 
 /// A "buddy allocator"
 
@@ -311,7 +313,16 @@ class BuddyAllocator : public Allocator {
               original_level, level, idx, size);
     }
 
-    void print_level_map() { _level_of_index.print(); }
+    void print_level_map() const { _level_of_index.print(); }
+
+    json_map get_json_tree() const {
+        json_map top;
+        json_array children;
+        _json_collect(children, 0, 0);
+        top["name"] = "top";
+        top["children"] = children;
+        return top;
+    }
 
   private:
     /// Allocates the buffer and sets up the free lists.
@@ -419,6 +430,34 @@ class BuddyAllocator : public Allocator {
               level, index, last);
         _level_of_index.set_range(index, last, level);
         _index_allocated[index] = false;
+    }
+
+    /// BAD, doesn't do it correctly. Re-do.
+    void _json_collect(json_array &arr, uint32_t level,
+                       uint32_t start_index) const {
+        uint64_t buddy_size = _buddy_size_at_level(level);
+        if ((_level_of_index.get(start_index) == level &&
+             !_index_allocated[start_index]) ||
+            level == _last_level) {
+            std::cout << start_index << " resides at level " << level
+                      << "\n-----\n";
+            arr.push_back(json_map{{"name", std::to_string(level)},
+                                   {"size", buddy_size}});
+
+            print_level_map();
+            return;
+        }
+        std::cout << "level - " << level << std::endl;
+        uint32_t next_level = level + 1;
+        uint32_t adj_index =
+            start_index + _buddy_size_at_level(next_level) / _min_buddy_size;
+        std::cout << "(start, adj) = " << start_index << ", " << adj_index
+                  << "\n---\n";
+        assert(adj_index < 1 << _last_level);
+        json_array children;
+        _json_collect(children, next_level, start_index);
+        _json_collect(children, next_level, adj_index);
+        arr.push_back(json_map{{"children", children}});
     }
 };
 

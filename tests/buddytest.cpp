@@ -37,6 +37,11 @@ int main(int argc, char **argv) {
         std::set<void *> allocateds;
 
         for (int i = 0; i < 10000; ++i) {
+            if (i % 1000 == 0) {
+                int n;
+                std::cout << ba.get_json_tree() << "\n";
+                std::cin >> n;
+            }
             if (d(dre) < 3) {
                 SmallestBlock &p1 = *((SmallestBlock *)ba.allocate(
                     sizeof(SmallestBlock), alignof(SmallestBlock)));

@@ -148,9 +148,9 @@ template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
     }
 
     /// A forward const iterator
-    const_iterator begin() const { return const_iterator(_words.data(), 0); }
+    const_iterator cbegin() const { return const_iterator(_words.data(), 0); }
 
-    const_iterator end() const {
+    const_iterator cend() const {
         return const_iterator(_words.data() + _num_words, 0);
     }
 
@@ -160,7 +160,7 @@ template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
 
         Buffer b(memory_globals::default_allocator());
 
-        for (auto i = this->begin(), e = this->end(); i != e; ++i) {
+        for (auto i = this->cbegin(), e = this->cend(); i != e; ++i) {
             b << n << " = " << *i << "\t";
             tab(b, 8);
             ++n;
