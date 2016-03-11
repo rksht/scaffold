@@ -150,11 +150,11 @@ class BuddyAllocator : public Allocator {
         : _backing(&backing_allocator), _mem(nullptr) {
         _initialize();
 
-        debug("Buddy allocator initialized - _min_buddy_size = %lu, "
-              "_min_buddy_size_power = %u, num_levels = %u, num_indices = "
-              "%u\n--",
-              _min_buddy_size, _min_buddy_size_power, num_levels,
-              1 << _last_level);
+        log_info("Buddy allocator initialized - _min_buddy_size = %lu, "
+                 "_min_buddy_size_power = %u, num_levels = %u, num_indices = "
+                 "%u\n--",
+                 _min_buddy_size, _min_buddy_size_power, num_levels,
+                 1 << _last_level);
     }
 
     ~BuddyAllocator() {
@@ -313,7 +313,27 @@ class BuddyAllocator : public Allocator {
               original_level, level, idx, size);
     }
 
-    void print_level_map() const { _level_of_index.print(); }
+    void print_level_map() const {
+        std::cout << "LEVEL MAP"
+                  << "\n";
+        _level_of_index.print();
+
+        using namespace string_stream;
+
+        Buffer b(memory_globals::default_allocator());
+
+        for (uint32_t i = 0; i < _num_indices; ++i) {
+            b << i << "=" << (_index_allocated[i] ? "Alloc" : "Free") << "\t";
+            tab(b, 8);
+            if (array::size(b) >= 120) {
+                ::printf("%s\n", c_str(b));
+                array::clear(b);
+            }
+        }
+        if (array::size(b) != 0) {
+            ::printf("%s\n", c_str(b));
+        }
+    }
 
     json_map get_json_tree() const {
         json_map top;
@@ -432,31 +452,36 @@ class BuddyAllocator : public Allocator {
         _index_allocated[index] = false;
     }
 
-    /// BAD, doesn't do it correctly. Re-do.
     void _json_collect(json_array &arr, uint32_t level,
-                       uint32_t start_index) const {
-        uint64_t buddy_size = _buddy_size_at_level(level);
-        if ((_level_of_index.get(start_index) == level &&
-             !_index_allocated[start_index]) ||
-            level == _last_level) {
-            std::cout << start_index << " resides at level " << level
-                      << "\n-----\n";
-            arr.push_back(json_map{{"name", std::to_string(level)},
-                                   {"size", buddy_size}});
-
-            print_level_map();
+                       uint32_t buddy_index) const {
+        // case 1 - buddy is free
+        if (!_index_allocated[buddy_index]) {
+            arr.push_back(json_map{{"name", buddy_index},
+                                   {"color", "green"},
+                                   {"size", _buddy_size_at_level(level)}});
             return;
         }
-        std::cout << "level - " << level << std::endl;
-        uint32_t next_level = level + 1;
-        uint32_t adj_index =
-            start_index + _buddy_size_at_level(next_level) / _min_buddy_size;
-        std::cout << "(start, adj) = " << start_index << ", " << adj_index
-                  << "\n---\n";
-        assert(adj_index < 1 << _last_level);
+
+        // case 2 - allocated and at this very level
+        if (_level_of_index.get(buddy_index) == level) {
+            arr.push_back(json_map{{"name", buddy_index},
+                                   {"color", "red"},
+                                   {"size", _buddy_size_at_level(level)}});
+            return;
+        }
+
+        // case 3 - allocated and not at this level
+        if (level == _last_level) {
+            log_err("JSON collect - reached buddy %u which is case 3 but at "
+                    "last level(=%u)",
+                    buddy_index, _last_level);
+            assert(level != _last_level);
+        }
+        uint32_t adj_super_buddy_index =
+            buddy_index + (_num_indices / (1 << level));
         json_array children;
-        _json_collect(children, next_level, start_index);
-        _json_collect(children, next_level, adj_index);
+        _json_collect(children, level + 1, buddy_index);
+        _json_collect(children, level + 1, adj_super_buddy_index);
         arr.push_back(json_map{{"children", children}});
     }
 };

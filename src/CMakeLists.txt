@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.4)
 
 set(SOURCE_FILES memory.cpp murmur_hash.cpp scanner.cpp string_stream.cpp)
 
-add_compile_options("-std=c++14" "-ggdb" "-Wall" "-Wextra" "-Wshadow" "-DNDEBUG")
+add_compile_options("-std=c++14" "-ggdb" "-Wall" "-Wextra" "-Wshadow")
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 
