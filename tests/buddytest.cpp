@@ -19,16 +19,18 @@ using SmallestBlock = Block<SMALLEST_SIZE>;
 using Block_8KB = Block<8 << 10>;
 
 int main(int argc, char **argv) {
-    uint64_t seed =
-        argc == 2 ? strtoull(argv[1], nullptr, 10) : (uint64_t)time(nullptr);
+    uint64_t seed = argc >= 2 ? strtoull(argv[1], nullptr, 10) : 100;
 
     log_info("Seed = %lu", seed);
+    if (seed == 100 && argc == 2) {
+        abort();
+    }
 
     foundation::memory_globals::init();
     {
         using BA = foundation::BuddyAllocator<1 << 20, 10>;
         BA ba(foundation::memory_globals::default_allocator());
-        std::cout << "SIZE OF SMALLEST ARRAY = " << sizeof(SmallestBlock)
+        std::cerr << "SIZE OF SMALLEST ARRAY = " << sizeof(SmallestBlock)
                   << std::endl;
 
         std::default_random_engine dre(seed);
@@ -36,11 +38,14 @@ int main(int argc, char **argv) {
 
         std::set<void *> allocateds;
 
-        for (int i = 0; i < 10000; ++i) {
-            if (i % 1000 == 0) {
-                std::cout << ba.get_json_tree() << "\n";
+        for (int i = 0; i < 5000; ++i) {
+            std::cerr << "ITER = " << i << "\n";
+
+            if (i % 500 == 0) {
+                std::cout << ba.get_json_tree() << "\n--\n";
                 //std::cin >> n;
             }
+
             if (d(dre) < 3) {
                 SmallestBlock &p1 = *((SmallestBlock *)ba.allocate(
                     sizeof(SmallestBlock), alignof(SmallestBlock)));
@@ -87,9 +92,11 @@ int main(int argc, char **argv) {
             }
         }
         for (void *p : allocateds) {
+            std::cerr << "Have to deallocate extra buddy"
+                      << "\n";
             ba.deallocate(p);
         }
     }
     foundation::memory_globals::shutdown();
-    printf("Seed = %lu\n", seed);
+    fprintf(stderr, "Seed = %lu\n", seed);
 }

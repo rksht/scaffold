@@ -27,6 +27,7 @@ template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
     /// Array to store the stuff
     std::array<uint32_t, _num_words> _words;
 
+  private:
     constexpr static uint32_t _front_mask() { return (1 << bits_per_int) - 1; }
 
     uint32_t _word(unsigned idx) const {
@@ -85,6 +86,7 @@ template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
     /// Ctor - sets all to 0
     SmallIntArray() {
         memset(_words.data(), 0, sizeof(uint32_t) * _words.size());
+        log_info("SmallIntArray with array size = %lu", _words.size());
     }
 
     /// Returns the `idx`-th integer
@@ -154,7 +156,7 @@ template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
         return const_iterator(_words.data() + _num_words, 0);
     }
 
-    void print() const {
+    void print(FILE *f=stderr) const {
         int n = 0;
         using namespace string_stream;
 
@@ -165,12 +167,12 @@ template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
             tab(b, 8);
             ++n;
             if (array::size(b) >= 80) {
-                ::printf("%s\n", c_str(b));
+                ::fprintf(f, "%s\n", c_str(b));
                 array::clear(b);
             }
         }
         if (array::size(b) != 0) {
-            ::printf("%s\n", c_str(b));
+            ::fprintf(f, "%s\n", c_str(b));
         }
     }
 };

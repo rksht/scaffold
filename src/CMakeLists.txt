@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.4)
 
-set(SOURCE_FILES memory.cpp murmur_hash.cpp scanner.cpp string_stream.cpp)
+set(SOURCE_FILES memory.cpp murmur_hash.cpp scanner.cpp string_stream.cpp
+  buddy.h)
 
 add_compile_options("-std=c++14" "-ggdb" "-Wall" "-Wextra" "-Wshadow")
 
