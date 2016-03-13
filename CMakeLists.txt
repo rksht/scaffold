@@ -11,4 +11,7 @@ add_subdirectory(src)
 add_subdirectory(tests)
 
 # Submodules
-add_subdirectory(submodules)
+#add_subdirectory(submodules)
+
+add_subdirectory(seasocks)
+

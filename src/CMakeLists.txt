@@ -8,10 +8,15 @@ add_compile_options("-std=c++14" "-ggdb" "-Wall" "-Wextra" "-Wshadow")
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 
-include_directories(${PROJECT_SOURCE_DIR}/submodules/jeayeson/include)
+#include_directories(${project_source_dir}/submodules/jeayeson/include)
 
-include_directories(${PROJECT_SOURCE_DIR}/submodules/seasocks/src/main/c)
+#include_directories(${project_source_dir}/submodules/seasocks/src/main/c)
+
+include_directories(${project_source_dir}/jeayeson/include)
+
+include_directories(${project_source_dir}/seasocks/src/main/c)
 
 add_library(scaffold ${SOURCE_FILES})
 target_link_libraries(scaffold seasocks)
-add_dependencies(scaffold submodules)
+
+#add_dependencies(scaffold submodules)
