@@ -1,6 +1,7 @@
 #pragma once
 
 #include "memory.h"
+#include "debug.h"
 #include <memory> // std::move
 #include <assert.h>
 
@@ -99,9 +100,7 @@ template <typename K, typename V> struct RBT {
     RBNode<K, V> *get_node(const K &key);
 
     /// Casts `Nil *` to `RBNode<K, V> *`
-    RBNode<K, V> *nil_node() {
-        return reinterpret_cast<RBNode<K, V> *>(_nil);
-    }
+    RBNode<K, V> *nil_node() { return reinterpret_cast<RBNode<K, V> *>(_nil); }
 
   private:
     /// Transplants the given node `n2` to the given node `n1`'s position
@@ -171,8 +170,11 @@ template <typename K, typename V> void RBT<K, V>::insert(RBNode<K, V> *n) {
     while (cur != nil_node()) {
         assert(cur != nullptr);
         par = cur;
-        assert(n->_key != cur->_key);
-        if (n->_key < cur->_key) {
+        if (n->_key == cur->_key) {
+            log_err("Same key");
+            abort();
+        }
+        if (n->_key <= cur->_key) {
             cur = cur->_kids[LEFT];
             dir = LEFT;
         } else {

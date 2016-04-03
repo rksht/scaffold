@@ -1,4 +1,3 @@
-/// A lexer for common formats
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory>
@@ -183,12 +182,6 @@ char *token_text(const Scanner &s, Allocator &a) {
     memcpy(buf, c_str(s._text) + s.token_start, length);
     buf[length] = 0;
     return buf;
-}
-
-sds get_token_text(const Scanner &s) {
-    const int length = s.offset - s.token_start;
-    sds str = sdsnewlen(NULL, length);
-    return sdscpylen(str, c_str(s._text) + s.token_start, length);
 }
 
 void string_token(Buffer &b, Buffer &raw) {

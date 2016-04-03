@@ -3,14 +3,12 @@
 #include "memory.h"
 #include "array.h"
 #include "string_stream.h"
-#include "sds.h"
 
 namespace scanner {
 
 using namespace foundation;
 using namespace memory_globals;
 using namespace string_stream;
-
 
 const int INT = -1;
 const int FLOAT = -2;
@@ -29,7 +27,8 @@ enum Modes {
     SCAN_IDENTS = 1 << -IDENT,
     SCAN_SPACES = 1 << -SPACE,
     SCAN_COMMENTS = 1 << -COMMENT,
-    SCAN_ESCAPES = 1 << -ESCAPE, // This will inteprete escape codes all throughout the string
+    SCAN_ESCAPES = 1 << -ESCAPE, // This will inteprete escape codes all
+                                 // throughout the string
 };
 
 /// This default mode is like scanning most simple languages
@@ -64,8 +63,6 @@ const char *desc(int token);
 void token_text(const Scanner &s, Buffer &b);
 /// Overload of token_text that returns a null terminated c-string
 char *token_text(const Scanner &s, Allocator &a);
-
-sds get_token_text(const Scanner &s);
 
 /// A function that takes takes a buffer and a raw string token text
 /// and stores the in-memory representation of the string in the buffer.

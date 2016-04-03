@@ -14,8 +14,7 @@ add_executable(buddytest buddytest.cpp)
 target_link_libraries(buddytest scaffold)
 add_executable(smallintarraytest smallintarraytest.cpp)
 target_link_libraries(smallintarraytest scaffold)
-add_executable(seasocktest seasocktest.cpp)
-target_link_libraries(seasocktest seasocks)
-add_executable(operatornew_test operatornew_test.cpp)
-target_link_libraries(operatornew_test scaffold)
-#add_dependencies(seasocktest submodules)
+add_executable(rbt_test rbt_test.cpp)
+target_link_libraries(rbt_test scaffold)
+
+

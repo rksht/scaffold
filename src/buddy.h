@@ -261,8 +261,6 @@ class BuddyAllocator : public Allocator {
         }
 
         // Corresponding header pointer - make it meaningless for confidence.
-        // In the merging loop, `h` will always point to the lesser(one to the
-        // left) of the two consecutive buddies being merged.
         BuddyHead *h = _head_at(p);
         h->destroy();
 

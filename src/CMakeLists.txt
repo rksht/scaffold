@@ -17,6 +17,5 @@ include_directories(${project_source_dir}/jeayeson/include)
 include_directories(${project_source_dir}/seasocks/src/main/c)
 
 add_library(scaffold ${SOURCE_FILES})
-target_link_libraries(scaffold seasocks)
 
 #add_dependencies(scaffold submodules)
