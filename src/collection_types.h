@@ -21,8 +21,16 @@ template <typename T> struct Array {
     Array(Array<T> &&other); // move
     Array &operator=(const Array &other);
 
+    using iterator = T*;
+    using const_iterator = const T*;
+
     T &operator[](uint32_t i);
     const T &operator[](uint32_t i) const;
+
+    iterator begin() { return _data; }
+    iterator end() { return _data + _size; }
+    const_iterator begin() const { return _data; }
+    const_iterator end() const { return _data + _size; }
 
     Allocator *_allocator;
     uint32_t _size;

@@ -14,6 +14,8 @@ add_executable(buddytest buddytest.cpp)
 target_link_libraries(buddytest scaffold)
 add_executable(smallintarraytest smallintarraytest.cpp)
 target_link_libraries(smallintarraytest scaffold)
+add_executable(arena_test arena_test.cpp)
+target_link_libraries(arena_test scaffold)
 add_executable(rbt_test rbt_test.cpp)
 target_link_libraries(rbt_test scaffold)
 

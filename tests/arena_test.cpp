@@ -32,6 +32,9 @@ int main() {
                 MAKE_NEW(default_arena_allocator(), Student, i, i, i % 128);
             array::push_back(students, student_p);
         }
+        for (Student *p : students) {
+            printf("id = %li\n", p->id);
+        }
         printf("Total allocated: %u bytes\n",
                default_arena_allocator().total_allocated());
         int j = 0;
