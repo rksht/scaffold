@@ -27,9 +27,9 @@ int main() {
 
     memory_globals::init();
     {
-        pod_hash::Hash<Data, uint64_t> h(memory_globals::default_allocator(),
-                                         memory_globals::default_allocator(),
-                                         Data_hash, Data_equal);
+        pod_hash::PodHash<Data, uint64_t> h(memory_globals::default_allocator(),
+                                            memory_globals::default_allocator(),
+                                            Data_hash, Data_equal);
         assert(pod_hash::has(h, D1) == false);
         pod_hash::set(h, D1, 0x10lu);
         assert(pod_hash::has(h, D1) == true);
@@ -60,10 +60,10 @@ int main() {
             assert(pod_hash::has(h, d) == false);
         }
 
-        pod_hash::Hash<char, uint64_t> h1(memory_globals::default_allocator(),
-                                          memory_globals::default_allocator(),
-                                          pod_hash::usual_hash<char>,
-                                          pod_hash::usual_equal<char>);
+        pod_hash::PodHash<char, uint64_t> h1(
+            memory_globals::default_allocator(),
+            memory_globals::default_allocator(), pod_hash::usual_hash<char>,
+            pod_hash::usual_equal<char>);
 
         for (char i = 'a'; i < 'z'; ++i) {
             pod_hash::set(h1, i, (uint64_t)(i * i));
