@@ -1,4 +1,6 @@
 #include "memory.h"
+#include "debug.h"
+#include "arena.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +11,7 @@
 #include <stdio.h>
 
 namespace {
+
 using namespace foundation;
 
 // Header stored at the beginning of a memory allocation to indicate the
@@ -209,113 +212,6 @@ class ScratchAllocator : public Allocator {
     virtual uint32_t total_allocated() { return _end - _begin; }
 };
 
-/// An ArenaAllocator allocates a buffer and bumps a pointer on each allocation.
-/// This allocator is to be used standalone and not via the other foundation
-/// data structures.
-class ArenaAllocator : public Allocator {
-  private:
-    struct _Header {
-        uint32_t size;
-    };
-
-  private:
-    Allocator &_backing;
-    void *_mem;
-    _Header *_top_header;
-    _Header *_next_header;
-    uint32_t _total_allocated;
-    uint32_t _wasted;
-
-  private:
-    // Returns a size that is a multiple of alignof(_Header)
-    uint32_t _aligned_size_with_padding(uint32_t size) {
-        uint32_t total = size + sizeof(_Header);
-        int mod = total % alignof(_Header);
-        if (mod) {
-            total += alignof(_Header) - mod;
-        }
-        return total;
-    }
-
-  public:
-    ArenaAllocator(Allocator &backing, uint32_t size) : _backing(backing) {
-        uint32_t adjusted_size = _aligned_size_with_padding(size);
-        _mem = _backing.allocate(adjusted_size, alignof(_Header));
-        memset(_mem, 0, adjusted_size);
-        _top_header = (_Header *)_mem;
-        _top_header->size = 0;
-        _next_header = _top_header;
-        _total_allocated = 0;
-    }
-
-    void *allocate(uint32_t size, uint32_t align) override {
-        void *after_header, *aligned_start;
-        uint32_t pad_size;
-
-        if (size % alignof(_Header) != 0) {
-            printf("Size requested is not a multiple of the alignment of "
-                   "header\n");
-            int mod = size % alignof(_Header);
-            if (mod) {
-                size += alignof(_Header) - mod;
-            }
-        }
-
-        assert(align % alignof(_Header) == 0);
-
-        after_header = (char *)(_next_header + 1);
-        aligned_start = (char *)memory::align_forward(after_header, align);
-        if ((char *)aligned_start + size >
-            (char *)_mem + _backing.allocated_size(_mem)) {
-            assert(false && "Backing allocator ran out of memory");
-            return (void *)0;
-        }
-
-        pad_size = (uint32_t)((char *)aligned_start - (char *)after_header);
-
-        // wasted
-        _wasted += sizeof(_Header) + pad_size;
-
-        for (uint32_t *p = (uint32_t *)after_header;
-             p != (uint32_t *)aligned_start; ++p) {
-            p[0] = HEADER_PAD_VALUE;
-        }
-
-        _next_header->size = size;
-        _total_allocated += _next_header->size + pad_size;
-        _top_header = _next_header;
-        _next_header = (_Header *)((char *)_top_header + sizeof(_Header) +
-                                   pad_size + _top_header->size);
-
-        return (void *)aligned_start;
-    }
-
-    /// Do not use deallocate for this allocator. Use the destructor.
-    /// To free all memory
-    void deallocate(void * /*unused*/) override {
-        assert(false && "You must not call this");
-    }
-
-    uint32_t allocated_size(void *p) override {
-        uint32_t *pad = (uint32_t *)p;
-        while (pad[-1] == HEADER_PAD_VALUE) {
-            --pad;
-        }
-        --pad;
-        return ((Header *)pad)->size;
-    }
-
-    uint32_t total_allocated() override { return _total_allocated; }
-
-    /// Destructor
-    ~ArenaAllocator() {
-        if (_mem)
-            _backing.deallocate(_mem);
-        _mem = 0;
-        _top_header = (_Header *)0;
-    }
-};
-
 struct MemoryGlobals {
     static const int ALLOCATOR_MEMORY = sizeof(MallocAllocator) +
                                         sizeof(ScratchAllocator) +
@@ -337,18 +233,19 @@ MemoryGlobals _memory_globals;
 
 namespace foundation {
 namespace memory_globals {
-void init(uint32_t temporary_memory) {
+void init(uint32_t scratch_buffer_size, uint32_t default_arena_size) {
     // Create some default allocators
     char *p = _memory_globals.buffer;
     _memory_globals.default_allocator = new (p) MallocAllocator();
 
     p += sizeof(MallocAllocator);
-    _memory_globals.default_scratch_allocator = new (p)
-        ScratchAllocator(*_memory_globals.default_allocator, temporary_memory);
+    _memory_globals.default_scratch_allocator = new (p) ScratchAllocator(
+        *_memory_globals.default_allocator, scratch_buffer_size);
 
     p += sizeof(ScratchAllocator);
-    _memory_globals.default_arena_allocator = new (p)
-        ArenaAllocator(*_memory_globals.default_allocator, 4 * 1024 * 1024);
+    _memory_globals.default_arena_allocator =
+        new (p) ArenaAllocator(*_memory_globals.default_allocator,
+                               default_arena_size, (ArenaAllocator &)(*p));
 }
 
 Allocator &default_allocator() { return *_memory_globals.default_allocator; }
@@ -357,7 +254,7 @@ Allocator &default_scratch_allocator() {
     return *_memory_globals.default_scratch_allocator;
 }
 
-Allocator &default_arena_allocator() {
+ArenaAllocator &default_arena_allocator() {
     return *_memory_globals.default_arena_allocator;
 }
 
@@ -367,6 +264,5 @@ void shutdown() {
     _memory_globals.default_allocator->~MallocAllocator();
     _memory_globals = MemoryGlobals();
 }
-} //namespace memory_globals
-} //namespace foundation
-
+} // namespace memory_globals
+} // namespace foundation

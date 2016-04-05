@@ -1,6 +1,7 @@
 #include "murmur_hash.h"
 #include "hash.h"
 #include "memory.h"
+#include "arena.h"
 #include "array.h"
 
 #include <stdio.h>

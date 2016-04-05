@@ -71,12 +71,16 @@ class Allocator {
         }                                                                      \
     } while (0)
 
+/// Fwd declaring the ArenaAllocator here
+class ArenaAllocator;
+
 /// Functions for accessing global memory data.
 namespace memory_globals {
 /// Initializes the global memory allocators. scratch_buffer_size is the size of
-/// the
-/// memory buffer used by the scratch allocators.
-void init(uint32_t scratch_buffer_size = 4 * 1024 * 1024);
+/// the memory buffer used by the scratch allocators. default_arena_size is the
+/// size of the default arena allocator.
+void init(uint32_t scratch_buffer_size = 4 << 20,
+          uint32_t default_arena_size = 4 << 20);
 
 /// Returns a default memory allocator that can be used for most allocations.
 ///
@@ -93,11 +97,11 @@ Allocator &default_allocator();
 /// memory, memory from the default_allocator will be returned instaed.
 Allocator &default_scratch_allocator();
 
-/// Returns an "arena" allocator that has a very simple manually managed scheme.
+/// Returns an arena allocator that has a very simple manually managed scheme.
 /// You must not call deallocate() on these allocator and instead just delete
 /// the backing allocator used - which is  default_allocator() usually.
-/// The preferrable option is to just call memory_globals::shudown()
-Allocator &default_arena_allocator();
+/// The preferrable option is to just call memory_globals::shudown().
+ArenaAllocator &default_arena_allocator();
 
 /// Shuts down the global memory allocators created by init().
 void shutdown();

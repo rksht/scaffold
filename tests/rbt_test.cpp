@@ -1,6 +1,7 @@
 #include "rbt.h"
-
 #include "memory.h"
+#include "arena.h"
+
 #include <iostream>
 #include <random>
 
