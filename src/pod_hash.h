@@ -8,23 +8,25 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <type_traits>
+#include <iterator>
 
 /// namespace pod_hash contains a chain-based hash table implementation for
 /// POD key- value pairs
 namespace pod_hash {
-
+template <typename K, typename V> struct Entry {
+    K key;
+    V value;
+    uint32_t next;
+};
 /// PodHash<K, V>
-template <typename K, typename V> struct PodHash {
+template <typename K, typename V>
+struct PodHash : std::iterator<std::random_access_iterator_tag, Entry<K, V>> {
     static_assert(std::is_trivially_copyable<K>::value,
                   "Key type must be trivially copyable");
     static_assert(std::is_trivially_copyable<V>::value,
                   "Value type must be trivially copyabe");
 
-    struct Entry {
-        K key;
-        V value;
-        uint32_t next;
-    };
+    using Entry = pod_hash::Entry<K, V>;
 
     /// Type of hashing function
     using HashFunc = uint64_t (*)(K const &key);
@@ -334,6 +336,21 @@ const typename PodHash<K, V>::Entry *cend(const PodHash<K, V> &h) {
     return foundation::array::end(h._entries);
 }
 
+/// Returns an entry pointer to the start to the start of  the buffer of entries
+template <typename K, typename V>
+typename PodHash<K, V>::Entry *begin(PodHash<K, V> &h) {
+    return foundation::array::begin(h._entries);
+}
+
+/// Returns a constant-entry pointer to one cell past the end of the buffer of
+/// entries
+template <typename K, typename V>
+typename PodHash<K, V>::Entry *end(PodHash<K, V> &h) {
+    return foundation::array::end(h._entries);
+}
+
+/// Finds the maximum chain length in the hash table. For debugging and stuff.
+/// :)
 template <typename K, typename V>
 uint32_t max_chain_length(const PodHash<K, V> &h) {
     uint32_t max_length = 0;
