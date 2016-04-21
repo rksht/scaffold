@@ -6,28 +6,34 @@
 #include <random>
 
 using namespace foundation;
+using namespace rbt;
+using Tree = RBT<int, int>;
+const size_t num_nodes = 100;
 
-const int NR_NODES = 1000;
+int id = 0;
 
-void print_tree(rbt::RBNode<int, int> *nil, rbt::RBNode<int, int> *node) {
-    if (node->_kids[rbt::LEFT] != nil) {
-        print_tree(nil, node->_kids[rbt::LEFT]);
-        std::cout << node->_key << " -> " << node->_kids[rbt::LEFT]->_key
-                  << ";\n";
+void print_tree(const RBNode<int, int> *nil, const RBNode<int, int> *node,
+                int node_id) {
+    if (node->_kids[LEFT] != nil) {
+        std::cout << node_id << " -> " << ++id << ";\n";
+        print_tree(nil, node->_kids[LEFT], id);
     }
 
-    std::cout << node->_key << " [fillcolor = "
-              << (node->_color == rbt::BLACK ? "grey" : "red") << "];\n";
+    std::cout << node_id
+              << " [fillcolor = " << (node->_color == BLACK ? "grey" : "red")
+              << ", label = " << node_id << "];\n";
 
-    if (node->_kids[rbt::RIGHT] != nil) {
-        print_tree(nil, node->_kids[rbt::RIGHT]);
-        std::cout << node->_key << " -> " << node->_kids[rbt::RIGHT]->_key
-                  << ";\n";
+    if (node->_kids[RIGHT] != nil) {
+        std::cout << node_id << " -> " << ++id << ";\n";
+        print_tree(nil, node->_kids[RIGHT], id);
     }
 }
-void print_dot_format(rbt::RBNode<int, int> *nil, rbt::RBNode<int, int> *root) {
+
+void print_dot_format(const RBNode<int, int> *nil,
+                      const RBNode<int, int> *root) {
     std::cout << "digraph rbt {\n";
-    print_tree(nil, root);
+    id = 1;
+    print_tree(nil, root, 1);
     std::cout << "}\n";
 }
 
@@ -41,7 +47,7 @@ int main() {
 
         using Int2Int = rbt::RBNode<int, int>;
 
-        for (int i = 0; i < NR_NODES; i += 5) {
+        for (int i = 0; i < num_nodes; i += 5) {
             rbt::RBNode<int, int> *node =
                 MAKE_NEW(memory_globals::default_arena_allocator(), Int2Int,
                          i + d(rng) % 5, i);
