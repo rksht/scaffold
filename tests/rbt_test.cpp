@@ -1,11 +1,14 @@
 #include "rbt.h"
 #include "memory.h"
-#include "arena.h"
 
+// For testing
+#include <algorithm>
 #include <iostream>
-#include <random>
+#include <iterator>
+#include <math.h>
+#include <string>
+#include <vector>
 
-using namespace foundation;
 using namespace rbt;
 using Tree = RBT<int, int>;
 const size_t num_nodes = 100;
@@ -38,46 +41,34 @@ void print_dot_format(const RBNode<int, int> *nil,
 }
 
 int main() {
-    memory_globals::init();
+
+    foundation::memory_globals::init();
+
     {
-        std::default_random_engine rng;
-        std::uniform_int_distribution<int> d;
 
-        rbt::RBT<int, int> tree{memory_globals::default_allocator()};
+        // Creating a vector filled with random nodes
+        std::vector<Tree::node_type> node_store;
+        node_store.reserve(num_nodes);
+        std::srand(0xDEADBEEF);
+        std::generate_n(std::back_inserter(node_store), num_nodes, [&]() {
+            int n = std::rand() % 100;
+            return Tree::node_type{n, n * 2};
+        });
 
-        using Int2Int = rbt::RBNode<int, int>;
+        for (const auto &node : node_store) {
+            std::cout << "//K: " << node._key << "\tV: " << node._val << "\n";
+        }
 
-        for (int i = 0; i < num_nodes; i += 5) {
-            rbt::RBNode<int, int> *node =
-                MAKE_NEW(memory_globals::default_arena_allocator(), Int2Int,
-                         i + d(rng) % 5, i);
+        // Create the tree
+        Tree tree(foundation::memory_globals::default_allocator());
 
-            std::cout << "// Parent of nil node = "
-                      << (tree.nil_node()->_parent == nullptr
-                              ? "NULL"
-                              : std::to_string(tree.nil_node()->_parent->_key))
-                      << "\n";
-            std::cout
-                << "// Lchild "
-                << (tree.nil_node()->_kids[rbt::LEFT] == nullptr
-                        ? "NULL"
-                        : std::to_string(
-                              tree.nil_node()->_parent->_kids[rbt::LEFT]->_key))
-                << "\n";
-
-            std::cout << "// Rchild "
-                      << (tree.nil_node()->_kids[rbt::RIGHT] == nullptr
-                              ? "NULL"
-                              : std::to_string(tree.nil_node()
-                                                   ->_parent->_kids[rbt::RIGHT]
-                                                   ->_key))
-                      << "\n";
-
-            tree.insert(node);
+        // Insert the node pointers
+        for (auto &node : node_store) {
+            tree.insert(&node);
         }
 
         print_dot_format(tree.nil_node(), tree._root);
     }
 
-    memory_globals::shutdown();
+    foundation::memory_globals::shutdown();
 }

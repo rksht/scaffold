@@ -1,7 +1,6 @@
 #pragma once
 
 #include "memory.h"
-#include "debug.h"
 #include <memory> // std::move
 #include <assert.h>
 
@@ -32,14 +31,12 @@ template <typename K, typename V> struct RBNode {
     RBNode(const K &key, const V &val)
         : _color(BLACK), _parent(nullptr), _kids{nullptr, nullptr}, _key(key),
           _val(val) {}
-
-    RBNode(K &&key, V &&val) : _key(std::move(key)), _val(std::move(val)) {}
-
-    RBNode(const RBNode<K, V> &other) = delete;
 };
 
 /// RBT<K, V> represents a red black tree.
 template <typename K, typename V> struct RBT {
+    using node_type = RBNode<K, V>;
+
     /// The pointer to root
     RBNode<K, V> *_root;
 
@@ -170,11 +167,7 @@ template <typename K, typename V> void RBT<K, V>::insert(RBNode<K, V> *n) {
     while (cur != nil_node()) {
         assert(cur != nullptr);
         par = cur;
-        if (n->_key == cur->_key) {
-            log_err("Same key");
-            abort();
-        }
-        if (n->_key <= cur->_key) {
+        if (n->_key < cur->_key) {
             cur = cur->_kids[LEFT];
             dir = LEFT;
         } else {
