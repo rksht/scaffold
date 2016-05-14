@@ -2,23 +2,27 @@
 
 #include <new>
 
-#include "types.h"
 #include "memory_types.h"
+#include "types.h"
 
 namespace foundation {
 /// Base class for memory allocators.
 ///
 /// Note: Regardless of which allocator is used, prefer to allocate memory in
-/// larger chunks
-/// instead of in many small allocations. This helps with data locality,
-/// fragmentation,
-/// memory usage tracking, etc.
+/// larger chunks instead of in many small allocations. This helps with data
+/// locality, fragmentation, memory usage tracking, etc.
 class Allocator {
   public:
     /// Default alignment for memory allocations.
-    static const uint32_t DEFAULT_ALIGN = 16;
+    static constexpr uint32_t DEFAULT_ALIGN = 16;
 
-    Allocator() {}
+    /// Maximum name size for any allocator including the '\0' character
+    static constexpr uint32_t ALLOCATOR_NAME_SIZE = 32;
+
+    // Ctor
+    Allocator();
+
+    // Dtor
     virtual ~Allocator() {}
 
     /// Allocates the specified amount of memory aligned to the specified
@@ -52,10 +56,24 @@ class Allocator {
     /// SIZE_NOT_TRACKED.
     virtual uint32_t total_allocated() = 0;
 
-  private:
+    /// Returns the name of this allocator. If no name was explicitly set by a
+    /// call to `set_name` method, returns the `this` pointer stringified.
+    const char *name();
+
+    /// Sets the name of the allocator. The name must fit within
+    /// `ALLOCATOR_NAME_SIZE` characters and must not be empty. `len` is the
+    /// length of the string _including_ the '\0' character. Most allocators
+    /// names should be known at compile time, so you can just use
+    /// sizeof(literal) to obtain the size including the '\0'.
+    void set_name(const char *name, uint32_t len);
+
     /// Allocators cannot be copied.
-    Allocator(const Allocator &other);
-    Allocator &operator=(const Allocator &other);
+    Allocator(const Allocator &other) = delete;
+    Allocator &operator=(const Allocator &other) = delete;
+
+  private:
+    /// The name of the allocator is stored in this array
+    char _name[ALLOCATOR_NAME_SIZE];
 };
 
 /// Creates a new object of type T using the allocator a to allocate the memory.

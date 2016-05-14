@@ -85,9 +85,9 @@ template <typename T> void resize(Array<T> &a, uint32_t new_size) {
     if (new_size > a._capacity)
         grow(a, new_size);
 
-#ifdef ARRAY_ZERO_MEM
+#ifndef NDEBUG
     // If that pp flag is defined, zero fill the remaining memory.
-    memset(&a._data[new_size], 0, a.size - a.new_size);
+    memset(&a._data[new_size], 0, a._size - new_size);
 #endif
     a._size = new_size;
 }

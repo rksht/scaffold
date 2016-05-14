@@ -1,14 +1,27 @@
 #include "memory.h"
-#include "debug.h"
 #include "arena.h"
+#include "debug.h"
 
-#include <stdlib.h>
-#include <string.h>
 #include <assert.h>
 #include <iostream>
 #include <new>
+#include <stdlib.h>
+#include <string.h>
 
 #include <stdio.h>
+
+namespace foundation {
+
+// Some definitions for `class Allocator`'s member functions
+Allocator::Allocator() { memset(_name, 0, ALLOCATOR_NAME_SIZE); }
+
+const char *Allocator::name() { return _name; }
+
+void Allocator::set_name(const char *name, uint32_t len) {
+    assert(len < ALLOCATOR_NAME_SIZE && "Allocator name too large");
+    memcpy(_name, name, len);
+}
+}
 
 namespace {
 
@@ -232,9 +245,15 @@ MemoryGlobals _memory_globals;
 } // anon namespace
 
 namespace foundation {
+
 namespace memory_globals {
+
+static const char default_allocator_name[] = "Default Allocator";
+static const char default_scratch_allocator_name[] =
+    "Default scratch allocator";
+static const char default_arena_allocator_name[] = "Default arena allocator";
+
 void init(uint32_t scratch_buffer_size, uint32_t default_arena_size) {
-    // Create some default allocators
     char *p = _memory_globals.buffer;
     _memory_globals.default_allocator = new (p) MallocAllocator();
 
@@ -246,6 +265,14 @@ void init(uint32_t scratch_buffer_size, uint32_t default_arena_size) {
     _memory_globals.default_arena_allocator =
         new (p) ArenaAllocator(*_memory_globals.default_allocator,
                                default_arena_size, (ArenaAllocator &)(*p));
+
+    _memory_globals.default_allocator->set_name(default_allocator_name,
+                                                sizeof(default_allocator_name));
+    _memory_globals.default_scratch_allocator->set_name(
+        default_arena_allocator_name, sizeof(default_scratch_allocator_name));
+
+    _memory_globals.default_arena_allocator->set_name(
+        default_arena_allocator_name, sizeof(default_arena_allocator_name));
 }
 
 Allocator &default_allocator() { return *_memory_globals.default_allocator; }
