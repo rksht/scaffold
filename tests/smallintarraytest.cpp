@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_MAIN
-#include "catch.hpp"
 #include "smallintarray.h"
+#include "catch.hpp"
 
 using foundation::SmallIntArray;
 
@@ -52,14 +52,24 @@ TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
         REQUIRE(bits.get(501) == 0);
         REQUIRE(bits.get(500) == 0);
     }
-    //smallints.print();
+    // smallints.print();
 
     SECTION("total size") {
         printf("Sizeof(smallints) = %zu\n", sizeof(smallints));
     }
 
-    SmallIntArray<4, 10000> ints;
+    SECTION("iterator") {
+        const int num_ints = 9990;
+        SmallIntArray<4, num_ints> ints;
+        int loop_count = 0;
+        for (auto i = ints.cbegin(), e = ints.cend(); i != e; ++i) {
+            ++loop_count;
+        }
+        REQUIRE(loop_count == num_ints);
+    }
+
     SECTION("smallintarray range set") {
+        SmallIntArray<4, 9990> ints;
         ints.set_range(100, 1000, 9);
         ints.set_range(1000, 2000, 8);
         for (int i = 100; i < 1000; ++i) {

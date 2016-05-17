@@ -1,13 +1,13 @@
 #pragma once
 
 #include "const_log.h"
-#include "string.h"
 #include "debug.h"
+#include "string.h"
 #include "string_stream.h"
-#include <array>
 #include <algorithm>
-#include <stdio.h>
+#include <array>
 #include <assert.h>
+#include <stdio.h>
 
 namespace foundation {
 
@@ -47,39 +47,32 @@ template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
   public:
     class const_iterator {
       private:
-        const uint32_t *_word;
-        uint32_t _offset;
+        static constexpr int end = num_ints;
+        const SmallIntArray *_sa;
+        int _idx;
 
       public:
         const_iterator() = delete;
 
         const_iterator(const const_iterator &other)
-            : _word(other._word), _offset(other._offset) {}
+            : _sa(other._sa), _idx(other._idx) {}
 
-        const_iterator(const uint32_t *word, uint32_t offset)
-            : _word(word), _offset(offset) {}
+        const_iterator(const SmallIntArray *sa, int idx) : _sa(sa), _idx(idx) {}
 
         const_iterator &operator++() {
-            if (_offset + 1 == _ints_per_word) {
-                ++_word;
-                _offset = 0;
-            } else {
-                _offset += 1;
-            }
+            ++_idx;
             return *this;
         }
 
         bool operator==(const const_iterator &other) {
-            return _word == other._word && _offset == other._offset;
+            return _idx == other._idx;
         }
 
         bool operator!=(const const_iterator &other) {
-            return !(*this == other);
+            return _idx != other._idx;
         }
 
-        uint32_t operator*() {
-            return (*_word & _mask(_offset)) >> (_offset * bits_per_int);
-        }
+        uint32_t operator*() { return _sa->get(_idx); }
     };
 
   public:
@@ -150,13 +143,11 @@ template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
     }
 
     /// A forward const iterator
-    const_iterator cbegin() const { return const_iterator(_words.data(), 0); }
+    const_iterator cbegin() const { return const_iterator{this, 0}; }
 
-    const_iterator cend() const {
-        return const_iterator(_words.data() + _num_words, 0);
-    }
+    const_iterator cend() const { return const_iterator{this, num_ints}; }
 
-    void print(FILE *f=stderr) const {
+    void print(FILE *f = stderr) const {
         int n = 0;
         using namespace string_stream;
 
