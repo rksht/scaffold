@@ -1,18 +1,18 @@
 #pragma once
 
-#include "debug.h"
-#include "memory.h"
 #include "const_log.h"
-#include "smallintarray.h"
+#include "debug.h"
 #include "jeayeson/jeayeson.hpp"
+#include "memory.h"
+#include "smallintarray.h"
 
-#include <stdint.h>
-#include <limits>
-#include <bitset>
-#include <map>
-#include <string.h>
-#include <stdio.h>
 #include <assert.h>
+#include <bitset>
+#include <limits>
+#include <map>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 /// A "buddy allocator"
 
@@ -218,7 +218,6 @@ class BuddyAllocator : public Allocator {
                 // Got the buddy with the exact size
                 BuddyHead *h = _free_lists[level];
                 const uint64_t index = _buddy_index(h);
-                const uint64_t next_index = _buddies_contained(level);
 
                 if (_level_of_index.get(index) != (uint32_t)level) {
                     log_err("Bad i:%lu, Freelist level = %d, Stored level "
@@ -226,6 +225,10 @@ class BuddyAllocator : public Allocator {
                             index, level, _level_of_index.get(index));
                     assert(0 && "See error");
                 }
+
+#ifndef NDEBUG
+                const uint64_t next_index = _buddies_contained(level);
+#endif
 
                 debug("FOUND EXACT SIZE(%u buddies) TO ALLOC - i:%lu",
                       next_index, index);

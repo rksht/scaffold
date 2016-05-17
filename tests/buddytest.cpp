@@ -9,7 +9,7 @@
 constexpr uint32_t BUFFER_SIZE = 1 << 20;   // 1 MB
 constexpr uint32_t SMALLEST_SIZE = 2 << 10; // 2 KB
 constexpr uint32_t NUM_INDICES = BUFFER_SIZE / SMALLEST_SIZE;
-constexpr uint32_t NUM_LEVELS = log2_ceil(NUM_INDICES) + 1;
+/*constexpr uint32_t NUM_LEVELS = log2_ceil(NUM_INDICES) + 1;*/
 
 template <uint32_t bytes>
 using Block = std::array<uint32_t, bytes / sizeof(uint32_t)>;
