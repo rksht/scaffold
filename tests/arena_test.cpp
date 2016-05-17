@@ -30,7 +30,7 @@ int main() {
         Student *student_p;
         for (int i = 0; i < nr_objects; ++i) {
             student_p =
-                MAKE_NEW(default_arena_allocator(), Student, i, i, i % 128);
+                MAKE_NEW(default_arena_allocator(), Student, i, i, 65 + (i % 26));
             array::push_back(students, student_p);
         }
         for (Student *p : students) {
