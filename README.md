@@ -1,4 +1,6 @@
-## A set of C++ utilities into the mix.
+## A set of C++ classes structures thrown into the mix.
+
+Almost always in progress.
 
 * Foundation library by Bitsquid plays a big part which resides in the top
   level.
@@ -9,7 +11,3 @@
 
 * Some more data structures.
 
-Then there's more in submodules/ directory which contains third-party projects
-I'm using.
-
-(README is kind of in progress)
