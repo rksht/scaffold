@@ -87,7 +87,7 @@ template <typename T> void resize(Array<T> &a, uint32_t new_size) {
 
 #ifndef NDEBUG
     // If that pp flag is defined, zero fill the remaining memory.
-    memset(&a._data[new_size], 0, a._size - new_size);
+    memset(&a._data[a._size], 0, a._size - new_size);
 #endif
     a._size = new_size;
 }
