@@ -1,6 +1,8 @@
 #define CATCH_CONFIG_MAIN
 #include "smallintarray.h"
 #include "catch.hpp"
+#include <map>
+#include <stdlib.h> // rand()
 
 using foundation::SmallIntArray;
 
@@ -33,29 +35,37 @@ TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
         REQUIRE(smallints.get(0) == 7);
     }
 
-    SmallIntArray<1, 1000> bits;
-    bits.set(1, 0);
-    bits.set(500, 1);
-    bits.set(501, 1);
+    {
+        SmallIntArray<1, 1000> bits;
+        std::map<int, bool> is_set;
 
-    SECTION("1 bit ints i.e bitsets") {
-        REQUIRE(bits.get(1) == 0);
-        REQUIRE(bits.get(500) == 1);
-        REQUIRE(bits.get(501) == 1);
-        REQUIRE(bits.get(1) == 0);
-    }
+        srand(0xbeef);
 
-    bits.set(500, 0);
-    bits.set(501, 0);
+        SECTION("Use as a bitset") {
+            for (int i = 0; i < 1000; ++i) {
+                if (rand() % 1000 < 500) {
+                    bits.set(i, 1);
+                    is_set[i] = true;
+                } else {
+                    is_set[i] = false;
+                }
+            }
 
-    SECTION("resets ok") {
-        REQUIRE(bits.get(501) == 0);
-        REQUIRE(bits.get(500) == 0);
-    }
-    // smallints.print();
+            for (auto i = is_set.cbegin(), e = is_set.cend(); i != e; ++i) {
+                if (i->second) {
+                    REQUIRE(bits.get(i->first) == 1);
+                } else {
+                    REQUIRE(bits.get(i->first) == 0);
+                }
+            }
+        }
 
-    SECTION("total size") {
-        printf("Sizeof(smallints) = %zu\n", sizeof(smallints));
+        SECTION("resets ok") {
+            bits.set(500, 0);
+            bits.set(501, 0);
+            REQUIRE(bits.get(501) == 0);
+            REQUIRE(bits.get(500) == 0);
+        }
     }
 
     SECTION("iterator") {
@@ -86,7 +96,9 @@ TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
         for (int i = 102; i < 1000; ++i) {
             REQUIRE(ints.get(i) == 9);
         }
+#if 0
         ints.print();
+#endif
     }
     foundation::memory_globals::shutdown();
 }
