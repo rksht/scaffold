@@ -3,7 +3,7 @@
 #include <assert.h>
 
 // Template for usual hash and equal functions
-namespace pod_hash {
+namespace foundation {
 template <typename T> uint64_t usual_hash(T const &k) {
     (void)k;
     assert(0 && "No usual hash function implementated for this type");
@@ -13,10 +13,11 @@ template <typename T> bool usual_equal(T const &k1, T const &k2) {
     (void)k1;
     (void)k2;
     assert(0 && "No usual equal function implemented for this type");
+    return false;
 }
-} // ns pod_hash
+} // ns foundation
 
-namespace pod_hash {
+namespace foundation {
 // char* strings
 template <> uint64_t usual_hash(char *const &s);
 template <> bool usual_equal(char *const &s1, char *const &s2);
@@ -24,4 +25,9 @@ template <> bool usual_equal(char *const &s1, char *const &s2);
 // char
 template <> uint64_t usual_hash(char const &s);
 template <> bool usual_equal(char const &s1, char const &s2);
-} // namespace pod_hash
+
+// int
+template <> uint64_t usual_hash(int const& n);
+template <> bool usual_equal(int const& n1, int const& n2);
+
+} // namespace foundation

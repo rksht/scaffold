@@ -3,7 +3,7 @@
 #include "murmur_hash.h"
 
 /// Usual hash functions for selected types.
-namespace pod_hash {
+namespace foundation {
 
 // cstring hash
 template <> uint64_t usual_hash(char *const &s) {
@@ -24,4 +24,8 @@ template <> bool usual_equal(char const &s1, char const &s2) {
     return s1 == s2;
 }
 
-} // ns pod_hash
+// int hash
+template <> uint64_t usual_hash(int const& n) {return (uint64_t) n; }
+template <> bool usual_equal(int const& n1, int const& n2) { return n1 == n2; }
+
+} // ns foundation
