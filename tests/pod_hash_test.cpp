@@ -27,28 +27,28 @@ int main() {
 
     memory_globals::init();
     {
-        pod_hash::PodHash<Data, uint64_t> h(memory_globals::default_allocator(),
+        PodHash<Data, uint64_t> h(memory_globals::default_allocator(),
                                             memory_globals::default_allocator(),
                                             Data_hash, Data_equal);
-        assert(pod_hash::has(h, D1) == false);
-        pod_hash::set(h, D1, 0x10lu);
-        assert(pod_hash::has(h, D1) == true);
-        assert(pod_hash::set_default(h, D2, 0x10lu) == 0x10lu);
+        assert(has(h, D1) == false);
+        set(h, D1, 0x10lu);
+        assert(has(h, D1) == true);
+        assert(set_default(h, D2, 0x10lu) == 0x10lu);
 
-        pod_hash::remove(h, D1);
-        pod_hash::remove(h, D2);
+        remove(h, D1);
+        remove(h, D2);
 
         for (uint64_t i = 0; i < 1000; ++i) {
             Data d = {i, i, i};
-            pod_hash::set(h, d, i * i);
+            set(h, d, i * i);
         }
 
         for (uint64_t i = 0; i < 1000; ++i) {
             Data d = {i, i, i};
-            assert(pod_hash::set_default(h, d, 0lu) == i * i);
+            assert(set_default(h, d, 0lu) == i * i);
         }
 
-        printf("Max chain length: %i\n", pod_hash::max_chain_length(h));
+        printf("Max chain length: %i\n", max_chain_length(h));
 
         for (const auto &e : h) {
             printf("id = %lu\n", e.key.id);
@@ -56,25 +56,25 @@ int main() {
 
         for (uint64_t i = 0; i < 1000; ++i) {
             Data d = {i, i, i};
-            pod_hash::remove(h, d);
+            remove(h, d);
         }
 
         for (uint64_t i = 0; i < 1000; ++i) {
             Data d = {i, i, i};
-            assert(pod_hash::has(h, d) == false);
+            assert(has(h, d) == false);
         }
 
-        pod_hash::PodHash<char, uint64_t> h1(
+        PodHash<char, uint64_t> h1(
             memory_globals::default_allocator(),
-            memory_globals::default_allocator(), pod_hash::usual_hash<char>,
-            pod_hash::usual_equal<char>);
+            memory_globals::default_allocator(), usual_hash<char>,
+            usual_equal<char>);
 
         for (char i = 'a'; i < 'z'; ++i) {
-            pod_hash::set(h1, i, (uint64_t)(i * i));
+            set(h1, i, (uint64_t)(i * i));
         }
 
         for (char i = 'a'; i < 'z'; ++i) {
-            pod_hash::remove(h1, i);
+            remove(h1, i);
         }
     }
     memory_globals::shutdown();

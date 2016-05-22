@@ -1,9 +1,11 @@
 #define CATCH_CONFIG_MAIN
 #include "smallintarray.h"
 #include "catch.hpp"
-#include <map>
+#include "pod_hash.h"
+#include "pod_hash_usuals.h"
 #include <stdlib.h> // rand()
 
+using foundation::PodHash;
 using foundation::SmallIntArray;
 
 TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
@@ -37,25 +39,29 @@ TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
 
     {
         SmallIntArray<1, 1000> bits;
-        std::map<int, bool> is_set;
 
         srand(0xbeef);
+
+        PodHash<int, int> is_set(
+            foundation::memory_globals::default_allocator(),
+            foundation::memory_globals::default_allocator(),
+            foundation::usual_hash<int>, foundation::usual_equal<int>);
 
         SECTION("Use as a bitset") {
             for (int i = 0; i < 1000; ++i) {
                 if (rand() % 1000 < 500) {
                     bits.set(i, 1);
-                    is_set[i] = true;
+                    set(is_set, i, 1);
                 } else {
-                    is_set[i] = false;
+                    set(is_set, i, 0);
                 }
             }
 
-            for (auto i = is_set.cbegin(), e = is_set.cend(); i != e; ++i) {
-                if (i->second) {
-                    REQUIRE(bits.get(i->first) == 1);
+            for (auto i = cbegin(is_set), e = cend(is_set); i != e; ++i) {
+                if (i->value) {
+                    REQUIRE(bits.get(i->key) == 1);
                 } else {
-                    REQUIRE(bits.get(i->first) == 0);
+                    REQUIRE(bits.get(i->key) == 0);
                 }
             }
         }
