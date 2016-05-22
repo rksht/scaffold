@@ -82,13 +82,13 @@ template <typename T> inline void trim(Array<T> &a) {
 }
 
 template <typename T> void resize(Array<T> &a, uint32_t new_size) {
-    if (new_size > a._capacity)
+    if (new_size > a._capacity) {
         grow(a, new_size);
-
+// Zero the memory if we are in debug mode
 #ifndef NDEBUG
-    // If that pp flag is defined, zero fill the remaining memory.
-    memset(&a._data[a._size], 0, new_size - a._size);
+        memset(&a._data[a._size], 0, new_size - a._size);
 #endif
+    }
     a._size = new_size;
 }
 
@@ -133,7 +133,7 @@ template <typename T> inline void pop_back(Array<T> &a) { a._size--; }
 
 template <typename T>
 inline Array<T>::Array(Allocator &allocator)
-    : _allocator(&allocator), _size(0), _capacity(0), _data(0) {}
+    : _allocator(&allocator), _size(0), _capacity(0), _data(nullptr) {}
 
 template <typename T> inline Array<T>::~Array() {
     if (_data) {
