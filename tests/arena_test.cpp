@@ -1,13 +1,15 @@
-#include "murmur_hash.h"
-#include "hash.h"
-#include "memory.h"
+#if 0
+
 #include "arena.h"
 #include "array.h"
+#include "hash.h"
+#include "memory.h"
+#include "murmur_hash.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <utility>
-#include <assert.h>
 
 using namespace foundation;
 using namespace memory_globals;
@@ -59,3 +61,6 @@ int main() {
     shutdown();
     return 0;
 }
+#endif
+
+int main() {}
