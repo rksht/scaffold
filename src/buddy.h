@@ -2,9 +2,12 @@
 
 #include "const_log.h"
 #include "debug.h"
-#include "jeayeson/jeayeson.hpp"
 #include "memory.h"
 #include "smallintarray.h"
+
+#ifndef NDEBUG
+#include "jeayeson/jeayeson.hpp"
+#endif
 
 #include <assert.h>
 #include <bitset>
@@ -202,14 +205,17 @@ class BuddyAllocator : public Allocator {
             // of 2, break it in half and put the buddies in the lower level
             // just below, and check the lower level
             if (buddy_size > size) {
-                uint32_t index = _buddy_index(_free_lists[level]);
                 debug("Before allocate break");
+#ifndef NDEBUG
+                uint32_t index = _buddy_index(_free_lists[level]);
                 print_level_map(index, index + _buddies_contained(level));
+#endif
                 debug("Allocate - Break i:%u - level - %d", index, level);
-                BuddyHead *h = _break_free(level);
+                _break_free(level);
                 debug("After allocate break");
+#ifndef NDEBUG
                 print_level_map(index, index + _buddies_contained(level));
-                (void)h;
+#endif
                 ++level;
 #ifndef NDEBUG
                 print_level_map();
@@ -228,12 +234,8 @@ class BuddyAllocator : public Allocator {
 
 #ifndef NDEBUG
                 const uint64_t next_index = _buddies_contained(level);
-#endif
-
                 debug("FOUND EXACT SIZE(%u buddies) TO ALLOC - i:%lu",
                       next_index, index);
-
-#ifndef NDEBUG
                 print_level_map(index, next_index >= _num_indices ? _num_indices
                                                                   : next_index);
 #endif
@@ -268,7 +270,7 @@ class BuddyAllocator : public Allocator {
         h->destroy();
 
 #ifndef NDEBUG
-        _superbuddy_consistency_check(h);
+        _check_buddy_index(h);
 #endif
 
         // Get the index of the buddy as known from the address and then the
@@ -291,7 +293,9 @@ class BuddyAllocator : public Allocator {
         }
 
         debug("BEFORE DEALLOCATE: %u, here's the map", idx);
+#ifndef NDEBUG
         print_level_map(idx, idx + 20);
+#endif
 
         _index_allocated[idx] = false;
         _total_allocated -= size;
@@ -307,8 +311,10 @@ class BuddyAllocator : public Allocator {
 
         debug("SET THE INITIAL BLOCK headed by i:%u TO FREE, here's the map",
               idx);
+#ifndef NDEBUG
         print_level_map(idx,
                         idx + 20 >= _num_indices ? _num_indices : idx + 20);
+#endif
 
         while (level >= 1) {
             debug("Merge iteration - %d, level - %d", original_level - level,
@@ -343,9 +349,11 @@ class BuddyAllocator : public Allocator {
                 debug("\t BEFORE MERGE - left i:%u and right i:%u", left_idx,
                       right_idx);
 
-                // Print the surrounding buddy status
+// Print the surrounding buddy status
+#ifndef NDEBUG
                 print_level_map(idx, idx + 20 >= _num_indices ? _num_indices
                                                               : idx + 20);
+#endif
 
                 left->remove_self_from_list(_free_lists, level);
                 right->remove_self_from_list(_free_lists, level);
@@ -354,8 +362,10 @@ class BuddyAllocator : public Allocator {
 
                 debug("\t AFTER MERGE - left i:%u and right i:%u", left_idx,
                       right_idx);
+#ifndef NDEBUG
                 print_level_map(idx, idx + 20 >= _num_indices ? _num_indices
                                                               : idx + 20);
+#endif
 
             } else {
                 debug("NO MORE MERGE");
@@ -524,7 +534,8 @@ class BuddyAllocator : public Allocator {
         }
     }
 
-    void _superbuddy_consistency_check(BuddyHead *p) {
+    // A check to ensure we did the correct math :)
+    void _check_buddy_index(BuddyHead *p) {
         uint32_t index = _buddy_index(p);
         uint32_t level = _level_of_index.get(index);
         uint32_t buddies_inside = _buddies_contained(level);
@@ -538,6 +549,7 @@ class BuddyAllocator : public Allocator {
         }
     }
 
+#ifndef NDEBUG
     void _json_collect(json_array &arr, uint32_t level,
                        uint32_t buddy_index) const {
         // case 1 - buddy is free
@@ -571,6 +583,7 @@ class BuddyAllocator : public Allocator {
         _json_collect(children, level + 1, adj_super_buddy_index);
         arr.push_back(json_map{{"children", children}});
     }
+#endif
 }; // class BuddyAllocator
 
 } // namespace foundation
