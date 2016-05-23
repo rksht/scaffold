@@ -226,19 +226,9 @@ class ScratchAllocator : public Allocator {
 };
 
 struct MemoryGlobals {
-    static const int ALLOCATOR_MEMORY = sizeof(MallocAllocator) +
-                                        sizeof(ScratchAllocator) +
-                                        sizeof(ArenaAllocator);
-
-    char buffer[ALLOCATOR_MEMORY];
-
-    MallocAllocator *default_allocator;
-    ScratchAllocator *default_scratch_allocator;
-    ArenaAllocator *default_arena_allocator;
-
-    constexpr MemoryGlobals()
-        : buffer{0}, default_allocator(0), default_scratch_allocator(0),
-          default_arena_allocator(0) {}
+    alignas(MallocAllocator) char default_allocator[sizeof(MallocAllocator)];
+    alignas(ScratchAllocator) char default_scratch_allocator[sizeof(
+        ScratchAllocator)];
 };
 
 MemoryGlobals _memory_globals;
@@ -254,41 +244,36 @@ static const char default_scratch_allocator_name[] =
 static const char default_arena_allocator_name[] = "Default arena allocator";
 
 void init(uint32_t scratch_buffer_size, uint32_t default_arena_size) {
-    char *p = _memory_globals.buffer;
-    _memory_globals.default_allocator = new (p) MallocAllocator();
+    (void)default_arena_size;
+    new (_memory_globals.default_allocator) MallocAllocator{};
+    new (_memory_globals.default_scratch_allocator)
+        ScratchAllocator{*(MallocAllocator *)_memory_globals.default_allocator,
+                         scratch_buffer_size};
 
-    p += sizeof(MallocAllocator);
-    _memory_globals.default_scratch_allocator = new (p) ScratchAllocator(
-        *_memory_globals.default_allocator, scratch_buffer_size);
-
-    p += sizeof(ScratchAllocator);
-    _memory_globals.default_arena_allocator =
-        new (p) ArenaAllocator(*_memory_globals.default_allocator,
-                               default_arena_size, (ArenaAllocator &)(*p));
-
-    _memory_globals.default_allocator->set_name(default_allocator_name,
-                                                sizeof(default_allocator_name));
-    _memory_globals.default_scratch_allocator->set_name(
+    default_allocator().set_name(default_allocator_name,
+                                 sizeof(default_allocator_name));
+    default_scratch_allocator().set_name(
         default_arena_allocator_name, sizeof(default_scratch_allocator_name));
-
-    _memory_globals.default_arena_allocator->set_name(
-        default_arena_allocator_name, sizeof(default_arena_allocator_name));
 }
 
-Allocator &default_allocator() { return *_memory_globals.default_allocator; }
+// Incoming barrage of reinterpret_casts
+
+Allocator &default_allocator() {
+    return *(
+        reinterpret_cast<MallocAllocator *>(_memory_globals.default_allocator));
+}
 
 Allocator &default_scratch_allocator() {
-    return *_memory_globals.default_scratch_allocator;
-}
-
-ArenaAllocator &default_arena_allocator() {
-    return *_memory_globals.default_arena_allocator;
+    return *(reinterpret_cast<ScratchAllocator *>(
+        _memory_globals.default_scratch_allocator));
 }
 
 void shutdown() {
-    _memory_globals.default_arena_allocator->~ArenaAllocator();
-    _memory_globals.default_scratch_allocator->~ScratchAllocator();
-    _memory_globals.default_allocator->~MallocAllocator();
+    reinterpret_cast<ScratchAllocator *>(
+        _memory_globals.default_scratch_allocator)
+        ->~ScratchAllocator();
+    reinterpret_cast<MallocAllocator *>(_memory_globals.default_allocator)
+        ->~MallocAllocator();
     _memory_globals = MemoryGlobals();
 }
 } // namespace memory_globals
