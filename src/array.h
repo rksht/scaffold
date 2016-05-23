@@ -58,11 +58,11 @@ template <typename T> inline bool empty(const Array<T> &a) {
 }
 
 template <typename T> typename Array<T>::iterator begin(Array<T> &a) {
-    return a._data;
+    return a.begin();
 }
 
 template <typename T> inline typename Array<T>::iterator end(Array<T> &a) {
-    return a._data + a._size;
+    return a.end();
 }
 
 template <typename T> inline T &front(Array<T> &a) { return a._data[0]; }
