@@ -1,7 +1,7 @@
 #pragma once
 
-#include "memory.h"
 #include "array.h"
+#include "memory.h"
 #include "string_stream.h"
 
 namespace scanner {
@@ -50,7 +50,7 @@ struct Scanner {
     long current_int;
     double current_float;
 
-    Scanner(Buffer &&text, int mode = DEFAULT_MODE);
+    Scanner(Buffer text, int mode = DEFAULT_MODE);
 
     Scanner(Scanner &&sc);
 };
@@ -64,9 +64,9 @@ void token_text(const Scanner &s, Buffer &b);
 /// Overload of token_text that returns a null terminated c-string
 char *token_text(const Scanner &s, Allocator &a);
 
-/// A function that takes takes a buffer and a raw string token text
-/// and stores the in-memory representation of the string in the buffer.
-/// Call this on the token for the STRING type
+/// Pushes into `b` all the characters from `raw` while decoding the escape
+/// codes in `raw` (e.g - The sequence of characters '\' and 'n' in `raw` will
+/// be pushed as a single newline character into `b`.
 void string_token(Buffer &b, Buffer &raw);
 
 } // namespace scanner

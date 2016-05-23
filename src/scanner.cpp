@@ -1,13 +1,13 @@
+#include <assert.h>
+#include <memory>
 #include <stdio.h>
 #include <stdlib.h>
-#include <memory>
-#include <assert.h>
 
 #include "scanner.h"
 
 namespace scanner {
 
-Scanner::Scanner(Array<char> &&text, int mode)
+Scanner::Scanner(Buffer text, int mode)
     : _text(std::move(text)), mode(mode), line(1), col(1), offset(0),
       token_start(-1), current_tok(INVALID) {}
 
