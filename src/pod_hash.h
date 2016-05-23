@@ -1,5 +1,9 @@
 #pragma once
 
+/// This file contains an implementation of a 'PodHash' which is essentially the
+/// Hash in collection_types.h, but can use any POD data type as key. It's
+/// a good idea to use Hash for integer keys and this one for larger objects.
+
 #include "array.h"
 #include "collection_types.h"
 #include "memory.h"
