@@ -13,21 +13,20 @@
 /// namespace foundation contains a chain-based hash table implementation for
 /// POD key- value pairs
 namespace foundation {
-template <typename K, typename V> struct _HashEntry {
+template <typename K, typename V> struct _Entry {
     K key;
     V value;
     uint32_t next;
 };
 /// PodHash<K, V>
 template <typename K, typename V>
-struct PodHash
-    : std::iterator<std::random_access_iterator_tag, _HashEntry<K, V>> {
+struct PodHash : std::iterator<std::random_access_iterator_tag, _Entry<K, V>> {
     static_assert(std::is_trivially_copyable<K>::value,
                   "Key type must be trivially copyable");
     static_assert(std::is_trivially_copyable<V>::value,
                   "Value type must be trivially copyabe");
 
-    using Entry = _HashEntry<K, V>;
+    using Entry = _Entry<K, V>;
     using iterator = typename foundation::Array<Entry>::iterator;
     using const_iterator = typename foundation::Array<Entry>::const_iterator;
 
