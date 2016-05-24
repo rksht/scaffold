@@ -21,10 +21,7 @@ using Block_8KB = Block<8 << 10>;
 int main(int argc, char **argv) {
     uint64_t seed = argc >= 2 ? strtoull(argv[1], nullptr, 10) : 100;
 
-    log_info("Seed = %lu", seed);
-    if (seed == 100 && argc == 2) {
-        abort();
-    }
+    log_info("--Seed = %lu", seed);
 
     foundation::memory_globals::init();
     {
@@ -42,8 +39,8 @@ int main(int argc, char **argv) {
             std::cerr << "ITER = " << i << "\n";
 
             if (i % 500 == 0) {
-                std::cout << ba.get_json_tree() << "\n--\n";
-                //std::cin >> n;
+                // std::cout << ba.get_json_tree() << "\n--\n";
+                // std::cin >> n;
             }
 
             if (d(dre) < 3) {
