@@ -8,12 +8,6 @@ add_compile_options("-std=c++14" "-Wall" "-Wextra" "-Wshadow")
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 
-#include_directories(${project_source_dir}/submodules/jeayeson/include)
-
-#include_directories(${project_source_dir}/submodules/seasocks/src/main/c)
-
-include_directories(${project_source_dir}/jeayeson/include)
-
 add_library(scaffold ${SOURCE_FILES})
 
 #add_dependencies(scaffold submodules)

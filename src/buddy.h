@@ -5,10 +5,6 @@
 #include "memory.h"
 #include "smallintarray.h"
 
-#ifndef NDEBUG
-#include "jeayeson/jeayeson.hpp"
-#endif
-
 #include <assert.h>
 #include <bitset>
 #include <limits>
@@ -118,7 +114,7 @@ class BuddyAllocator : public Allocator {
     /// latter determinining the size of the buddy, so we do need to store the
     /// level of any allocated buddy alongside as the API for deallocate only
     /// takes the pointer to the start address of the buddy to be deallocated
-    std::bitset<_num_indices> _index_allocated;
+    SmallIntArray<1, _num_indices> _index_allocated;
 
     /// Level at which the buddy - denoted by its i:is residing
     SmallIntArray<log2_ceil(num_levels), _num_indices> _level_of_index;
@@ -244,7 +240,7 @@ class BuddyAllocator : public Allocator {
                 // Set each to allocated status
                 for (uint32_t b = index, e = index + _buddies_contained(level);
                      b < e; ++b) {
-                    _index_allocated[b] = true;
+                    _index_allocated.set(b, 1);
                 }
                 _total_allocated += size;
 
@@ -279,7 +275,7 @@ class BuddyAllocator : public Allocator {
         const uint32_t original_level = _level_of_index.get(idx);
         uint32_t level = original_level;
 
-        assert(_index_allocated[idx] == true);
+        assert(_index_allocated.get(idx));
 
         const uint64_t size = _buddy_size_at_level((uint32_t)level);
 
@@ -287,7 +283,7 @@ class BuddyAllocator : public Allocator {
             log_err("Unallocated index (index_allocated = %d? i:%u, "
                     "level - %d, size - %lu, "
                     "_total_allocated - %lu",
-                    int(_index_allocated[idx]), idx, level, size,
+                    int(_index_allocated.get(idx)), idx, level, size,
                     _total_allocated);
             assert(0 && "See error");
         }
@@ -297,7 +293,7 @@ class BuddyAllocator : public Allocator {
         print_level_map(idx, idx + 20);
 #endif
 
-        _index_allocated[idx] = false;
+        _index_allocated.set(idx, 0);
         _total_allocated -= size;
 
         // Put h back into free list
@@ -343,7 +339,8 @@ class BuddyAllocator : public Allocator {
             // One of the buddies left or right is guaranteed to be free, but
             // we don't track which to keep it all simple. Same argument for
             // level - one of them is guaranteed to be in the current `level`.
-            if (!_index_allocated[left_idx] && !_index_allocated[right_idx] &&
+            if (!_index_allocated.get(left_idx) &&
+                !_index_allocated.get(right_idx) &&
                 _level_of_index.get(left_idx) ==
                     _level_of_index.get(right_idx)) {
                 debug("\t BEFORE MERGE - left i:%u and right i:%u", left_idx,
@@ -397,10 +394,10 @@ class BuddyAllocator : public Allocator {
             ::fprintf(stderr, "%s\n", c_str(b));
             array::clear(b);
         }
-        std::cerr << "\n--\n";
+        fprintf(stderr, "\n--\n");
 
         for (uint32_t i = start; i < end; ++i) {
-            b << i << "=" << (_index_allocated[i] ? "x" : "o") << "\t";
+            b << i << "=" << (_index_allocated.get(i) ? "x" : "o") << "\t";
             tab(b, 8);
             if (array::size(b) >= 80) {
                 ::fprintf(stderr, "%s\n", c_str(b));
@@ -410,24 +407,16 @@ class BuddyAllocator : public Allocator {
         if (array::size(b) != 0) {
             ::fprintf(stderr, "%s\n", c_str(b));
         }
-        std::cerr << "\n--\n";
+        fprintf(stderr, "\n--\n");
+
         for (uint32_t i = 0; i < num_levels; ++i) {
             BuddyHead *h = _free_lists[i];
             while (h) {
-                std::cerr << _buddy_index(h) << " at " << i << "\n";
+                fprintf(stderr, "%lu at %u\n", _buddy_index(h), i);
                 h = h->_next;
             }
         }
         fprintf(stderr, "+-------END-------+\n**\n");
-    }
-
-    json_map get_json_tree() const {
-        json_map top;
-        json_array children;
-        _json_collect(children, 0, 0);
-        top["name"] = "top";
-        top["children"] = children;
-        return top;
     }
 
   private:
@@ -530,7 +519,7 @@ class BuddyAllocator : public Allocator {
 #endif
         _level_of_index.set_range(index, last, level);
         for (uint32_t b = index; b < last; ++b) {
-            _index_allocated[b] = false;
+            _index_allocated.set(b, 0);
         }
     }
 
@@ -548,42 +537,6 @@ class BuddyAllocator : public Allocator {
             abort();
         }
     }
-
-#ifndef NDEBUG
-    void _json_collect(json_array &arr, uint32_t level,
-                       uint32_t buddy_index) const {
-        // case 1 - buddy is free
-        if (!_index_allocated[buddy_index]) {
-            arr.push_back(json_map{{"name", buddy_index},
-                                   {"color", "green"},
-                                   {"size", _buddy_size_at_level(level)}});
-            return;
-        }
-
-        // case 2 - allocated and at this very level
-        if (_level_of_index.get(buddy_index) == level) {
-            arr.push_back(json_map{{"name", buddy_index},
-                                   {"color", "red"},
-                                   {"size", _buddy_size_at_level(level)}});
-            return;
-        }
-
-        // case 3 - allocated and not at this level
-        if (level == _last_level) {
-            print_level_map();
-            log_err("JSON collect - reached buddy %u which is case 3 but at "
-                    "last level(=%u)",
-                    buddy_index, _last_level);
-            abort();
-        }
-        uint32_t adj_super_buddy_index =
-            buddy_index + _buddies_contained(level + 1);
-        json_array children;
-        _json_collect(children, level + 1, buddy_index);
-        _json_collect(children, level + 1, adj_super_buddy_index);
-        arr.push_back(json_map{{"children", children}});
-    }
-#endif
 }; // class BuddyAllocator
 
 } // namespace foundation
