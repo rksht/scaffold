@@ -12,9 +12,8 @@ uint32_t ArenaAllocator::_aligned_size_with_padding(uint32_t size) {
     return total;
 }
 
-ArenaAllocator::ArenaAllocator(Allocator &backing, uint32_t size,
-                               ArenaAllocator &fallback)
-    : _backing(&backing), _fallback(&fallback) {
+ArenaAllocator::ArenaAllocator(Allocator &backing, uint32_t size)
+    : _backing(&backing) {
     uint32_t adjusted_size = _aligned_size_with_padding(size);
     _mem = _backing->allocate(adjusted_size, alignof(_Header));
     memset(_mem, 0, adjusted_size);
@@ -25,7 +24,7 @@ ArenaAllocator::ArenaAllocator(Allocator &backing, uint32_t size,
 }
 
 void *ArenaAllocator::allocate(uint32_t size, uint32_t align) {
-    void *after_header, *aligned_start;
+    char *after_header, *aligned_start;
     uint32_t pad_size;
 
     if (size % alignof(_Header) != 0) {
@@ -41,20 +40,13 @@ void *ArenaAllocator::allocate(uint32_t size, uint32_t align) {
     after_header = (char *)(_next_header + 1);
     aligned_start = (char *)memory::align_forward(after_header, align);
 
-    // Would go past last byte? If so, try the fallback allocator.
-    if ((char *)aligned_start + size >
-        (char *)_mem + _backing->allocated_size(_mem)) {
-        log_info("ArenaAllocator(%p) exhausted, using fallback allocator",
-                 this);
-        if (_fallback == &memory_globals::default_arena_allocator() &&
-            this == _fallback) {
-            log_err("ArenaAllocator(%p), fallback exhausted too", this);
-            return nullptr;
-        }
-        return _fallback->allocate(size, align);
+    // Would go past last byte?
+    if (aligned_start + size > (char *)_mem + _backing->allocated_size(_mem)) {
+        log_err("ArenaAllocator(%s) exhausted, using fallback allocator",
+                name());
     }
 
-    pad_size = (uint32_t)((char *)aligned_start - (char *)after_header);
+    pad_size = (uint32_t)(aligned_start - after_header);
 
     // wasted
     _wasted += sizeof(_Header) + pad_size;
@@ -75,11 +67,8 @@ void *ArenaAllocator::allocate(uint32_t size, uint32_t align) {
 
 /// Do not use it explicitly
 void ArenaAllocator::deallocate(void *p) {
-    if (_mem <= p && p < (char *)_mem + _backing->allocated_size(p)) {
-        assert(false && "You must not call this");
-    } else {
-        _fallback->deallocate(p);
-    }
+    (void)p;
+    assert(false && "You must not call this");
 }
 
 uint32_t ArenaAllocator::allocated_size(void *p) {

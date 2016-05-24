@@ -17,7 +17,6 @@ class ArenaAllocator : public Allocator {
 
   private:
     Allocator *_backing;
-    ArenaAllocator *_fallback;
     void *_mem;
     _Header *_top_header;
     _Header *_next_header;
@@ -29,7 +28,7 @@ class ArenaAllocator : public Allocator {
     uint32_t _aligned_size_with_padding(uint32_t size);
 
   public:
-    ArenaAllocator(Allocator &backing, uint32_t size, ArenaAllocator &fallback);
+    ArenaAllocator(Allocator &backing, uint32_t size);
 
     ~ArenaAllocator();
 
