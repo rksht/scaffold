@@ -226,9 +226,14 @@ class ScratchAllocator : public Allocator {
 };
 
 struct MemoryGlobals {
-    alignas(MallocAllocator) char default_allocator[sizeof(MallocAllocator)];
-    alignas(ScratchAllocator) char default_scratch_allocator[sizeof(
+    alignas(MallocAllocator) char _default_allocator[sizeof(MallocAllocator)];
+    alignas(ScratchAllocator) char _default_scratch_allocator[sizeof(
         ScratchAllocator)];
+
+    // Don't like to have strict aliasing related warnings. I can spare a few
+    // bytes to point to the above two chunks
+    MallocAllocator *default_allocator;
+    ScratchAllocator *default_scratch_allocator;
 };
 
 MemoryGlobals _memory_globals;
@@ -245,10 +250,12 @@ static const char default_arena_allocator_name[] = "Default arena allocator";
 
 void init(uint32_t scratch_buffer_size, uint32_t default_arena_size) {
     (void)default_arena_size;
-    new (_memory_globals.default_allocator) MallocAllocator{};
-    new (_memory_globals.default_scratch_allocator)
-        ScratchAllocator{*(MallocAllocator *)_memory_globals.default_allocator,
-                         scratch_buffer_size};
+    _memory_globals.default_allocator =
+        new (_memory_globals._default_allocator) MallocAllocator{};
+    _memory_globals.default_scratch_allocator =
+        new (_memory_globals._default_scratch_allocator) ScratchAllocator{
+            *(MallocAllocator *)_memory_globals.default_allocator,
+            scratch_buffer_size};
 
     default_allocator().set_name(default_allocator_name,
                                  sizeof(default_allocator_name));
@@ -256,24 +263,15 @@ void init(uint32_t scratch_buffer_size, uint32_t default_arena_size) {
         default_arena_allocator_name, sizeof(default_scratch_allocator_name));
 }
 
-// Incoming barrage of reinterpret_casts
-
-Allocator &default_allocator() {
-    return *(
-        reinterpret_cast<MallocAllocator *>(_memory_globals.default_allocator));
-}
+Allocator &default_allocator() { return *_memory_globals.default_allocator; }
 
 Allocator &default_scratch_allocator() {
-    return *(reinterpret_cast<ScratchAllocator *>(
-        _memory_globals.default_scratch_allocator));
+    return *_memory_globals.default_scratch_allocator;
 }
 
 void shutdown() {
-    reinterpret_cast<ScratchAllocator *>(
-        _memory_globals.default_scratch_allocator)
-        ->~ScratchAllocator();
-    reinterpret_cast<MallocAllocator *>(_memory_globals.default_allocator)
-        ->~MallocAllocator();
+    _memory_globals.default_allocator->~MallocAllocator();
+    _memory_globals.default_scratch_allocator->~ScratchAllocator();
     _memory_globals = MemoryGlobals();
 }
 } // namespace memory_globals
