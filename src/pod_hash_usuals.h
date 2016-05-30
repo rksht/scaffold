@@ -7,6 +7,7 @@ namespace foundation {
 template <typename T> uint64_t usual_hash(T const &k) {
     (void)k;
     assert(0 && "No usual hash function implementated for this type");
+    return 0;
 }
 
 template <typename T> bool usual_equal(T const &k1, T const &k2) {
