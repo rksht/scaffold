@@ -91,17 +91,12 @@ class MallocAllocator : public Allocator {
         fill(h, p, ts);
         _total_allocated += ts;
         assert((uintptr_t)p % align == 0);
-
-        // printf("ALLOCATE: %p\n", p);
-
         return p;
     }
 
     virtual void deallocate(void *p) {
         if (!p)
             return;
-
-        // printf("DEALLOCATE: %p\n", p);
 
         Header *h = header(p);
         _total_allocated -= h->size;
@@ -270,8 +265,10 @@ Allocator &default_scratch_allocator() {
 }
 
 void shutdown() {
-    _memory_globals.default_allocator->~MallocAllocator();
     _memory_globals.default_scratch_allocator->~ScratchAllocator();
+    // MallocAllocator must be last as its used as the backing allocator for
+    // others
+    _memory_globals.default_allocator->~MallocAllocator();
     _memory_globals = MemoryGlobals();
 }
 } // namespace memory_globals
