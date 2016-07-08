@@ -6,9 +6,7 @@
 #include "smallintarray.h"
 
 #include <assert.h>
-#include <bitset>
 #include <limits>
-#include <map>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -322,9 +320,13 @@ class BuddyAllocator : public Allocator {
             const uint32_t buddies_inside = _buddies_contained(level);
             uint32_t left_idx = _buddy_index(left);
             uint32_t right_idx = left_idx + buddies_inside;
-
-            // TODO: write an explanation about the direction of the adjacent
-            // buddy(left or right)
+            // Suppose that a buddy head is pointing to a buddy currently
+            // located at level 'n'. The level can be 'chunked' into
+            // _buddies_contained(n) buddies of size _buddy_size_at_level(n). We
+            // want to know the index of the buddy our current buddy head is
+            // pointing at level n, if we see level n as such an array. If that
+            // index is odd, the buddy we should merge with is located to th
+            // eleft, otherwise it's to the right.
             const uint32_t level_idx = left_idx / (1 << (_last_level - level));
             if (level_idx % 2 != 0) {
                 tmp = left;
