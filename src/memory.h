@@ -119,11 +119,11 @@ Allocator &default_scratch_allocator();
 /// You must not call deallocate() on these allocator and instead just delete
 /// the backing allocator used - which is  default_allocator() usually.
 /// The preferrable option is to just call memory_globals::shudown().
-ArenaAllocator &default_arena_allocator();
+/// ArenaAllocator &default_arena_allocator(); // Commented out for now
 
 /// Shuts down the global memory allocators created by init().
 void shutdown();
-}
+} // namespace memory_globals
 
 namespace memory {
 inline void *align_forward(void *p, uint32_t align);
