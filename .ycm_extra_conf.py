@@ -1,12 +1,34 @@
-# For use with YouCompleteMe Vim plugin
+#!/usr/bin/env python2
 
-# Partially stolen from https://bitbucket.org/mblum/libgp/src/2537ea7329ef/.ycm_extra_conf.py
+# ~/.vim and/or ~/.config/nvim
+# ----------------------------
+
 import os
-import ycm_core
+#import ycm_core
 
-# These are the compilation flags that will be used in case there's no
-# compilation database set (by default, one is not set).
-# CHANGE THIS LIST OF FLAGS. YES, THIS IS THE DROID YOU HAVE BEEN LOOKING FOR.
+# For checking if I'm on NixOS
+import subprocess as sp
+import re
+
+IS_NIXOS = False
+GCC_VERSION = '5.3.0'
+
+# Usual include paths
+SYSTEM_INCLUDES = ['/usr/include', '/usr/include/c++/{}'.format(GCC_VERSION)]
+
+uname = sp.Popen(['uname', '-a'], stdout=sp.PIPE)
+uname_out, uname_err = uname.communicate()
+is_nixos = re.match(r'.*(NixOS).*', uname_out)
+
+# NixOS
+if is_nixos:
+    print('We are on nix -', uname_out)
+    SYSTEM_INCLUDES = [
+            '/run/current-system/sw/include',
+            '/run/current-system/sw/include/c++/{}'.format(GCC_VERSION)
+    ]
+
+# Add more flags to this list as required
 flags = [
     '-Wall',
     '-Wextra',
@@ -15,13 +37,16 @@ flags = [
     '-fexceptions',
     '-std=c++14',
     '-x', 'c++',
-    '-isystem', '/usr/local/include',
-    '-isystem', '/usr/include/c++/5.3.0',
+    '-I.',
     '-I', 'src',
-    '-I', 'submodules/jeayeson/include',
-    '-I', 'submodules/seasocks/src/main/c',
-    '-I.'
+    '-I', 'jeayeson/include'
 ]
+
+# Append the includes
+for i in SYSTEM_INCLUDES:
+    flags.append('-isystem')
+    flags.append(i)
+
 
 # Set this to the absolute path to the folder (NOT the file!) containing the
 # compile_commands.json file to use that instead of 'flags'. See here for
