@@ -1,6 +1,7 @@
 #pragma once
 
 #include "const_log.h"
+#define NDEBUG
 #include "debug.h"
 #include "memory.h"
 #include "smallintarray.h"
