@@ -1,4 +1,4 @@
-## A set of C++ classes structures thrown into the mix.
+## A set of C++ things thrown into the mix.
 
 Almost always in progress.
 
