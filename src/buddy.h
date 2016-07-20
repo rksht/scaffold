@@ -1,7 +1,6 @@
 #pragma once
 
 #include "const_log.h"
-#define NDEBUG
 #include "debug.h"
 #include "memory.h"
 #include "smallintarray.h"
@@ -148,7 +147,7 @@ class BuddyAllocator : public Allocator {
         : _backing(&backing_allocator), _mem(nullptr) {
         _initialize();
 
-        debug("Buddy allocator initialized - buffer_size = %lu "
+        debug("BuddyAllocator::Initialized - buffer_size = %lu "
               "_min_buddy_size = %lu, "
               "_min_buddy_size_power = %u, num_levels = %u, num_indices = "
               "%u\n--",
@@ -159,7 +158,7 @@ class BuddyAllocator : public Allocator {
     ~BuddyAllocator() {
         _backing->deallocate(_mem);
         if (_total_allocated != 0) {
-            log_err("BuddyAllocator - Leaking memory?! - Total Allocated = %lu",
+            log_err("BuddyAllocator::Leaking memory?! - Total Allocated = %lu",
                     _total_allocated);
             assert(0);
         }
@@ -184,7 +183,7 @@ class BuddyAllocator : public Allocator {
                "Aligned looser than _buddy_alignment");
 
         int level = _last_level;
-        debug("Allocating ... ");
+        debug("Allocating Buddy...");
         while (true) {
             const uint64_t buddy_size = _buddy_size_at_level((uint32_t)level);
 
@@ -200,41 +199,32 @@ class BuddyAllocator : public Allocator {
             // of 2, break it in half and put the buddies in the lower level
             // just below, and check the lower level
             if (buddy_size > size) {
-                debug("Before allocate break");
-#ifndef NDEBUG
                 uint32_t index = _buddy_index(_free_lists[level]);
                 print_level_map(index, index + _buddies_contained(level));
-#endif
-                debug("Allocate - Break i:%u - level - %d", index, level);
+                debug("BuddyAlloc::Allocate::Break i:%u - level - %d", index,
+                      level);
                 _break_free(level);
-                debug("After allocate break");
-#ifndef NDEBUG
                 print_level_map(index, index + _buddies_contained(level));
-#endif
                 ++level;
-#ifndef NDEBUG
                 print_level_map();
-#endif
             } else if (buddy_size == size) {
                 // Got the buddy with the exact size
                 BuddyHead *h = _free_lists[level];
                 const uint64_t index = _buddy_index(h);
 
                 if (_level_of_index.get(index) != (uint32_t)level) {
-                    log_err("Bad i:%lu, Freelist level = %d, Stored level "
+                    log_err("BuddyAlloc::Bad i:%lu, Freelist level = %d, "
+                            "Stored level "
                             "= %u",
                             index, level, _level_of_index.get(index));
                     assert(0 && "See error");
                 }
 
-#ifndef NDEBUG
                 const uint64_t next_index = _buddies_contained(level);
-                debug("FOUND EXACT SIZE(%u buddies) TO ALLOC - i:%lu",
+                debug("BuddyAlloc::Found exact size(%u buddies) TO ALLOC - i:%lu",
                       next_index, index);
                 print_level_map(index, next_index >= _num_indices ? _num_indices
                                                                   : next_index);
-#endif
-
                 h->remove_self_from_list(_free_lists, level);
                 // Set each to allocated status
                 for (uint32_t b = index, e = index + _buddies_contained(level);
@@ -243,12 +233,10 @@ class BuddyAllocator : public Allocator {
                 }
                 _total_allocated += size;
 
-                debug("BuddyAllocator - Allocated - Level - %u, i:%lu "
-                      "(Size = %u)\n--",
-                      level, index, size);
-#ifndef NDEBUG
+                log_info("BuddyAllocator::Allocated::Level - %u, i:%lu (Size = "
+                         "%u)\n--",
+                         level, index, size);
                 print_level_map(index, next_index);
-#endif
                 return (void *)h;
             }
         }
@@ -264,9 +252,7 @@ class BuddyAllocator : public Allocator {
         BuddyHead *h = _head_at(p);
         h->destroy();
 
-#ifndef NDEBUG
         _check_buddy_index(h);
-#endif
 
         // Get the index of the buddy as known from the address and then the
         // level and size of this buddy
@@ -279,18 +265,14 @@ class BuddyAllocator : public Allocator {
         const uint64_t size = _buddy_size_at_level((uint32_t)level);
 
         if (!((int64_t)_total_allocated - (int64_t)size >= 0)) {
-            log_err("Unallocated index (index_allocated = %d? i:%u, "
-                    "level - %d, size - %lu, "
-                    "_total_allocated - %lu",
+            log_err("BuddyAlloc::Unallocated index (index_allocated = %d? "
+                    "i:%u, level - %d, size - %lu, _total_allocated - %lu",
                     int(_index_allocated.get(idx)), idx, level, size,
                     _total_allocated);
             assert(0 && "See error");
         }
 
-        debug("BEFORE DEALLOCATE: %u, here's the map", idx);
-#ifndef NDEBUG
         print_level_map(idx, idx + 20);
-#endif
 
         _index_allocated.set(idx, 0);
         _total_allocated -= size;
@@ -306,17 +288,15 @@ class BuddyAllocator : public Allocator {
 
         debug("SET THE INITIAL BLOCK headed by i:%u TO FREE, here's the map",
               idx);
-#ifndef NDEBUG
+#ifndef BUDDY_ALLOC_LEVEL_LOGGING
         print_level_map(idx,
                         idx + 20 >= _num_indices ? _num_indices : idx + 20);
 #endif
 
         while (level >= 1) {
-            debug("Merge iteration - %d, level - %d", original_level - level,
-                  level);
-#ifndef NDEBUG
+            debug("BuddyAlloc::MERGE START - %d, level - %d",
+                  original_level - level, level);
             print_level_map();
-#endif
             const uint64_t size = _buddy_size_at_level(level);
             const uint32_t buddies_inside = _buddies_contained(level);
             uint32_t left_idx = _buddy_index(left);
@@ -349,26 +329,22 @@ class BuddyAllocator : public Allocator {
                 debug("\t BEFORE MERGE - left i:%u and right i:%u", left_idx,
                       right_idx);
 
-// Print the surrounding buddy status
-#ifndef NDEBUG
+                // Print the surrounding buddy status
                 print_level_map(idx, idx + 20 >= _num_indices ? _num_indices
                                                               : idx + 20);
-#endif
 
                 left->remove_self_from_list(_free_lists, level);
                 right->remove_self_from_list(_free_lists, level);
                 --level;
                 _push_free(left, level);
 
-                debug("\t AFTER MERGE - left i:%u and right i:%u", left_idx,
-                      right_idx);
-#ifndef NDEBUG
+                debug("BuddyAlloc::AFTER MERGE - left i:%u and right i:%u",
+                      left_idx, right_idx);
                 print_level_map(idx, idx + 20 >= _num_indices ? _num_indices
                                                               : idx + 20);
-#endif
 
             } else {
-                debug("NO MORE MERGE");
+                debug("BuddyAlloc::DONE MERGING");
                 break;
             }
         }
@@ -377,9 +353,10 @@ class BuddyAllocator : public Allocator {
               original_level, level, idx, size);
     }
 
+    /// Prints which level each buddy is allocated in (Only used for debugging)
     void print_level_map(uint32_t start = 0,
                          uint32_t end = _num_indices) const {
-
+#ifdef BUDDY_ALLOC_LEVEL_LOGGING
         using namespace string_stream;
         Buffer b(memory_globals::default_allocator());
 
@@ -420,6 +397,7 @@ class BuddyAllocator : public Allocator {
             }
         }
         fprintf(stderr, "+-------END-------+\n**\n");
+#endif
     }
 
   private:
@@ -516,10 +494,9 @@ class BuddyAllocator : public Allocator {
         _free_lists[level] = h;
         const uint32_t index = _buddy_index(h);
         const uint32_t last = index + _buddies_contained(level);
-#ifndef NDEBUG
-        debug("Setting levels - h = %p, level = %u, index = %u, last = %u", h,
-              level, index, last);
-#endif
+        debug("BuddyAlloc::Setting levels - h = %p, level = %u, index = %u, "
+              "last = %u",
+              h, level, index, last);
         _level_of_index.set_range(index, last, level);
         for (uint32_t b = index; b < last; ++b) {
             _index_allocated.set(b, 0);
