@@ -79,7 +79,7 @@ template <unsigned bits_per_int, unsigned num_ints> struct SmallIntArray {
     /// Ctor - sets all to 0
     SmallIntArray() {
         memset(_words.data(), 0, sizeof(uint32_t) * _words.size());
-        log_info("SmallIntArray with array size = %lu", _words.size());
+        debug("SmallIntArray with array size = %lu", _words.size());
     }
 
     /// Returns the `idx`-th integer

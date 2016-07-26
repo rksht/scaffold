@@ -9,6 +9,7 @@ message("CMake Build Type = ${CMAKE_BUILD_TYPE}")
 option(BUDDY_ALLOC_LEVEL_LOGGING "Log buddy allocator" off)
 add_compile_options("-std=c++14" "-Wall" "-Wextra" "-Wshadow")
 if(BUDDY_ALLOC_LEVEL_LOGGING)
+  message("Turning buddy logging on")
   add_compile_options("-DBUDDY_ALLOC_LEVEL_LOGGING")
 endif()
 

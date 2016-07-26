@@ -15,6 +15,8 @@
 
 namespace foundation {
 
+// Note -
+//
 // How to know the size of the buddy the user is requesting to deallocate(),
 // and how to efficiently find adjacent free buddies of a level that can
 // satisfy a size to allocate:
@@ -221,7 +223,8 @@ class BuddyAllocator : public Allocator {
                 }
 
                 const uint64_t next_index = _buddies_contained(level);
-                debug("BuddyAlloc::Found exact size(%u buddies) TO ALLOC - i:%lu",
+                debug("BuddyAlloc::Found exact size(%lu buddies) TO ALLOC - "
+                      "i:%lu",
                       next_index, index);
                 print_level_map(index, next_index >= _num_indices ? _num_indices
                                                                   : next_index);
@@ -286,12 +289,11 @@ class BuddyAllocator : public Allocator {
         BuddyHead *right = nullptr;
         BuddyHead *tmp = nullptr;
 
-        debug("SET THE INITIAL BLOCK headed by i:%u TO FREE, here's the map",
-              idx);
-#ifndef BUDDY_ALLOC_LEVEL_LOGGING
+        debug(
+            "BuddyAlloc::deallocate - set initial block headed by i:%u to free",
+            idx);
         print_level_map(idx,
                         idx + 20 >= _num_indices ? _num_indices : idx + 20);
-#endif
 
         while (level >= 1) {
             debug("BuddyAlloc::MERGE START - %d, level - %d",
@@ -366,12 +368,12 @@ class BuddyAllocator : public Allocator {
             b << i << "=" << _level_of_index.get(i) << "\t";
             tab(b, 8);
             if (array::size(b) >= 80) {
-                ::fprintf(stderr, "%s\n", c_str(b));
+                fprintf(stderr, "%s\n", c_str(b));
                 array::clear(b);
             }
         }
         if (array::size(b) != 0) {
-            ::fprintf(stderr, "%s\n", c_str(b));
+            fprintf(stderr, "%s\n", c_str(b));
             array::clear(b);
         }
         fprintf(stderr, "\n--\n");
@@ -380,12 +382,12 @@ class BuddyAllocator : public Allocator {
             b << i << "=" << (_index_allocated.get(i) ? "x" : "o") << "\t";
             tab(b, 8);
             if (array::size(b) >= 80) {
-                ::fprintf(stderr, "%s\n", c_str(b));
+                fprintf(stderr, "%s\n", c_str(b));
                 array::clear(b);
             }
         }
         if (array::size(b) != 0) {
-            ::fprintf(stderr, "%s\n", c_str(b));
+            fprintf(stderr, "%s\n", c_str(b));
         }
         fprintf(stderr, "\n--\n");
 
@@ -397,6 +399,9 @@ class BuddyAllocator : public Allocator {
             }
         }
         fprintf(stderr, "+-------END-------+\n**\n");
+#else
+        (void)start;
+        (void)end;
 #endif
     }
 

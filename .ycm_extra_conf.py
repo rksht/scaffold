@@ -11,7 +11,7 @@ import subprocess as sp
 import re
 
 IS_NIXOS = False
-GCC_VERSION = '5.3.0'
+GCC_VERSION = '6.1.1'
 
 # Usual include paths
 SYSTEM_INCLUDES = ['/usr/include', '/usr/include/c++/{}'.format(GCC_VERSION)]
