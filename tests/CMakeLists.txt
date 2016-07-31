@@ -6,7 +6,7 @@ include_directories(${PROJECT_SOURCE_DIR}/jeayeson/include)
 
 ##
 option(BUDDY_ALLOC_LEVEL_LOGGING "Log buddy allocator" off)
-add_compile_options("-std=c++14" "-Wall" "-Wextra" "-Wshadow")
+add_compile_options("-std=c++14" "-Wall" "-Wextra")
 if(BUDDY_ALLOC_LEVEL_LOGGING)
   message("Turning buddy logging on")
   add_compile_options("-DBUDDY_ALLOC_LEVEL_LOGGING")
