@@ -177,7 +177,6 @@ template <typename T> Array<T> &Array<T>::operator=(const Array<T> &other) {
 
 template <typename T> Array<T> &Array<T>::operator=(Array<T> &&other) {
     if (this != &other) {
-        _allocator->deallocate(_data);
         _data = other._data;
         _size = other._size;
         _capacity = other._capacity;
@@ -188,6 +187,7 @@ template <typename T> Array<T> &Array<T>::operator=(Array<T> &&other) {
         other._data = nullptr;
         // However, don't set other._allocator to null.
     }
+    return *this;
 }
 
 template <typename T> inline T &Array<T>::operator[](uint32_t i) {
