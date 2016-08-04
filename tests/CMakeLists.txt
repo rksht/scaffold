@@ -31,3 +31,8 @@ target_link_libraries(rbt_test scaffold)
 ##
 add_executable(pod_hash_test pod_hash_test.cpp)
 target_link_libraries(pod_hash_test scaffold)
+
+##
+add_executable(hash_test hash_test.cpp)
+target_link_libraries(hash_test scaffold)
+
