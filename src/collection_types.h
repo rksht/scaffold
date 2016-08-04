@@ -20,6 +20,7 @@ template <typename T> struct Array {
     Array(const Array &other);
     Array(Array<T> &&other); // move
     Array &operator=(const Array &other);
+    Array &operator=(Array &&other);
 
     using iterator = T*;
     using const_iterator = const T*;

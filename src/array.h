@@ -145,6 +145,7 @@ template <typename T> inline Array<T>::~Array() {
         _size = 0;
         _capacity = 0;
         _data = nullptr;
+        _allocator = nullptr;
     }
 }
 
@@ -172,6 +173,21 @@ template <typename T> Array<T> &Array<T>::operator=(const Array<T> &other) {
     array::resize(*this, n);
     memcpy(_data, other._data, sizeof(T) * n);
     return *this;
+}
+
+template <typename T> Array<T> &Array<T>::operator=(Array<T> &&other) {
+    if (this != &other) {
+        _allocator->deallocate(_data);
+        _data = other._data;
+        _size = other._size;
+        _capacity = other._capacity;
+        _allocator = other._allocator;
+        // Set other array to an empty state
+        other._size = 0;
+        other._capacity = 0;
+        other._data = nullptr;
+        // However, don't set other._allocator to null.
+    }
 }
 
 template <typename T> inline T &Array<T>::operator[](uint32_t i) {
