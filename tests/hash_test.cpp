@@ -28,11 +28,11 @@ struct ProbeQuadratic {};
 /// Selects which probe method to use
 template <typename Probe> struct ToAdd;
 
-template <> struct ToAdd<ProbeLinear> {
+template <> struct ToAdd<ProbeQuadratic> {
     static uint64_t to_add(uint64_t last) { return (last + 1) * (last + 1); }
 };
 
-template <> struct ToAdd<ProbeQuadratic> {
+template <> struct ToAdd<ProbeLinear> {
     static uint64_t to_add(uint64_t last) { return last + 1; }
 };
 
@@ -109,7 +109,7 @@ int main() {
 
         setbuf(stdout, nullptr);
 
-        ProbedHash<uint64_t, ProbeLinear> hash{
+        ProbedHash<uint64_t, ProbeQuadratic> hash{
             memory_globals::default_allocator(), 1024};
 
         for (uint64_t i = 0; i < 512; ++i) {
