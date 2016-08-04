@@ -29,7 +29,8 @@ class Allocator {
     /// alignment.
     virtual void *allocate(uint32_t size, uint32_t align = DEFAULT_ALIGN) = 0;
 
-    /// Frees an allocation previously made with allocate().
+    /// Frees an allocation previously made with allocate(). If `p` is nullptr,
+    /// then simply returns doing nothing.
     virtual void deallocate(void *p) = 0;
 
     static const uint32_t SIZE_NOT_TRACKED = 0xffffffffu;
