@@ -1,4 +1,4 @@
-#include "arena.h"
+#include "arena_allocator.h"
 #include "debug.h"
 #include <string.h>
 

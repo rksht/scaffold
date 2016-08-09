@@ -1,5 +1,4 @@
 #include "memory.h"
-#include "arena.h"
 #include "debug.h"
 
 #include <assert.h>
@@ -79,8 +78,8 @@ class MallocAllocator : public Allocator {
     MallocAllocator() : _total_allocated(0) {}
 
     ~MallocAllocator() {
-        // Check that we don't have any memory leaks when allocator is
-        // destroyed.
+// Check that we don't have any memory leaks when allocator is
+// destroyed.
 #if 0
         assert(_total_allocated == 0);
 #endif
@@ -222,6 +221,9 @@ class ScratchAllocator : public Allocator {
     virtual uint32_t total_allocated() { return _end - _begin; }
 };
 
+/// This struct should contain all allocators required by the
+/// application/library/deathray etc. Put any extra allocators required inside
+/// this struct.
 struct MemoryGlobals {
     alignas(MallocAllocator) char _default_allocator[sizeof(MallocAllocator)];
     alignas(ScratchAllocator) char _default_scratch_allocator[sizeof(
@@ -240,13 +242,14 @@ namespace foundation {
 
 namespace memory_globals {
 
+/// Allocator names should be defined here statically...
 static const char default_allocator_name[] = "Default Allocator";
 static const char default_scratch_allocator_name[] =
     "Default scratch allocator";
 static const char default_arena_allocator_name[] = "Default arena allocator";
 
-void init(uint32_t scratch_buffer_size, uint32_t default_arena_size) {
-    (void)default_arena_size;
+/// ... And add the initialization code here ...
+void init(uint32_t scratch_buffer_size) {
     _memory_globals.default_allocator =
         new (_memory_globals._default_allocator) MallocAllocator{};
     _memory_globals.default_scratch_allocator =
@@ -257,7 +260,7 @@ void init(uint32_t scratch_buffer_size, uint32_t default_arena_size) {
     default_allocator().set_name(default_allocator_name,
                                  sizeof(default_allocator_name));
     default_scratch_allocator().set_name(
-        default_arena_allocator_name, sizeof(default_scratch_allocator_name));
+        default_scratch_allocator_name, sizeof(default_scratch_allocator_name));
 }
 
 Allocator &default_allocator() { return *_memory_globals.default_allocator; }
@@ -266,6 +269,7 @@ Allocator &default_scratch_allocator() {
     return *_memory_globals.default_scratch_allocator;
 }
 
+/// ... And add deallocation code here.
 void shutdown() {
     _memory_globals.default_scratch_allocator->~ScratchAllocator();
     // MallocAllocator must be last as its used as the backing allocator for

@@ -93,13 +93,12 @@ class Allocator {
 /// Fwd declaring the ArenaAllocator here
 class ArenaAllocator;
 
-/// Functions for accessing global memory data.
+/// Functions for accessing global memory data. See `memory.cpp` file for adding
+/// extra statically initialized allocators.
 namespace memory_globals {
 /// Initializes the global memory allocators. scratch_buffer_size is the size of
-/// the memory buffer used by the scratch allocators. default_arena_size is the
-/// size of the default arena allocator.
-void init(uint32_t scratch_buffer_size = 4 << 20,
-          uint32_t default_arena_size = 4 << 20);
+/// the memory buffer used by the scratch allocators.
+void init(uint32_t scratch_buffer_size = 4 << 20);
 
 /// Returns a default memory allocator that can be used for most allocations.
 ///

@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.4)
 
-set(SOURCE_FILES memory.cpp memory.h arena.cpp arena.h murmur_hash.cpp
-  murmur_hash.h string_stream.cpp string_stream.h buddy_allocator.h scanner.cpp scanner.h
-  pod_hash.h pod_hash_usuals.h pod_hash_usuals.cpp)
+set(SOURCE_FILES memory.cpp memory.h arena_allocator.cpp arena_allocator.h
+  murmur_hash.cpp murmur_hash.h string_stream.cpp string_stream.h
+  buddy_allocator.h scanner.cpp scanner.h pod_hash.h pod_hash_usuals.h
+  pod_hash_usuals.cpp)
 
 message("CMake Build Type = ${CMAKE_BUILD_TYPE}")
 # Compile flags
