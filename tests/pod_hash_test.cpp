@@ -26,7 +26,10 @@ int main() {
     Data D2 = {201lu, 202lu, 203lu};
 
     memory_globals::init();
+
     {
+        using namespace pod_hash;
+
         PodHash<Data, uint64_t> h(memory_globals::default_allocator(),
                                             memory_globals::default_allocator(),
                                             Data_hash, Data_equal);

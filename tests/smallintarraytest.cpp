@@ -6,6 +6,7 @@
 #include <stdlib.h> // rand()
 
 using foundation::PodHash;
+using namespace foundation::pod_hash;
 using foundation::SmallIntArray;
 
 TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {

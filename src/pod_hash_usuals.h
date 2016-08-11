@@ -2,33 +2,37 @@
 #include "pod_hash.h"
 #include <assert.h>
 
-// Template for usual hash and equal functions
 namespace foundation {
-template <typename T> uint64_t usual_hash(T const &k) {
-    (void)k;
-    assert(0 && "No usual hash function implementated for this type");
-    return 0;
+// Templates for usual hash and equal functions. Undefined.
+template <typename T> uint64_t usual_hash(T const &k);
+template <typename T> bool usual_equal(T const &k1, T const &k2);
+
+// Define instantiations here
+
+/// cstring hash
+template <> inline uint64_t usual_hash(char *const &s) {
+    unsigned l = strlen(s);
+    return (uint64_t)foundation::murmur_hash_64(s, l, 0xDEADBEEF);
 }
 
-template <typename T> bool usual_equal(T const &k1, T const &k2) {
-    (void)k1;
-    (void)k2;
-    assert(0 && "No usual equal function implemented for this type");
-    return false;
+/// cstring equal
+template <> inline bool usual_equal(char *const &s1, char *const &s2) {
+    return strcmp(s1, s2) == 0;
 }
-} // ns foundation
 
-namespace foundation {
-// char* strings
-template <> uint64_t usual_hash(char *const &s);
-template <> bool usual_equal(char *const &s1, char *const &s2);
+/// char hash
+template <> inline uint64_t usual_hash(char const &s) { return s; }
 
-// char
-template <> uint64_t usual_hash(char const &s);
-template <> bool usual_equal(char const &s1, char const &s2);
+/// char equal
+template <> inline bool usual_equal(char const &s1, char const &s2) {
+    return s1 == s2;
+}
 
-// int
-template <> uint64_t usual_hash(int const& n);
-template <> bool usual_equal(int const& n1, int const& n2);
+/// int hash
+template <> inline uint64_t usual_hash(int const &n) { return (uint64_t)n; }
+
+template <> inline bool usual_equal(int const &n1, int const &n2) {
+    return n1 == n2;
+}
 
 } // namespace foundation

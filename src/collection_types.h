@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include "types.h"
@@ -67,4 +68,5 @@ template <typename T> struct Hash {
     Array<uint32_t> _hash;
     Array<Entry> _data;
 };
+
 }
