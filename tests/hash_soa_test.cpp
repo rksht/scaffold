@@ -29,28 +29,13 @@ namespace probed_hash {
 using namespace foundation;
 
 /// Denotes an invalid index or key.
-constexpr uint64_t TOMBSTONE = std::numeric_limits<uint64_t>::max();
-
-/// Tag for probe method
-struct ProbeLinear {};
-struct ProbeQuadratic {};
-
-/// Selects which probe method to use
-template <typename Probe> struct ToAdd;
-
-template <> struct ToAdd<ProbeQuadratic> {
-    static uint64_t to_add(uint64_t last) { return (last + 1) * (last + 1); }
-};
-
-template <> struct ToAdd<ProbeLinear> {
-    static uint64_t to_add(uint64_t last) { return last + 1; }
-};
+static constexpr uint64_t TOMBSTONE = std::numeric_limits<uint64_t>::max();
 
 /// The Open-addressed hash-table representation. We use two arrays, one for
 /// the keys and one for the corresponding values. Both always have the same
 /// size. The values array is _not_ kept compressed. So the table is good when
 /// you have a small number of key-value pairs to store.
-template <typename T, typename Probe> struct ProbedHash {
+template <typename T> struct ProbedHash {
     /// Don't support non-POD types
     static_assert(std::is_trivially_copyable<T>::value,
                   "ProbedHash only supports POD-types as values!");
@@ -61,11 +46,12 @@ template <typename T, typename Probe> struct ProbedHash {
     Array<T> values;
 
     /// Number of valid entries in the array
-    uint64_t _num_entries;
+    uint32_t _num_entries;
 
     ProbedHash(Allocator &keys_alloc, Allocator &values_alloc,
-               uint64_t starting_size)
+               uint32_t starting_size)
         : _keys{keys_alloc}, values{values_alloc}, _num_entries{0} {
+        assert(starting_size > 2);
         starting_size = clip_to_power_of_2(starting_size);
         array::resize(_keys, clip_to_power_of_2(starting_size));
         array::resize(values, clip_to_power_of_2(starting_size));
@@ -78,18 +64,21 @@ template <typename T, typename Probe> struct ProbedHash {
 
 namespace probed_hash::_internal {
 
+// Constant terms
+constexpr uint64_t _c1 = 3;
+constexpr uint64_t _c2 = 5;
+
 /// True if number of entries >= 1/2 of the array size.
-template <typename T, typename Probe>
-inline bool should_rehash(const ProbedHash<T, Probe> &h) {
-    return array::size(h._keys) <= 2 * h._num_entries;
+template <typename T> inline bool should_rehash(const ProbedHash<T> &h) {
+    static constexpr float load_factor = 0.50;
+    return h._num_entries / float(array::size(h._keys)) >= load_factor;
 }
 
 /// Allocates new array and copies elements there. Deallocates previous array.
-template <typename T, typename Probe>
-void rehash(ProbedHash<T, Probe> &h, uint32_t new_size) {
+template <typename T> void rehash(ProbedHash<T> &h, uint32_t new_size) {
     new_size = clip_to_power_of_2(new_size);
-    ProbedHash<T, Probe> new_hash{*h._keys._allocator, *h.values._allocator,
-                                  new_size};
+
+    ProbedHash<T> new_hash{*h._keys._allocator, *h.values._allocator, new_size};
 
     for (uint64_t i = 0; i < array::size(h._keys); ++i) {
         new_hash._keys[i] = TOMBSTONE;
@@ -107,87 +96,70 @@ void rehash(ProbedHash<T, Probe> &h, uint32_t new_size) {
 }
 
 namespace probed_hash {
-template <typename T, typename Probe>
-uint64_t probed_hash_find(const ProbedHash<T, Probe> &h, uint64_t key) {
+template <typename T>
+uint64_t probed_hash_find(const ProbedHash<T> &h, uint64_t key) {
     const uint64_t hash = murmur_hash_64(&key, sizeof(key), 0xCAFEBABE);
-    uint64_t add = 0;
-    uint64_t i = 0;
-    while (i < array::size(h._keys)) {
-        uint64_t idx = (hash + add) % array::size(h._keys);
+    for (uint32_t i = 0; i < array::size(h._keys); ++i) {
+        uint64_t idx = (hash + _internal::_c1 * i + _internal::_c2 * (i * i)) %
+                       array::size(h._keys);
         if (h._keys[idx] == key) {
             return idx;
         }
         if (h._keys[idx] == TOMBSTONE) {
             return TOMBSTONE;
         }
-        add = ToAdd<Probe>::to_add(add);
-        i++;
     }
     return TOMBSTONE;
 }
 
-template <typename T, typename Probe>
-uint64_t probed_hash_set(ProbedHash<T, Probe> &h, uint64_t key, T value) {
-    h._num_entries++;
+template <typename T>
+uint64_t probed_hash_set(ProbedHash<T> &h, uint64_t key, T value) {
     if (_internal::should_rehash(h)) {
         _internal::rehash(h, array::size(h._keys) * 2);
     }
 
     const uint64_t hash = murmur_hash_64(&key, sizeof(key), 0xCAFEBABE);
 
-    uint64_t add = 0;
-    uint64_t i = 0;
-    while (i < array::size(h._keys)) {
-        uint64_t idx = (hash + add) % array::size(h._keys);
+    for (uint32_t i = 0; i < array::size(h._keys); ++i) {
+        uint64_t idx = (hash + _internal::_c1 * i + _internal::_c2 * (i * i)) %
+                       array::size(h._keys);
         if (h._keys[idx] == TOMBSTONE || h._keys[idx] == key) {
             h._keys[idx] = key;
             h.values[idx] = value;
+            h._num_entries++;
             return idx;
         }
-        add = ToAdd<Probe>::to_add(add);
-        i++;
     }
-    return TOMBSTONE;
+    assert(0);
 }
-}
 
-#if 0
-int main() {
-    using namespace foundation;
-    using namespace probed_hash;
+template <typename T>
+uint64_t probed_hash_set_default(ProbedHash<T> &h, uint64_t key,
+                                 T default_value) {
+    if (_internal::should_rehash(h)) {
+        _internal::rehash(h, array::size(h._keys) * 2);
+    }
 
-    memory_globals::init();
-    {
+    const uint64_t hash = murmur_hash_64(&key, sizeof(key), 0xCAFEBABE);
 
-        //setbuf(stdout, nullptr);
-
-        const uint64_t INITIAL_SIZE = 1 << 10;
-        const uint64_t MAX_ENTRIES = 1 << 20;
-
-        ProbedHash<uint64_t, ProbeQuadratic> hash{
-            memory_globals::default_allocator(), INITIAL_SIZE};
-
-        for (uint64_t i = 0; i < MAX_ENTRIES; ++i) {
-            uint64_t idx = probed_hash_set(hash, i, i);
-            if (idx == TOMBSTONE) {
-                log_info("Insertion failed for key = %lu", i);
-            }
+    for (uint32_t i = 0; i < array::size(h._keys); ++i) {
+        uint64_t idx = (hash + _internal::_c1 * i + _internal::_c2 * (i * i)) %
+                       array::size(h._keys);
+        if (h._keys[idx] == TOMBSTONE) {
+            h._keys[idx] = key;
+            h.values[idx] = default_value;
+            h._num_entries++;
+            return idx;
         }
-
-        for (uint64_t i = 0; i < MAX_ENTRIES; ++i) {
-            uint64_t idx = probed_hash_find(hash, i);
-            if (idx == TOMBSTONE) {
-                log_info("Have TOMBSTONE at key = %lu", i);
-            } else {
-                //printf("Index=%lu, [%lu] = [%lu]\n", idx, i, hash.array[idx].second);
-                assert(hash.array[idx].second == i);
-            }
+        if (h._keys[idx] == key) {
+            return idx;
         }
     }
-    memory_globals::shutdown();
+    assert(0);
 }
-#endif
+}
 
+#if 1
 int main() {
     using namespace foundation;
     using namespace probed_hash;
@@ -198,14 +170,14 @@ int main() {
         // setbuf(stdout, nullptr);
 
         const uint64_t INITIAL_SIZE = 1 << 10;
-        const uint64_t MAX_ENTRIES = 1 << 20;
+        const uint64_t MAX_ENTRIES = 1 << 25;
         const uint8_t VALUE_MARKER = 'a';
 
-        ProbedHash<Obj<128>, ProbeQuadratic> hash{
-            memory_globals::default_allocator(),
-            memory_globals::default_allocator(), INITIAL_SIZE};
+        ProbedHash<Obj<4>> hash{memory_globals::default_allocator(),
+                                memory_globals::default_allocator(),
+                                INITIAL_SIZE};
 
-        Obj<128> ob{};
+        Obj<4> ob{};
         ob.set_first_byte(VALUE_MARKER);
 
         for (uint64_t i = 0; i < MAX_ENTRIES; ++i) {
@@ -226,3 +198,64 @@ int main() {
     }
     memory_globals::shutdown();
 }
+
+#endif
+
+#if 0
+
+#include <stdio.h>
+
+using namespace foundation;
+using namespace probed_hash;
+
+struct WordStore {
+    ProbedHash<char *> map;
+
+    WordStore()
+        : map{memory_globals::default_allocator(),
+              memory_globals::default_allocator(), 1024} {}
+
+    char *add_string(char *buffer, uint32_t length) {
+        char *str =
+            (char *)memory_globals::default_allocator().allocate(length, 1);
+        memcpy(str, buffer, length);
+        uint64_t idx = probed_hash_set_default(map, (uint64_t)str, str);
+        char *prev_str = map.values[idx];
+        if (prev_str != str) {
+            memory_globals::default_allocator().deallocate(str);
+            return prev_str;
+        }
+        return str;
+    }
+
+    ~WordStore() {
+        for (char *str : map.values) {
+            memory_globals::default_allocator().deallocate(str);
+        }
+    }
+};
+
+int main() {
+    memory_globals::init();
+    {
+        WordStore w{};
+        for (;;) {
+            char buf[1024] = {0};
+            fgets(buf, sizeof(buf), stdin);
+            auto len = strlen(buf);
+            if (buf[len - 1] == '\n') {
+                buf[len - 1] = '\0';
+            }
+            if (buf[0] == '\0') {
+                break;
+            }
+            w.add_string(buf, len);
+        }
+        fprintf(stderr, "Inserted\n");
+        for (auto str : w.map.values) {
+            printf("%s\n", str);
+        }
+    }
+    memory_globals::shutdown();
+}
+#endif
