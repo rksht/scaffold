@@ -64,10 +64,6 @@ template <typename T> struct ProbedHash {
 
 namespace probed_hash::_internal {
 
-// Constant terms
-constexpr uint64_t _c1 = 3;
-constexpr uint64_t _c2 = 5;
-
 /// True if number of entries >= 1/2 of the array size.
 template <typename T> inline bool should_rehash(const ProbedHash<T> &h) {
     static constexpr float load_factor = 0.50;
@@ -96,12 +92,14 @@ template <typename T> void rehash(ProbedHash<T> &h, uint32_t new_size) {
 }
 
 namespace probed_hash {
+
+/// Returns the array position at which the associated value exists, if it
+/// does exist. Otherwise returns `TOMBSTONE`
 template <typename T>
 uint64_t probed_hash_find(const ProbedHash<T> &h, uint64_t key) {
-    const uint64_t hash = murmur_hash_64(&key, sizeof(key), 0xCAFEBABE);
+    uint64_t idx = murmur_hash_64(&key, sizeof(key), 0xCAFEBABE);
     for (uint32_t i = 0; i < array::size(h._keys); ++i) {
-        uint64_t idx = (hash + _internal::_c1 * i + _internal::_c2 * (i * i)) %
-                       array::size(h._keys);
+        idx = (idx + i) % array::size(h._keys);
         if (h._keys[idx] == key) {
             return idx;
         }
@@ -112,17 +110,17 @@ uint64_t probed_hash_find(const ProbedHash<T> &h, uint64_t key) {
     return TOMBSTONE;
 }
 
+/// Associates the given value with the given key. May trigger a rehash if key
+/// doesn't exist already. Returns the position of the value.
 template <typename T>
 uint64_t probed_hash_set(ProbedHash<T> &h, uint64_t key, T value) {
     if (_internal::should_rehash(h)) {
         _internal::rehash(h, array::size(h._keys) * 2);
     }
 
-    const uint64_t hash = murmur_hash_64(&key, sizeof(key), 0xCAFEBABE);
-
+    uint64_t idx = murmur_hash_64(&key, sizeof(key), 0xCAFEBABE);
     for (uint32_t i = 0; i < array::size(h._keys); ++i) {
-        uint64_t idx = (hash + _internal::_c1 * i + _internal::_c2 * (i * i)) %
-                       array::size(h._keys);
+        idx = (idx + i) % array::size(h._keys);
         if (h._keys[idx] == TOMBSTONE || h._keys[idx] == key) {
             h._keys[idx] = key;
             h.values[idx] = value;
@@ -133,6 +131,8 @@ uint64_t probed_hash_set(ProbedHash<T> &h, uint64_t key, T value) {
     assert(0);
 }
 
+/// Associates the given value with the given key but only if the key doesn't
+/// exist in the table already. Returns the position of the value.
 template <typename T>
 uint64_t probed_hash_set_default(ProbedHash<T> &h, uint64_t key,
                                  T default_value) {
@@ -140,11 +140,9 @@ uint64_t probed_hash_set_default(ProbedHash<T> &h, uint64_t key,
         _internal::rehash(h, array::size(h._keys) * 2);
     }
 
-    const uint64_t hash = murmur_hash_64(&key, sizeof(key), 0xCAFEBABE);
-
+    uint64_t idx = murmur_hash_64(&key, sizeof(key), 0xCAFEBABE);
     for (uint32_t i = 0; i < array::size(h._keys); ++i) {
-        uint64_t idx = (hash + _internal::_c1 * i + _internal::_c2 * (i * i)) %
-                       array::size(h._keys);
+        uint64_t idx = (idx + i) % array::size(h._keys);
         if (h._keys[idx] == TOMBSTONE) {
             h._keys[idx] = key;
             h.values[idx] = default_value;
