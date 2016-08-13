@@ -110,6 +110,12 @@ typename PodHash<K, V>::iterator end(PodHash<K, V> &h) {
 
 /// -- Functions to operate on PodHash
 namespace foundation::pod_hash {
+
+/// Reserve space for `size` keys. Does not reserve space for the entries
+/// beforehand
+template <typename K, typename V>
+void reserve(PodHash<K, V> &h, uint32_t size);
+
 /// Sets the given key's value (Can trigger a rehash if `key` doesn't already
 /// exist)
 template <typename K, typename V>
@@ -321,6 +327,12 @@ void find_and_erase(PodHash<K, V> &h, const K &key) {
 } // namespace foundation::pod_hash::_internal
 
 namespace foundation::pod_hash {
+
+template <typename K, typename V>
+void reserve(PodHash<K, V> &h, uint32_t size) {
+    _internal::rehash(h, size);
+}
+
 template <typename K, typename V>
 void set(PodHash<K, V> &h, const K &key, const V &value) {
     if (foundation::array::size(h._hashes) == 0) {

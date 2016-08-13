@@ -35,4 +35,11 @@ template <> inline bool usual_equal(int const &n1, int const &n2) {
     return n1 == n2;
 }
 
+/// int hash
+template <> inline uint64_t usual_hash(uint64_t const &n) { return n; }
+
+template <> inline bool usual_equal(uint64_t const &n1, uint64_t const &n2) {
+    return n1 == n2;
+}
+
 } // namespace foundation

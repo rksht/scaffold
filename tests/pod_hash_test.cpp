@@ -33,6 +33,9 @@ int main() {
         PodHash<Data, uint64_t> h(memory_globals::default_allocator(),
                                             memory_globals::default_allocator(),
                                             Data_hash, Data_equal);
+
+        pod_hash::reserve(h, 512);
+
         assert(has(h, D1) == false);
         set(h, D1, 0x10lu);
         assert(has(h, D1) == true);
