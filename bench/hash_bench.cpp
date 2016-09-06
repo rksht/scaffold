@@ -244,8 +244,8 @@ static void BM_pod_hash_insertion(benchmark::State &bm_state) {
     memory_globals::shutdown();
 }
 
-BENCHMARK(BM_probed_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 10);
-BENCHMARK(BM_uint_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 10);
-BENCHMARK(BM_pod_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 10);
+BENCHMARK(BM_probed_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 20);
+BENCHMARK(BM_uint_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 20);
+BENCHMARK(BM_pod_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 20);
 
 BENCHMARK_MAIN();
