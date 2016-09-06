@@ -15,6 +15,8 @@ add_executable(buddytestsmall buddytestsmall.cpp)
 target_link_libraries(buddytestsmall scaffold)
 add_executable(buddytest buddytest.cpp)
 target_link_libraries(buddytest scaffold)
+add_executable(buddytestbig buddytestbig.cpp)
+target_link_libraries(buddytestbig scaffold)
 
 ##
 add_executable(smallintarraytest smallintarraytest.cpp)
