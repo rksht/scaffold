@@ -1,7 +1,8 @@
 // Run as ./tests/pod_hash_test_words < "/usr/share/dict/words"
 
-#include "pod_hash.h"
-#include "pod_hash_usuals.h"
+#include <scaffold/pod_hash.h>
+#include <scaffold/pod_hash_usuals.h>
+
 #include <stdio.h>
 #include <algorithm>
 

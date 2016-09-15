@@ -1,5 +1,5 @@
-#include "memory.h"
-#include "debug.h"
+#include <scaffold/debug.h>
+#include <scaffold/memory.h>
 
 #include <assert.h>
 #include <iostream>

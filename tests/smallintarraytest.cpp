@@ -1,8 +1,10 @@
 #define CATCH_CONFIG_MAIN
-#include "smallintarray.h"
+#include <scaffold/smallintarray.h>
+#include <scaffold/pod_hash.h>
+#include <scaffold/pod_hash_usuals.h>
+
 #include "catch.hpp"
-#include "pod_hash.h"
-#include "pod_hash_usuals.h"
+
 #include <stdlib.h> // rand()
 
 using foundation::PodHash;

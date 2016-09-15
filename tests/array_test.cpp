@@ -1,4 +1,4 @@
-#include "array.h"
+#include <scaffold/array.h>
 #include <algorithm>
 #include <assert.h>
 

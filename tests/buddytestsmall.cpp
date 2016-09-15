@@ -1,4 +1,4 @@
-#include "buddy_allocator.h"
+#include <scaffold/buddy_allocator.h>
 
 #include <new>
 #include <iostream>
@@ -7,10 +7,6 @@
 
 constexpr uint32_t BUFFER_SIZE = 1 << 20;   // 1 MB
 constexpr uint32_t SMALLEST_SIZE = 1 << 18; // 128 KB
-constexpr uint32_t NUM_INDICES = BUFFER_SIZE / SMALLEST_SIZE;
-constexpr uint32_t NUM_LEVELS = 3;
-
-static_assert(NUM_INDICES == 4, " <--");
 
 template <uint32_t bytes>
 using Block = std::array<uint32_t, bytes / sizeof(uint32_t)>;
@@ -22,7 +18,7 @@ using Block_8KB = Block<8 << 10>;
 int main() {
     foundation::memory_globals::init();
     {
-        using BA = foundation::BuddyAllocator<BUFFER_SIZE, NUM_LEVELS>;
+        using BA = foundation::BuddyAllocator<BUFFER_SIZE, SMALLEST_SIZE>;
         BA ba(foundation::memory_globals::default_allocator());
         std::cout << "SIZE OF SMALLEST ARRAY = " << sizeof(SmallestBlock)
                   << std::endl;

@@ -12,7 +12,7 @@ template <typename T> bool usual_equal(T const &k1, T const &k2);
 /// cstring hash
 template <> inline uint64_t usual_hash(char *const &s) {
     unsigned l = strlen(s);
-    return (uint64_t)foundation::murmur_hash_64(s, l, 0xDEADBEEF);
+    return murmur_hash_64(s, l, 0xDEADBEEF);
 }
 
 /// cstring equal

@@ -1,5 +1,5 @@
-#include "arena_allocator.h"
-#include "debug.h"
+#include <scaffold/arena_allocator.h>
+#include <scaffold/debug.h>
 #include <string.h>
 
 namespace foundation {

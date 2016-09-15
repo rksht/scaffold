@@ -1,5 +1,5 @@
-#include "rbt.h"
-#include "memory.h"
+#include <scaffold/memory.h>
+#include <scaffold/rbt.h>
 
 // For testing
 #include <algorithm>

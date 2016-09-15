@@ -1,9 +1,9 @@
+#include <scaffold/scanner.h>
+
 #include <assert.h>
 #include <memory>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "scanner.h"
 
 namespace scanner {
 

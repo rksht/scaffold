@@ -1,18 +1,23 @@
 cmake_minimum_required(VERSION 3.4)
 
-set(SOURCE_FILES memory.cpp memory.h arena_allocator.cpp arena_allocator.h
-  murmur_hash.cpp murmur_hash.h string_stream.cpp string_stream.h
-  buddy_allocator.h scanner.cpp scanner.h pod_hash.h pod_hash_usuals.h)
-
-message("CMake Build Type = ${CMAKE_BUILD_TYPE}")
 # Compile flags
+add_compile_options("-std=c++14" "-Wall" "-Wextra" "-Werror")
+
+file(GLOB SOURCE_FILES
+    *.cpp
+    ${PROJECT_SOURCE_DIR}/include/scaffold/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
+
+add_library(scaffold ${SOURCE_FILES})
+
+include_directories(${PROJECT_SOURCE_DIR}/src)
+target_include_directories(scaffold PUBLIC ${PROJECT_SOURCE_DIR}/include)
+
+
 option(BUDDY_ALLOC_LEVEL_LOGGING "Log buddy allocator" off)
-add_compile_options("-std=c++14" "-Wall" "-Wextra")
+
 if(BUDDY_ALLOC_LEVEL_LOGGING)
-  message("Turning buddy logging on")
   add_compile_options("-DBUDDY_ALLOC_LEVEL_LOGGING")
 endif()
 
-include_directories(${PROJECT_SOURCE_DIR}/src)
 
-add_library(scaffold ${SOURCE_FILES})

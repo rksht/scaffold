@@ -4,12 +4,13 @@
 /// less cache misses because we only look into the keys of the entries during
 /// lookup.
 
-#include "hash.h"
-#include "array.h"
-#include "const_log.h"
-#include "debug.h"
-#include "memory.h"
-#include "murmur_hash.h"
+#include <scaffold/hash.h>
+#include <scaffold/array.h>
+#include <scaffold/const_log.h>
+#include <scaffold/debug.h>
+#include <scaffold/memory.h>
+#include <scaffold/murmur_hash.h>
+
 #include <array>
 #include <assert.h>
 #include <limits>
@@ -54,7 +55,8 @@ template <typename T> struct ProbedHash {
 };
 }
 
-namespace probed_hash::_internal {
+namespace probed_hash {
+namespace _internal {
 
 /// True if number of entries >= 1/2 of the array size.
 template <typename T> inline bool should_rehash(const ProbedHash<T> &h) {
@@ -80,6 +82,7 @@ template <typename T> void rehash(ProbedHash<T> &h, uint32_t new_size) {
     }
     std::swap(h._keys, new_hash._keys);
     std::swap(h.values, new_hash.values);
+}
 }
 }
 
@@ -149,7 +152,7 @@ uint64_t probed_hash_set_default(ProbedHash<T> &h, uint64_t key,
 }
 }
 
-#include "benchmark/benchmark.h"
+#include <benchmark/benchmark.h>
 
 // argument 0 is the number of entries to insert
 static void BM_probed_hash_insertion(benchmark::State &bm_state) {
@@ -183,7 +186,7 @@ static void BM_probed_hash_insertion(benchmark::State &bm_state) {
     memory_globals::shutdown();
 }
 
-#include "hash.h"
+#include <scaffold/hash.h>
 
 // argument 0 is the number of entries to insert
 static void BM_uint_hash_insertion(benchmark::State &bm_state) {
@@ -211,8 +214,8 @@ static void BM_uint_hash_insertion(benchmark::State &bm_state) {
     memory_globals::shutdown();
 }
 
-#include "pod_hash.h"
-#include "pod_hash_usuals.h"
+#include <scaffold/pod_hash.h>
+#include <scaffold/pod_hash_usuals.h>
 
 // argument 0 is the number of entries to insert
 static void BM_pod_hash_insertion(benchmark::State &bm_state) {
@@ -244,8 +247,8 @@ static void BM_pod_hash_insertion(benchmark::State &bm_state) {
     memory_globals::shutdown();
 }
 
-BENCHMARK(BM_probed_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 20);
-BENCHMARK(BM_uint_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 20);
-BENCHMARK(BM_pod_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 20);
+BENCHMARK(BM_probed_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 10);
+BENCHMARK(BM_uint_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 10);
+BENCHMARK(BM_pod_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 10);
 
 BENCHMARK_MAIN();

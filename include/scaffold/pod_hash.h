@@ -12,22 +12,29 @@
 #include <type_traits>
 
 namespace foundation {
+
+namespace pod_hash {
+namespace _internal {
+
 template <typename K, typename V> struct _Entry {
     K key;
     V value;
     uint32_t next;
 };
+}
+}
 
 /// 'PodHash' is similar Hash in collection_types.h, but can use any
 /// 'trivially-copyable data type as key. Also supports move semantics.
 template <typename K, typename V>
-struct PodHash : std::iterator<std::random_access_iterator_tag, _Entry<K, V>> {
+struct PodHash : std::iterator<std::random_access_iterator_tag,
+                               pod_hash::_internal::_Entry<K, V>> {
     static_assert(std::is_trivially_copyable<K>::value,
                   "Key type must be trivially copyable");
     static_assert(std::is_trivially_copyable<V>::value,
                   "Value type must be trivially copyable");
 
-    using Entry = _Entry<K, V>;
+    using Entry = pod_hash::_internal::_Entry<K, V>;
 
     /// Both are const_iterator to the underlying array because we don't allow
     /// changing keys.
@@ -109,12 +116,12 @@ typename PodHash<K, V>::iterator end(PodHash<K, V> &h) {
 } // namespace foundation
 
 /// -- Functions to operate on PodHash
-namespace foundation::pod_hash {
+namespace foundation {
+namespace pod_hash {
 
 /// Reserve space for `size` keys. Does not reserve space for the entries
 /// beforehand
-template <typename K, typename V>
-void reserve(PodHash<K, V> &h, uint32_t size);
+template <typename K, typename V> void reserve(PodHash<K, V> &h, uint32_t size);
 
 /// Sets the given key's value (Can trigger a rehash if `key` doesn't already
 /// exist)
@@ -139,10 +146,12 @@ const K &get_key(const PodHash<K, V> &h, K const &key, K const &deffault);
 
 /// Removes the entry with the given key
 template <typename K, typename V> void remove(PodHash<K, V> &h, const K &key);
+}
+}
 
-} // namespace foundation::pod_hash
-
-namespace foundation::pod_hash::_internal {
+namespace foundation {
+namespace pod_hash {
+namespace _internal {
 
 const uint32_t END_OF_LIST = 0xffffffffu;
 
@@ -324,9 +333,12 @@ void find_and_erase(PodHash<K, V> &h, const K &key) {
     }
 }
 
-} // namespace foundation::pod_hash::_internal
+} // namespace _internal
+} // namespace pod_hash
+} // namespace foundation
 
-namespace foundation::pod_hash {
+namespace foundation {
+namespace pod_hash {
 
 template <typename K, typename V>
 void reserve(PodHash<K, V> &h, uint32_t size) {
@@ -406,4 +418,5 @@ uint32_t max_chain_length(const PodHash<K, V> &h) {
     }
     return max_length;
 }
-} // namespace foundation::pod_hash
+} // namespace pod_hash
+} // namespace foundation

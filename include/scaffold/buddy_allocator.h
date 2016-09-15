@@ -22,7 +22,7 @@ namespace foundation {
 // satisfy a size to allocate:
 //
 // The largest number of buddies that can be 'unfree' at any instant is 2 **
-// (num_levels - 1). Now, each of these buddies is mapped onto a unique
+// (_num_levels - 1). Now, each of these buddies is mapped onto a unique
 // address in the buffer. So using this addresses as indices we need 2 **
 // (num_buddies - 1) indices to uniquely identify the _start_ position of a
 // buddy.
@@ -30,7 +30,7 @@ namespace foundation {
 // But not the level from where this buddy was allocated - Remember, the size
 // of the allocated buddy is just a function of the level and it is one- to-
 // one. As a buddy with index 0 can have size (buffer_size >> l) for any
-// level l = 0 to (num_levels - 1). To store the level l of the a buddy whose
+// level l = 0 to (_num_levels - 1). To store the level l of the a buddy whose
 // index is i, we use a bitset (SmallIntArray) and set all of the indices'
 // level to 0 on initialization and set the level for buddy i to the proper l
 // when we allocate the buddy. This way on deallocation, we get the
@@ -38,7 +38,7 @@ namespace foundation {
 // bitset.
 
 /// The implementation proper of the `BuddyAllocator` class template.
-template <uint64_t buffer_size, uint32_t num_levels = 32>
+template <uint64_t buffer_size, uint32_t _min_buddy_size>
 class BuddyAllocator : public Allocator {
 
   private:
@@ -86,12 +86,11 @@ class BuddyAllocator : public Allocator {
     }
 
   private:
-    /// (static) Last level (for convenience)
-    static constexpr uint32_t _last_level = num_levels - 1;
+    static constexpr uint32_t _num_levels =
+        log2_ceil(buffer_size / _min_buddy_size) + 1;
 
-    /// (static) Minimum buddy size
-    static constexpr uint64_t _min_buddy_size =
-        _buddy_size_at_level(_last_level);
+    /// (static) Last level (for convenience)
+    static constexpr uint32_t _last_level = _num_levels - 1;
 
     /// (static) Minimum buddy size power
     static constexpr uint32_t _min_buddy_size_power =
@@ -106,7 +105,7 @@ class BuddyAllocator : public Allocator {
 
   private:
     /// Pointers to free lists of each level
-    BuddyHead *_free_lists[num_levels];
+    BuddyHead *_free_lists[_num_levels];
 
     /// Bitset where each bit represents the possible start address of a buddy
     /// and the corresponding bit a buddy with that address is allocated. Note
@@ -117,7 +116,7 @@ class BuddyAllocator : public Allocator {
     SmallIntArray<1, _num_indices> _index_allocated;
 
     /// Level at which the buddy - denoted by its i:is residing
-    SmallIntArray<log2_ceil(num_levels), _num_indices> _level_of_index;
+    SmallIntArray<log2_ceil(_num_levels), _num_indices> _level_of_index;
 
     /// To support total_allocated() call
     uint64_t _total_allocated;
@@ -135,10 +134,13 @@ class BuddyAllocator : public Allocator {
     static_assert(buffer_size <= uint64_t(4) << 30,
                   "Buffer size should not exceed 4-GB");
 
-    static_assert(num_levels > 0, "num_levels must be > 0");
+    static_assert(_num_levels > 0, "_num_levels must be > 0");
 
     static_assert(_min_buddy_size >= sizeof(BuddyHead),
                   "minimum buddy size is not sufficient with this config");
+
+    static_assert((_min_buddy_size & (_min_buddy_size - 1)) == 0,
+                  "_min_buddy_size should be a power of 2");
 
     // Make sure the buddy allocator's buffer is a power of 2
     static_assert(clip_to_power_of_2(buffer_size) == buffer_size,
@@ -150,10 +152,9 @@ class BuddyAllocator : public Allocator {
         _initialize();
 
         debug("BuddyAllocator::Initialized - buffer_size = %lu "
-              "_min_buddy_size = %lu, "
-              "_min_buddy_size_power = %u, num_levels = %u, num_indices = "
-              "%u\n--",
-              buffer_size, _min_buddy_size, _min_buddy_size_power, num_levels,
+              "_min_buddy_size = %u, _min_buddy_size_power = %u, "
+              "_num_levels = %u, num_indices = %u\n--",
+              buffer_size, _min_buddy_size, _min_buddy_size_power, _num_levels,
               1 << _last_level);
     }
 
@@ -379,7 +380,7 @@ class BuddyAllocator : public Allocator {
         fprintf(stderr, "\n--\n");
 
         for (uint32_t i = start; i < end; ++i) {
-            b << i << "=" << (_index_allocated.get(i) ? "x" : "o") << "\t";
+            b << i << "-" << (_index_allocated.get(i) ? "[x]" : "[]") << "\t";
             tab(b, 8);
             if (array::size(b) >= 80) {
                 fprintf(stderr, "%s\n", c_str(b));
@@ -391,7 +392,7 @@ class BuddyAllocator : public Allocator {
         }
         fprintf(stderr, "\n--\n");
 
-        for (uint32_t i = 0; i < num_levels; ++i) {
+        for (uint32_t i = 0; i < _num_levels; ++i) {
             BuddyHead *h = _free_lists[i];
             while (h) {
                 fprintf(stderr, "%lu at %u\n", _buddy_index(h), i);

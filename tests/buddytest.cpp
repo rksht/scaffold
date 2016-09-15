@@ -1,15 +1,13 @@
-#include "buddy_allocator.h"
+#include <scaffold/buddy_allocator.h>
 
-#include <new>
 #include <iostream>
+#include <new>
 #include <random>
 #include <set>
 #include <time.h>
 
 constexpr uint32_t BUFFER_SIZE = 1 << 20;   // 1 MB
 constexpr uint32_t SMALLEST_SIZE = 2 << 10; // 2 KB
-constexpr uint32_t NUM_INDICES = BUFFER_SIZE / SMALLEST_SIZE;
-/*constexpr uint32_t NUM_LEVELS = log2_ceil(NUM_INDICES) + 1;*/
 
 template <uint32_t bytes>
 using Block = std::array<uint32_t, bytes / sizeof(uint32_t)>;
@@ -25,7 +23,7 @@ int main(int argc, char **argv) {
 
     foundation::memory_globals::init();
     {
-        using BA = foundation::BuddyAllocator<1 << 20, 10>;
+        using BA = foundation::BuddyAllocator<BUFFER_SIZE, SMALLEST_SIZE>;
         BA ba(foundation::memory_globals::default_allocator());
         std::cerr << "SIZE OF SMALLEST ARRAY = " << sizeof(SmallestBlock)
                   << std::endl;
@@ -35,13 +33,8 @@ int main(int argc, char **argv) {
 
         std::set<void *> allocateds;
 
-        for (int i = 0; i < 5000; ++i) {
+        for (int i = 0; i < 100; ++i) {
             std::cerr << "ITER = " << i << "\n";
-
-            if (i % 500 == 0) {
-                // std::cout << ba.get_json_tree() << "\n--\n";
-                // std::cin >> n;
-            }
 
             if (d(dre) < 3) {
                 SmallestBlock &p1 = *((SmallestBlock *)ba.allocate(
