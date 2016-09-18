@@ -10,7 +10,6 @@ file(GLOB SOURCE_FILES
 
 add_library(scaffold ${SOURCE_FILES})
 
-include_directories(${PROJECT_SOURCE_DIR}/src)
 target_include_directories(scaffold PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
 
