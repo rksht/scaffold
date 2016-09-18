@@ -1,15 +1,13 @@
+#include <scaffold/array.h>
 #include <scaffold/memory.h>
 #include <scaffold/rbt.h>
 
 // For testing
 #include <algorithm>
 #include <iostream>
-#include <iterator>
-#include <math.h>
 #include <string>
-#include <vector>
 
-using namespace rbt;
+using namespace foundation::rbt;
 using Tree = RBT<int, int>;
 const size_t num_nodes = 100;
 
@@ -42,21 +40,22 @@ void print_dot_format(const RBNode<int, int> *nil,
 
 int main() {
 
-    foundation::memory_globals::init();
+    using namespace foundation;
+
+    memory_globals::init();
 
     {
 
         // Creating a vector filled with random nodes
-        std::vector<Tree::node_type> node_store;
-        node_store.reserve(num_nodes);
-        std::srand(0xDEADBEEF);
-        std::generate_n(std::back_inserter(node_store), num_nodes, [&]() {
-            int n = std::rand() % 100;
-            return Tree::node_type{n, n * 2};
-        });
+        Array<Tree::node_type> node_store{memory_globals::default_allocator()};
+        array::reserve(node_store, num_nodes);
+
+        for (int i = 0; i < 1000; ++i) {
+            array::push_back(node_store, Tree::node_type{i, i * 2});
+        }
 
         for (const auto &node : node_store) {
-            std::cout << "//K: " << node._key << "\tV: " << node._val << "\n";
+            std::cout << "//K: " << node.key() << "\tV: " << node._val << "\n";
         }
 
         // Create the tree
@@ -70,5 +69,5 @@ int main() {
         print_dot_format(tree.nil_node(), tree._root);
     }
 
-    foundation::memory_globals::shutdown();
+    memory_globals::shutdown();
 }

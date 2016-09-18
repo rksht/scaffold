@@ -1,10 +1,15 @@
 #pragma once
 
-#include "memory.h"
-#include <memory> // std::move
+#include <scaffold/debug.h>
+#include <scaffold/memory.h>
+
 #include <assert.h>
+#include <memory>   // std::move
+#include <stdlib.h> // abort()
 
 /// Namespace rbt contains a non-owning red-black tree implementation.
+namespace foundation {
+
 namespace rbt {
 
 enum RBColor { BLACK = 0, RED };
@@ -13,8 +18,9 @@ const int RIGHT = 1;
 
 /// The `RBNode` objects are allocated and initialized by the user themselves
 /// and then inserted into the tree. The keys of each node must be unique (i.e
-/// operator=(k1, k2) returns false). The tree does not own the nodes and will
-/// not free them. So don't forget to walk the tree and free the nodes!
+/// operator=(k1, k2) returns false) and must have operator< and operator>
+/// defined on them. The tree does not own the nodes and will not free them. So
+/// don't forget to walk the tree and free the nodes!
 template <typename K, typename V> struct RBNode {
     /// Color of node
     RBColor _color;
@@ -23,10 +29,20 @@ template <typename K, typename V> struct RBNode {
     /// The two kid nodes
     RBNode<K, V> *_kids[2];
 
-    /// Key
+    // Allow RBT to access `_key`
+    template <typename _K, typename _V> friend struct RBT;
+
+  private:
+    // Key
     K _key;
-    /// Value
+
+  public:
+    // Value
     V _val;
+
+    const K &key() const { return _key; }
+    V &val() { return _val; }
+    const V &val() const { return _val; }
 
     RBNode(const K &key, const V &val)
         : _color(BLACK), _parent(nullptr), _kids{nullptr, nullptr}, _key(key),
@@ -41,7 +57,7 @@ template <typename K, typename V> struct RBT {
     RBNode<K, V> *_root;
 
     /// Number of nodes in the tree
-    size_t _nr_nodes;
+    size_t _num_nodes;
 
     /// Pointer to the nil node
     struct Nil {
@@ -61,7 +77,7 @@ template <typename K, typename V> struct RBT {
         _nil->_kids[0] = nullptr;
         _nil->_kids[1] = nullptr;
         _root = nil_node();
-        _nr_nodes = 0;
+        _num_nodes = 0;
         _nil_alloc = &a;
     }
 
@@ -94,10 +110,19 @@ template <typename K, typename V> struct RBT {
     RBNode<K, V> *remove(RBNode<K, V> *n);
 
     /// Returns a pointer to the node with the given key
+    const RBNode<K, V> *get_node(const K &key) const;
     RBNode<K, V> *get_node(const K &key);
 
     /// Casts `Nil *` to `RBNode<K, V> *`
+    const RBNode<K, V> *nil_node() const {
+        return reinterpret_cast<RBNode<K, V> *>(_nil);
+    }
     RBNode<K, V> *nil_node() { return reinterpret_cast<RBNode<K, V> *>(_nil); }
+
+    RBNode<K, V> *root() { return _root; }
+    const RBNode<K, V> *root() const { return _root; }
+
+    size_t size() const { return _num_nodes; }
 
   private:
     /// Transplants the given node `n2` to the given node `n1`'s position
@@ -125,6 +150,22 @@ static inline bool is_root(RBT<K, V> *t, RBNode<K, V> *n) {
 
 template <typename K, typename V>
 RBNode<K, V> *RBT<K, V>::get_node(const K &key) {
+    auto cur = _root;
+    while (cur != nil_node()) {
+        if (cur->_key == key) {
+            return cur;
+        }
+        if (key < cur->_key) {
+            cur = cur->_kids[LEFT];
+        } else {
+            cur = cur->_kids[RIGHT];
+        }
+    }
+    return nullptr;
+}
+
+template <typename K, typename V>
+const RBNode<K, V> *RBT<K, V>::get_node(const K &key) const {
     auto cur = _root;
     while (cur != nil_node()) {
         if (cur->_key == key) {
@@ -170,9 +211,12 @@ template <typename K, typename V> void RBT<K, V>::insert(RBNode<K, V> *n) {
         if (n->_key < cur->_key) {
             cur = cur->_kids[LEFT];
             dir = LEFT;
-        } else {
+        } else if (n->_key > cur->_key) {
             cur = cur->_kids[RIGHT];
             dir = RIGHT;
+        } else {
+            log_err("RBT - Inserted same-value key!!");
+            abort();
         }
     }
     n->_color = RED;
@@ -180,7 +224,7 @@ template <typename K, typename V> void RBT<K, V>::insert(RBNode<K, V> *n) {
     n->_kids[LEFT] = nil_node();
     n->_kids[RIGHT] = nil_node();
     par->_kids[dir] = n;
-    ++_nr_nodes;
+    ++_num_nodes;
 
     // bottom-up fix
     while (n->_parent->_color == RED) {
@@ -310,3 +354,4 @@ RBNode<K, V> *RBT<K, V>::_remove_fix(RBNode<K, V> *x) {
     return x;
 }
 } // namespace rbt
+} // namespace foundation
