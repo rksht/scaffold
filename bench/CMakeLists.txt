@@ -9,5 +9,5 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 add_executable(hash_bench hash_bench.cpp)
 target_link_libraries(hash_bench benchmark scaffold)
 
-add_executable(cuckoohash_bench cuckoohash_bench.cpp)
-target_link_libraries(hash_bench benchmark scaffold)
+#add_executable(cuckoohash_bench cuckoohash_bench.cpp)
+#target_link_libraries(hash_bench benchmark scaffold)
