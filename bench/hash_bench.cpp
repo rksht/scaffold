@@ -165,8 +165,6 @@ static void BM_probed_hash_insertion(benchmark::State &bm_state) {
     {
         while (bm_state.KeepRunning()) {
             bm_state.PauseTiming();
-
-            const uint32_t INITIAL_SIZE = 1 << 10;
             const uint32_t MAX_ENTRIES = bm_state.range(0);
 
             ProbedHash<uint64_t> hash{memory_globals::default_allocator(),
@@ -193,14 +191,12 @@ static void BM_probed_hash_insertion(benchmark::State &bm_state) {
 // argument 0 is the number of entries to insert
 static void BM_uint_hash_insertion(benchmark::State &bm_state) {
     using namespace foundation;
-    using namespace probed_hash;
 
     memory_globals::init();
     {
         while (bm_state.KeepRunning()) {
             bm_state.PauseTiming();
 
-            const uint32_t INITIAL_SIZE = 1 << 10;
             const uint32_t MAX_ENTRIES = bm_state.range(0);
 
             Hash<uint64_t> h{memory_globals::default_allocator()};
@@ -243,7 +239,7 @@ static void BM_pod_hash_insertion(benchmark::State &bm_state) {
                 memory_globals::default_allocator(),
                 memory_globals::default_allocator(),
                 [](const uint64_t &key) {
-                    return murmur_hash_64(&key, sizeof(uint64_t), 0xdeadbeeflu);
+                    return murmur_hash_64(&key, sizeof(uint64_t), 0xCAFEBABE);
                 },
                 [](const uint64_t &key1, const uint64_t &key2) {
                     return key1 == key2;
@@ -307,7 +303,7 @@ static void BM_pod_hash_search(benchmark::State &bm_state) {
             memory_globals::default_allocator(),
             memory_globals::default_allocator(),
             [](const uint64_t &key) {
-                return murmur_hash_64(&key, sizeof(uint64_t), 0xdeadbeeflu);
+                return murmur_hash_64(&key, sizeof(uint64_t), 0xCAFEBABE);
             },
             [](const uint64_t &key1, const uint64_t &key2) {
                 return key1 == key2;
@@ -324,8 +320,8 @@ static void BM_pod_hash_search(benchmark::State &bm_state) {
         while (bm_state.KeepRunning()) {
             for (uint64_t i = 0; i < MAX_ENTRIES; ++i) {
                 auto ret = pod_hash::get(h, i);
-                assert(ret.present);
-                assert(ret.value == 0xdeadbeeflu);
+                //assert(ret.present);
+                //assert(ret.value == 0xdeadbeeflu);
                 if (!ret.present) {
                     bm_state.SkipWithError(
                         "Didn't find a ket, shouldn't happen.");
@@ -336,11 +332,65 @@ static void BM_pod_hash_search(benchmark::State &bm_state) {
     memory_globals::shutdown();
 }
 
-BENCHMARK(BM_probed_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 10);
-BENCHMARK(BM_uint_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 10);
-BENCHMARK(BM_pod_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 10);
+static void BM_uint_hash_search(benchmark::State &bm_state) {
+    using namespace foundation;
+    using namespace pod_hash;
 
-BENCHMARK(BM_probed_hash_search)->RangeMultiplier(2)->Range(16, 8 << 10);
-BENCHMARK(BM_pod_hash_search)->RangeMultiplier(2)->Range(16, 8 << 10);
+    memory_globals::init();
+    {
+
+        Hash<uint64_t> h{memory_globals::default_allocator()};
+
+        const uint32_t MAX_ENTRIES = bm_state.range(0);
+        hash::reserve(h, MAX_ENTRIES);
+
+        for (uint64_t i = 0; i < MAX_ENTRIES; ++i) {
+            hash::set(h, i, 0xdeadbeeflu);
+        }
+
+        while (bm_state.KeepRunning()) {
+            for (uint64_t i = 0; i < MAX_ENTRIES; ++i) {
+                auto val = hash::get(h, i, 0lu);
+                if (val != 0xdeadbeeflu) {
+                    bm_state.SkipWithError("Should not happen");
+                }
+            }
+        }
+    }
+    memory_globals::shutdown();
+}
+
+#include <unordered_map>
+
+static void BM_stdumap_hash_search(benchmark::State &bm_state) {
+
+    std::unordered_map<uint64_t, uint64_t> h;
+
+    const uint32_t MAX_ENTRIES = bm_state.range(0);
+
+    h.reserve(MAX_ENTRIES);
+
+    for (uint64_t i = 0; i < MAX_ENTRIES; ++i) {
+        h[i] = 0xdeadbeeflu;
+    }
+
+    while (bm_state.KeepRunning()) {
+        for (uint64_t i = 0; i < MAX_ENTRIES; ++i) {
+            auto it = h.find(i);
+            if (it == h.end()) {
+                bm_state.SkipWithError("Should not happen");
+            }
+        }
+    }
+}
+
+// BENCHMARK(BM_probed_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 10);
+// BENCHMARK(BM_uint_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 10);
+// BENCHMARK(BM_pod_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 10);
+
+BENCHMARK(BM_uint_hash_search)->RangeMultiplier(2)->Range(1024, 1 << 20);
+BENCHMARK(BM_stdumap_hash_search)->RangeMultiplier(2)->Range(1024, 1 << 20);
+BENCHMARK(BM_probed_hash_search)->RangeMultiplier(2)->Range(1024, 1 << 20);
+BENCHMARK(BM_pod_hash_search)->RangeMultiplier(2)->Range(1024, 1 << 20);
 
 BENCHMARK_MAIN();
