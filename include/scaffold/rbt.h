@@ -125,17 +125,17 @@ template <typename K, typename V> struct RBT {
     size_t size() const { return _num_nodes; }
 
   private:
-    /// Transplants the given node `n2` to the given node `n1`'s position
+    // Transplants the given node `n2` to the given node `n1`'s position
     void _graft(RBNode<K, V> *n1, RBNode<K, V> *n2);
 
-    /// Rotations
+    // Rotations
     template <int left, int right> void _rotate(RBNode<K, V> *n);
 
-    /// Bottom-up fixing for insertion
+    // Bottom-up fixing for insertion
     template <int left, int right>
     inline RBNode<K, V> *_insert_fix(RBNode<K, V> *z);
 
-    /// Bottom-up fixing for deletion
+    // Bottom-up fixing for deletion
     template <int left, int right>
     inline RBNode<K, V> *_remove_fix(RBNode<K, V> *x);
 };

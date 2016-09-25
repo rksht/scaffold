@@ -18,7 +18,7 @@ namespace _internal {
 
 template <typename K, typename V> struct _Entry {
     K key;
-    V value;
+    mutable V value;
     uint32_t next;
 };
 }
@@ -33,6 +33,11 @@ struct PodHash : std::iterator<std::random_access_iterator_tag,
                   "Key type must be trivially copyable");
     static_assert(std::is_trivially_copyable<V>::value,
                   "Value type must be trivially copyable");
+
+    static_assert(std::is_trivially_copy_assignable<K>::value,
+                  "Key type must be trivially copy assignable");
+    static_assert(std::is_trivially_copy_assignable<V>::value,
+                  "Value type must be trivially copy assignable");
 
     using Entry = pod_hash::_internal::_Entry<K, V>;
 
@@ -131,6 +136,12 @@ void set(PodHash<K, V> &h, const K &key, const V &value);
 /// Returns true if an entry with the given key is present.
 template <typename K, typename V>
 bool has(const PodHash<K, V> &h, const K &key);
+
+/// Returns an object containing the fields `bool present` and `V &value`. If
+/// a value is associated with the given key, present will be true and value
+/// will refer to the associated value. Otherwise present will be false.
+template <typename K, typename V>
+auto get(const PodHash<K, V> &h, const K &key);
 
 /// Sets the given key's associated value to the given default value if no
 /// entry is present with the given key. Returns reference to the value
@@ -360,6 +371,24 @@ void set(PodHash<K, V> &h, const K &key, const V &value) {
 template <typename K, typename V> bool has(PodHash<K, V> &h, const K &key) {
     const _internal::FindResult fr = _internal::find(h, key);
     return fr.entry_i != _internal::END_OF_LIST;
+}
+
+template <typename K, typename V>
+auto get(const PodHash<K, V> &h, const K &key) {
+    struct Ret {
+        V &value;
+        bool present;
+    };
+
+    bool found = false;
+
+    _internal::FindResult fr = _internal::find(h, key);
+
+    if (fr.entry_i != _internal::END_OF_LIST) {
+        found = true;
+    }
+
+    return Ret{h._entries[fr.entry_i].value, found};
 }
 
 template <typename K, typename V>
