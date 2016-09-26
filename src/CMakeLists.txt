@@ -5,11 +5,17 @@ add_compile_options("-std=c++14" "-Wall" "-Wextra" "-Werror")
 
 # gprof
 option(USE_GPROF "use gprof" off)
-if (USE_GCOV)
+if (USE_GPROF)
 	add_compile_options("-pg")
 	SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg")
 	SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg")
 	SET(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg")
+endif()
+
+# sanitizer
+option(USE_MEMORY_SANITIZER "use memory sanitizer" off)
+if (USE_MEMORY_SANITIZER)
+	add_compile_options("-fsanitize=memory")
 endif()
 
 

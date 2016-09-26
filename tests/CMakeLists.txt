@@ -47,9 +47,13 @@ target_link_libraries(pod_hash_test_2 scaffold)
 
 ##
 
-SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg")
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg")
-SET(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg")
+if (USE_GPROF)
+	SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg")
+	SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg")
+	SET(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg")
+endif()
 add_executable(pod_hash_gprof_test pod_hash_gprof_test.cpp)
 target_link_libraries(pod_hash_gprof_test scaffold)
-target_compile_options(pod_hash_gprof_test PRIVATE "-save-temps" "-pg")
+if (USE_GPROF)
+	target_compile_options(pod_hash_gprof_test PRIVATE "-save-temps" "-pg")
+endif()

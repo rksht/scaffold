@@ -4,7 +4,9 @@
 #include "collection_types.h"
 #include "memory.h"
 #include "murmur_hash.h"
+#include "smallintarray.h"
 
+#include <algorithm> // std::swap
 #include <iterator>
 #include <memory> // std::move
 #include <stdint.h>
@@ -74,14 +76,17 @@ struct PodHash : std::iterator<std::random_access_iterator_tag,
 
     /// Move constructor
     PodHash(PodHash &&other)
-        : _hashes(std::move(other._hashes)),
-          _entries(std::move(other._entries)), _hash_func(other._hash_func) {}
+        : _hashes{std::move(other._hashes)},
+          _entries{std::move(other._entries)}, _hash_func{other._hash_func},
+          _equal_func{other._equal_func} {}
 
     /// Move assignment
     PodHash &operator=(PodHash &&other) {
         if (this != &other) {
             _hashes = std::move(other._hashes);
             _entries = std::move(other._entries);
+            _hash_func = other._hash_func;
+            _equal_func = other._equal_func;
         }
         return *this;
     }
@@ -252,29 +257,26 @@ uint32_t make(PodHash<K, V> &h, const K &key) {
 template <typename K, typename V>
 void rehash(PodHash<K, V> &h, uint32_t new_size) {
     // create a new hash table
-    PodHash<K, V> nh(*h._hashes._allocator, *h._entries._allocator,
-                     h._hash_func, h._equal_func);
+    PodHash<K, V> new_hash(*h._hashes._allocator, *h._entries._allocator,
+                           h._hash_func, h._equal_func);
 
     // Don't need the previous hashes.
     foundation::array::clear(h._hashes);
-    foundation::array::resize(nh._hashes, new_size);
-    foundation::array::reserve(nh._entries,
+    foundation::array::resize(new_hash._hashes, new_size);
+    foundation::array::reserve(new_hash._entries,
                                foundation::array::size(h._entries));
-    // Empty out the hashes first
-    for (uint32_t i = 0; i < new_size; ++i) {
-        nh._hashes[i] = END_OF_LIST;
-    }
-    // Insert one by one
-    for (uint32_t i = 0; i < foundation::array::size(h._entries); ++i) {
-        const typename PodHash<K, V>::Entry &e = h._entries[i];
-        insert(nh, e.key, e.value);
+
+    // Empty out hashes
+    for (uint32_t &entry_i : new_hash._hashes) {
+        entry_i = END_OF_LIST;
     }
 
-    PodHash<K, V> empty(*h._hashes._allocator, *h._entries._allocator,
-                        h._hash_func, h._equal_func);
-    h.~PodHash<K, V>();
-    memcpy(&h, &nh, sizeof(PodHash<K, V>));
-    memcpy(&nh, &empty, sizeof(PodHash<K, V>));
+    // Insert one by one
+    for (const auto &entry : h._entries) {
+        insert(new_hash, entry.key, entry.value);
+    }
+
+    std::swap(h, new_hash);
 }
 
 template <typename K, typename V> void grow(PodHash<K, V> &h) {
