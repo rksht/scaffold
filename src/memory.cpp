@@ -246,7 +246,7 @@ namespace memory_globals {
 static const char default_allocator_name[] = "Default Allocator";
 static const char default_scratch_allocator_name[] =
     "Default scratch allocator";
-static const char default_arena_allocator_name[] = "Default arena allocator";
+// static const char default_arena_allocator_name[] = "Default arena allocator";
 
 /// ... And add the initialization code here ...
 void init(uint32_t scratch_buffer_size) {
