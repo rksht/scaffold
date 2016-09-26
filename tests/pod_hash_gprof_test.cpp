@@ -19,7 +19,7 @@ int main() {
                 return key1 == key2;
             }};
 
-        const uint32_t MAX_ENTRIES = 8192;
+        const uint32_t MAX_ENTRIES = 1 << 20;
 
         pod_hash::reserve(h, MAX_ENTRIES);
 

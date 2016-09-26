@@ -92,8 +92,8 @@ namespace probed_hash {
 /// does exist. Otherwise returns `TOMBSTONE`
 template <typename T>
 uint64_t probed_hash_find(const ProbedHash<T> &h, uint64_t key) {
-    uint64_t idx = murmur_hash_64(&key, sizeof(key), 0xCAFEBABE);
-    // uint64_t idx = key;
+    // uint64_t idx = murmur_hash_64(&key, sizeof(key), 0xCAFEBABE);
+    uint64_t idx = key;
     for (uint32_t i = 0; i < array::size(h._keys); ++i) {
         idx = (idx + i) % array::size(h._keys);
         if (h._keys[idx] == key) {
@@ -114,8 +114,8 @@ uint64_t probed_hash_set(ProbedHash<T> &h, uint64_t key, T value) {
         _internal::rehash(h, array::size(h._keys) * 2);
     }
 
-    uint64_t idx = murmur_hash_64(&key, sizeof(key), 0xCAFEBABE);
-    // uint64_t idx = key;
+    //uint64_t idx = murmur_hash_64(&key, sizeof(key), 0xCAFEBABE);
+    uint64_t idx = key;
     for (uint32_t i = 0; i < array::size(h._keys); ++i) {
         idx = (idx + i) % array::size(h._keys);
         if (h._keys[idx] == TOMBSTONE || h._keys[idx] == key) {
@@ -137,7 +137,8 @@ uint64_t probed_hash_set_default(ProbedHash<T> &h, uint64_t key,
         _internal::rehash(h, array::size(h._keys) * 2);
     }
 
-    uint64_t idx = murmur_hash_64(&key, sizeof(key), 0xCAFEBABE);
+    // uint64_t idx = murmur_hash_64(&key, sizeof(key), 0xCAFEBABE);
+    uint64_t idx = key;
     for (uint32_t i = 0; i < array::size(h._keys); ++i) {
         idx = (idx + i) % array::size(h._keys);
         if (h._keys[idx] == TOMBSTONE) {
@@ -227,7 +228,7 @@ static void BM_pod_hash_insertion(benchmark::State &bm_state) {
 
             const uint32_t MAX_ENTRIES = bm_state.range(0);
 
-#if 0
+#if 1
 
             PodHash<uint64_t, uint64_t> h{memory_globals::default_allocator(),
                                           memory_globals::default_allocator(),
@@ -235,6 +236,7 @@ static void BM_pod_hash_insertion(benchmark::State &bm_state) {
                                           usual_equal<uint64_t>};
 #endif
 
+#if 0
             PodHash<uint64_t, uint64_t> h{
                 memory_globals::default_allocator(),
                 memory_globals::default_allocator(),
@@ -244,6 +246,8 @@ static void BM_pod_hash_insertion(benchmark::State &bm_state) {
                 [](const uint64_t &key1, const uint64_t &key2) {
                     return key1 == key2;
                 }};
+
+#endif
 
             pod_hash::reserve(h, MAX_ENTRIES);
 
@@ -299,6 +303,8 @@ static void BM_pod_hash_search(benchmark::State &bm_state) {
 
     memory_globals::init();
     {
+
+#if 0
         PodHash<uint64_t, uint64_t> h{
             memory_globals::default_allocator(),
             memory_globals::default_allocator(),
@@ -309,7 +315,15 @@ static void BM_pod_hash_search(benchmark::State &bm_state) {
                 return key1 == key2;
             }};
 
+#endif
+
+        PodHash<uint64_t, uint64_t> h{memory_globals::default_allocator(),
+                                      memory_globals::default_allocator(),
+                                      usual_hash<uint64_t>,
+                                      usual_equal<uint64_t>};
+
         const uint32_t MAX_ENTRIES = bm_state.range(0);
+            // bm_state.range(0) <= (16 << 10) ? (16 << 10) : bm_state.range(0);
 
         pod_hash::reserve(h, MAX_ENTRIES);
 
@@ -320,8 +334,8 @@ static void BM_pod_hash_search(benchmark::State &bm_state) {
         while (bm_state.KeepRunning()) {
             for (uint64_t i = 0; i < MAX_ENTRIES; ++i) {
                 auto ret = pod_hash::get(h, i);
-                //assert(ret.present);
-                //assert(ret.value == 0xdeadbeeflu);
+                // assert(ret.present);
+                // assert(ret.value == 0xdeadbeeflu);
                 if (!ret.present) {
                     bm_state.SkipWithError(
                         "Didn't find a ket, shouldn't happen.");
@@ -388,9 +402,11 @@ static void BM_stdumap_hash_search(benchmark::State &bm_state) {
 // BENCHMARK(BM_uint_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 10);
 // BENCHMARK(BM_pod_hash_insertion)->RangeMultiplier(2)->Range(16, 8 << 10);
 
-BENCHMARK(BM_uint_hash_search)->RangeMultiplier(2)->Range(1024, 1 << 20);
-BENCHMARK(BM_stdumap_hash_search)->RangeMultiplier(2)->Range(1024, 1 << 20);
-BENCHMARK(BM_probed_hash_search)->RangeMultiplier(2)->Range(1024, 1 << 20);
-BENCHMARK(BM_pod_hash_search)->RangeMultiplier(2)->Range(1024, 1 << 20);
+constexpr uint32_t MAX_ENTRIES = 4 << 20;
+
+BENCHMARK(BM_stdumap_hash_search)->RangeMultiplier(2)->Range(1024, MAX_ENTRIES);
+BENCHMARK(BM_uint_hash_search)->RangeMultiplier(2)->Range(1024, MAX_ENTRIES);
+BENCHMARK(BM_probed_hash_search)->RangeMultiplier(2)->Range(1024, MAX_ENTRIES);
+BENCHMARK(BM_pod_hash_search)->RangeMultiplier(2)->Range(1024, MAX_ENTRIES);
 
 BENCHMARK_MAIN();
