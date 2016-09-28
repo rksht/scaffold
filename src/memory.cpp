@@ -78,11 +78,9 @@ class MallocAllocator : public Allocator {
     MallocAllocator() : _total_allocated(0) {}
 
     ~MallocAllocator() {
-// Check that we don't have any memory leaks when allocator is
-// destroyed.
-#if 0
+        // Check that we don't have any memory leaks when allocator is
+        // destroyed.
         assert(_total_allocated == 0);
-#endif
     }
 
     virtual void *allocate(uint32_t size, uint32_t align) {

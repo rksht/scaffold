@@ -90,7 +90,7 @@ template <typename T> void resize(Array<T> &a, uint32_t new_size) {
         grow(a, new_size);
 // Zero the memory if we are in debug mode
 #ifndef NDEBUG
-        memset(&a._data[a._size], 0, new_size - a._size);
+        memset(&a._data[a._size], 0, (new_size - a._size) * sizeof(T));
 #endif
     }
     a._size = new_size;
@@ -165,7 +165,6 @@ Array<T>::Array(Array<T> &&other)
     other._size = 0;
     other._capacity = 0;
     other._data = nullptr;
-    other._allocator = nullptr;
 }
 
 template <typename T> Array<T> &Array<T>::operator=(const Array<T> &other) {
@@ -177,6 +176,7 @@ template <typename T> Array<T> &Array<T>::operator=(const Array<T> &other) {
 
 template <typename T> Array<T> &Array<T>::operator=(Array<T> &&other) {
     if (this != &other) {
+        _allocator->deallocate(_data);
         _data = other._data;
         _size = other._size;
         _capacity = other._capacity;

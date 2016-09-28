@@ -1,8 +1,8 @@
 
 #pragma once
 
-#include "types.h"
 #include "memory_types.h"
+#include "types.h"
 
 /// All collection types assume that they are used to store POD objects. I.e.
 /// they:
@@ -23,8 +23,8 @@ template <typename T> struct Array {
     Array &operator=(const Array &other);
     Array &operator=(Array &&other);
 
-    using iterator = T*;
-    using const_iterator = const T*;
+    using iterator = T *;
+    using const_iterator = const T *;
 
     T &operator[](uint32_t i);
     const T &operator[](uint32_t i) const;
@@ -68,5 +68,4 @@ template <typename T> struct Hash {
     Array<uint32_t> _hash;
     Array<Entry> _data;
 };
-
 }
