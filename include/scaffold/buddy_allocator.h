@@ -113,10 +113,11 @@ class BuddyAllocator : public Allocator {
     /// latter determinining the size of the buddy, so we do need to store the
     /// level of any allocated buddy alongside as the API for deallocate only
     /// takes the pointer to the start address of the buddy to be deallocated
-    SmallIntArray<1, _num_indices> _index_allocated;
+    SmallIntArray<1, _num_indices, uint32_t> _index_allocated;
 
     /// Level at which the buddy - denoted by its i:is residing
-    SmallIntArray<log2_ceil(_num_levels), _num_indices> _level_of_index;
+    SmallIntArray<log2_ceil(_num_levels), _num_indices, uint32_t>
+        _level_of_index;
 
     /// To support total_allocated() call
     uint64_t _total_allocated;

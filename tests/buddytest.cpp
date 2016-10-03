@@ -86,6 +86,8 @@ int main(int argc, char **argv) {
                       << "\n";
             ba.deallocate(p);
         }
+
+        std::cerr << "BuddyAllocator object size = " << sizeof(ba) << "\n";
     }
     foundation::memory_globals::shutdown();
     fprintf(stderr, "Seed = %lu\n", seed);
