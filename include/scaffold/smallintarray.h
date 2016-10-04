@@ -84,6 +84,12 @@ struct SmallIntArray {
     };
 
   public:
+    /// Returns the amount of memory the underlying array would require,
+    /// clipped to nearest power of 2.
+    constexpr static size_t space_required() {
+        return clip_to_power_of_2(_num_words * sizeof(T));
+    }
+
     /// Ctor - sets all to 0
     SmallIntArray(Allocator &allocator = memory_globals::default_allocator())
         : _words{allocator} {
