@@ -73,6 +73,15 @@ template <int BUFFER_SIZE>
 void *TempAllocator<BUFFER_SIZE>::allocate(uint32_t size, uint32_t align) {
     _p = (char *)memory::align_forward(_p, align);
     if ((int)size > _end - _p) {
+        // Total space to allocate is the size given plus the "next" pointer
+        // which is stored at the head of the allocated region. Due to this we
+        // can use the region only by entering a little into it. If v is the
+        // start location, we want the following to hold -
+        //
+        //      v + sizeof(void *) + padding == 0 (modulo align)
+        // So the maximum padding needed will be when (v + sizeof(void *)) is 1
+        // modulo n, in which case padding will be (align - 1). We always use a
+        // padding of align bytes as a safe over-estimate.
         uint32_t to_allocate = sizeof(void *) + size + align;
         if (to_allocate < _chunk_size)
             to_allocate = _chunk_size;

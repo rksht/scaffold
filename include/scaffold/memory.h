@@ -14,7 +14,7 @@ namespace foundation {
 class Allocator {
   public:
     /// Default alignment for memory allocations.
-    static constexpr uint32_t DEFAULT_ALIGN = 16;
+    static constexpr uint32_t DEFAULT_ALIGN = alignof(void *);
 
     /// Maximum name size for any allocator including the '\0' character
     static constexpr uint32_t ALLOCATOR_NAME_SIZE = 32;
