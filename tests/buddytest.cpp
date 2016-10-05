@@ -21,6 +21,8 @@ int main(int argc, char **argv) {
 
     log_info("--Seed = %lu", seed);
 
+    assert(clip_to_power_of_2(32768) == 32768);
+
     foundation::memory_globals::init();
     {
         using BA = foundation::BuddyAllocator<BUFFER_SIZE, SMALLEST_SIZE>;
@@ -42,8 +44,6 @@ int main(int argc, char **argv) {
                 new (&p1) SmallestBlock();
 
                 allocateds.insert((void *)&p1);
-
-                // ba.print_level_map();
             }
 
             int r = d(dre);
@@ -52,7 +52,6 @@ int main(int argc, char **argv) {
                     if (d(dre) > 4) {
                         ba.deallocate(p);
                         allocateds.erase(p);
-                        // ba.print_level_map();
                         break;
                     }
                 }
@@ -65,7 +64,6 @@ int main(int argc, char **argv) {
                                                            alignof(Block_8KB)));
                 new (&p2) Block_8KB();
                 allocateds.insert((void *)&p2);
-                // ba.print_level_map();
             }
 
             r = d(dre);
@@ -75,7 +73,6 @@ int main(int argc, char **argv) {
                     if (d(dre) > 4) {
                         ba.deallocate(p);
                         allocateds.erase(p);
-                        // ba.print_level_map();
                         break;
                     }
                 }

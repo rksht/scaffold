@@ -2,6 +2,7 @@
 #include <scaffold/pod_hash.h>
 #include <scaffold/pod_hash_usuals.h>
 #include <scaffold/smallintarray.h>
+#include <scaffold/temp_allocator.h>
 
 #include "catch.hpp"
 
@@ -109,6 +110,46 @@ TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
 #if 0
         ints.print();
 #endif
+        }
+    }
+    foundation::memory_globals::shutdown();
+}
+
+TEST_CASE("SmallIntArray with TempAllocator", "[SmallIntArray_temp]") {
+    foundation::memory_globals::init();
+    {
+        using Sia = SmallIntArray<4, 512, uint32_t>;
+
+        REQUIRE(Sia::space_required() == 256);
+
+        foundation::TempAllocator<Sia::space_required()> temp_alloc;
+
+        Sia smallints{temp_alloc};
+
+        smallints.set(0, 9);
+        smallints.set(90, 12);
+        smallints.set(91, 9);
+        smallints.set(89, 10);
+        smallints.set(80, 10);
+
+        SECTION("get back value ok") {
+            REQUIRE(smallints.get(0) == 9);
+            REQUIRE(smallints.get(90) == 12);
+            REQUIRE(smallints.get(91) == 9);
+            REQUIRE(smallints.get(89) == 10);
+            REQUIRE(smallints.get(80) == 10);
+        }
+
+        smallints.set(90, 0);
+        smallints.set(91, 8);
+        smallints.set(0, 7);
+
+        SECTION("can reset") {
+            REQUIRE(smallints.get(90) == 0);
+            REQUIRE(smallints.get(91) == 8);
+            REQUIRE(smallints.get(89) == 10);
+            REQUIRE(smallints.get(80) == 10);
+            REQUIRE(smallints.get(0) == 7);
         }
     }
     foundation::memory_globals::shutdown();

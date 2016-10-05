@@ -1,20 +1,16 @@
-#include <scaffold/buddy_allocator.h>
 #include <scaffold/array.h>
+#include <scaffold/buddy_allocator.h>
 
 #include <stdio.h>
 
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
 
-constexpr uint32_t BUFFER_SIZE = 64 << 10;          // 16 KB
-constexpr uint32_t SMALLEST_SIZE = 8; // 8 bytes
 
-template <size_t size>
-struct alignas(16) Ob {
-    char _arr[size];
-};
+constexpr uint32_t BUFFER_SIZE = 64 << 10; // 64 KB
+constexpr uint32_t SMALLEST_SIZE = 8;      // 8 bytes
 
-TEST_CASE("Array with buddy allocation", "[array-buddy-test]") {
+template <size_t size> struct alignas(16) Ob { char _arr[size]; };
+
+ int main() {
     using namespace foundation;
 
     memory_globals::init();
@@ -25,9 +21,9 @@ TEST_CASE("Array with buddy allocation", "[array-buddy-test]") {
             memory_globals::default_scratch_allocator());
 
         Array<Ob<object_sz>> a{ba};
-        for (int i = 0; i < 1024; ++i) {
-            fprintf(stderr, "Pushing %d\n", i);
-            array::push_back(a, Ob<object_sz>{});
+        for (uint32_t size = 16; size <= BUFFER_SIZE / 4; size *= 2) {
+            log_info("New size = %u bytes", size);
+            array::resize(a, size / object_sz);
         }
         array::clear(a);
     }

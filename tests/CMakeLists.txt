@@ -47,6 +47,9 @@ target_link_libraries(pod_hash_test_2 scaffold)
 
 ##
 
+add_executable(temp_allocator_test temp_allocator_test.cpp)
+target_link_libraries(temp_allocator_test scaffold)
+
 if (USE_GPROF)
 	SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg")
 	SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg")
