@@ -184,7 +184,7 @@ class BuddyAllocator : public Allocator {
 
         log_assert(
             size >= _min_buddy_size,
-            "Cannot allocate a buddy size smaller than the minimum size of %lu",
+            "Cannot allocate a buddy size smaller than the minimum size of %u",
             _min_buddy_size);
 
         log_assert(_buddy_alignment % align == 0,
