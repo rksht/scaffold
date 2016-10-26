@@ -1,13 +1,18 @@
 #include <scaffold/debug.h>
 #include <scaffold/memory.h>
 
+// For posix_memalign
+#ifdef MALLOC_ALLOC_DONT_TRACK_SIZE
+#if !defined(_POSIX_C_SOURCE) || (_POSIX_C_SOURCE < 200112L)
+#define _POSIX_C_SOURCE 200112L
+#endif
+#endif
 #include <assert.h>
 #include <iostream>
 #include <new>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <stdio.h>
 
 namespace foundation {
 
@@ -16,7 +21,7 @@ Allocator::Allocator() { memset(_name, 0, ALLOCATOR_NAME_SIZE); }
 
 const char *Allocator::name() { return _name; }
 
-void Allocator::set_name(const char *name, uint32_t len) {
+void Allocator::set_name(const char *name, uint64_t len) {
     assert(len < ALLOCATOR_NAME_SIZE && "Allocator name too large");
     memcpy(_name, name, len);
 }
@@ -29,22 +34,22 @@ using namespace foundation;
 // Header stored at the beginning of a memory allocation to indicate the
 // size of the allocated data.
 struct Header {
-    uint32_t size;
+    uint64_t size;
 };
 
 // If we need to align the memory allocation we pad the header with this
 // value after storing the size. That way we can
-const uint32_t HEADER_PAD_VALUE = 0xffffffffu;
+const uint64_t HEADER_PAD_VALUE = ~uint64_t(0);
 
 // Given a pointer to the header, returns a pointer to the data that follows it.
-inline void *data_pointer(Header *header, uint32_t align) {
+inline void *data_pointer(Header *header, uint64_t align) {
     void *p = header + 1;
     return memory::align_forward(p, align);
 }
 
 // Given a pointer to the data, returns a pointer to the header before it.
 inline Header *header(void *data) {
-    uint32_t *p = (uint32_t *)data;
+    uint64_t *p = (uint64_t *)data;
     while (p[-1] == HEADER_PAD_VALUE)
         --p;
     return (Header *)p - 1;
@@ -52,9 +57,9 @@ inline Header *header(void *data) {
 
 // Stores the size in the header and pads with HEADER_PAD_VALUE up to the
 // data pointer.
-inline void fill(Header *header, void *data, uint32_t size) {
+inline void fill(Header *header, void *data, uint64_t size) {
     header->size = size;
-    uint32_t *p = (uint32_t *)(header + 1);
+    uint64_t *p = (uint64_t *)(header + 1);
     while (p < data)
         *p++ = HEADER_PAD_VALUE;
 }
@@ -67,15 +72,19 @@ inline void fill(Header *header, void *data, uint32_t size) {
 /// does need this padding and can thus be more efficient than the
 /// MallocAllocator.)
 class MallocAllocator : public Allocator {
-    uint32_t _total_allocated;
+    uint64_t _total_allocated;
 
     // Returns the size to allocate from malloc() for a given size and align.
-    static inline uint32_t size_with_padding(uint32_t size, uint32_t align) {
+    static inline uint64_t size_with_padding(uint64_t size, uint64_t align) {
         return size + align + sizeof(Header);
     }
 
   public:
-    MallocAllocator() : _total_allocated(0) {}
+    MallocAllocator() : _total_allocated(0) {
+#ifdef MALLOC_ALLOC_DONT_TRACK_SIZE
+        _total_allocated = SIZE_NOT_TRACKED;
+#endif
+    }
 
     ~MallocAllocator() {
         // Check that we don't have any memory leaks when allocator is
@@ -83,8 +92,22 @@ class MallocAllocator : public Allocator {
         assert(_total_allocated == 0);
     }
 
-    virtual void *allocate(uint32_t size, uint32_t align) {
-        const uint32_t ts = size_with_padding(size, align);
+#ifdef MALLOC_ALLOC_DONT_TRACK_SIZE
+    virtual void *allocate(uint64_t size, uint64_t align) override {
+        void *p = nullptr;
+        if (posix_memalign(&p, align, size) != 0) {
+            log_err("MallocAllocator failed to allocate");
+            abort();
+        }
+        return p;
+    }
+
+    virtual void *deallocate(void *p) override { free(p); }
+
+    virtual uint64_t allocated_size(void *p) { return SIZE_NOT_TRACKED; }
+#else
+    virtual void *allocate(uint64_t size, uint64_t align) override {
+        const uint64_t ts = size_with_padding(size, align);
         Header *h = (Header *)malloc(ts);
         void *p = data_pointer(h, align);
         fill(h, p, ts);
@@ -93,7 +116,7 @@ class MallocAllocator : public Allocator {
         return p;
     }
 
-    virtual void deallocate(void *p) {
+    virtual void deallocate(void *p) override {
         if (!p)
             return;
 
@@ -102,9 +125,12 @@ class MallocAllocator : public Allocator {
         free(h);
     }
 
-    virtual uint32_t allocated_size(void *p) { return header(p)->size; }
+    virtual uint64_t allocated_size(void *p) override {
+        return header(p)->size;
+    }
+#endif
 
-    virtual uint32_t total_allocated() { return _total_allocated; }
+    virtual uint64_t total_allocated() override { return _total_allocated; }
 };
 
 /// An allocator used to allocate temporary "scratch" memory. The allocator
@@ -137,7 +163,7 @@ class ScratchAllocator : public Allocator {
     /// that don't fit in the ring buffer.
     ///
     /// size specifies the size of the ring buffer.
-    ScratchAllocator(Allocator &backing, uint32_t size) : _backing(backing) {
+    ScratchAllocator(Allocator &backing, uint64_t size) : _backing(backing) {
         _begin = (char *)_backing.allocate(size);
         _end = _begin + size;
         _allocate = _begin;
@@ -157,7 +183,7 @@ class ScratchAllocator : public Allocator {
         return p >= _free || p < _allocate;
     }
 
-    virtual void *allocate(uint32_t size, uint32_t align) {
+    virtual void *allocate(uint64_t size, uint64_t align) {
         assert(align % 4 == 0);
         size = ((size + 3) / 4) * 4;
 
@@ -211,12 +237,12 @@ class ScratchAllocator : public Allocator {
         }
     }
 
-    virtual uint32_t allocated_size(void *p) {
+    virtual uint64_t allocated_size(void *p) {
         Header *h = header(p);
         return h->size - ((char *)p - (char *)h);
     }
 
-    virtual uint32_t total_allocated() { return _end - _begin; }
+    virtual uint64_t total_allocated() { return _end - _begin; }
 };
 
 /// This struct should contain all allocators required by the
@@ -247,7 +273,7 @@ static const char default_scratch_allocator_name[] =
 // static const char default_arena_allocator_name[] = "Default arena allocator";
 
 /// ... And add the initialization code here ...
-void init(uint32_t scratch_buffer_size) {
+void init(uint64_t scratch_buffer_size) {
     _memory_globals.default_allocator =
         new (_memory_globals._default_allocator) MallocAllocator{};
     _memory_globals.default_scratch_allocator =

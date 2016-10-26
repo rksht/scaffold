@@ -16,17 +16,17 @@ template <int BUFFER_SIZE> class TempAllocator : public Allocator {
         Allocator &backing = memory_globals::default_scratch_allocator());
     virtual ~TempAllocator();
 
-    virtual void *allocate(uint32_t size, uint32_t align = DEFAULT_ALIGN);
+    virtual void *allocate(uint64_t size, uint64_t align = DEFAULT_ALIGN);
 
     /// Deallocation is a NOP for the TempAllocator. The memory is automatically
     /// deallocated when the TempAllocator is destroyed.
     virtual void deallocate(void *) {}
 
     /// Returns SIZE_NOT_TRACKED.
-    virtual uint32_t allocated_size(void *) { return SIZE_NOT_TRACKED; }
+    virtual uint64_t allocated_size(void *) { return SIZE_NOT_TRACKED; }
 
     /// Returns SIZE_NOT_TRACKED.
-    virtual uint32_t total_allocated() { return SIZE_NOT_TRACKED; }
+    virtual uint64_t total_allocated() { return SIZE_NOT_TRACKED; }
 
   private:
     char _buffer[BUFFER_SIZE]; //< Local stack buffer for allocations.
@@ -70,7 +70,7 @@ template <int BUFFER_SIZE> TempAllocator<BUFFER_SIZE>::~TempAllocator() {
 }
 
 template <int BUFFER_SIZE>
-void *TempAllocator<BUFFER_SIZE>::allocate(uint32_t size, uint32_t align) {
+void *TempAllocator<BUFFER_SIZE>::allocate(uint64_t size, uint64_t align) {
     _p = (char *)memory::align_forward(_p, align);
     if ((int)size > _end - _p) {
         // Total space to allocate is the size given plus the "next" pointer
@@ -82,7 +82,7 @@ void *TempAllocator<BUFFER_SIZE>::allocate(uint32_t size, uint32_t align) {
         // So the maximum padding needed will be when (v + sizeof(void *)) is 1
         // modulo n, in which case padding will be (align - 1). We always use a
         // padding of align bytes as a safe over-estimate.
-        uint32_t to_allocate = sizeof(void *) + size + align;
+        uint64_t to_allocate = sizeof(void *) + size + align;
         if (to_allocate < _chunk_size)
             to_allocate = _chunk_size;
         _chunk_size *= 2;

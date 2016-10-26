@@ -3,8 +3,8 @@
 #include <string.h>
 
 namespace foundation {
-uint32_t ArenaAllocator::_aligned_size_with_padding(uint32_t size) {
-    uint32_t total = size + sizeof(_Header);
+uint64_t ArenaAllocator::_aligned_size_with_padding(uint64_t size) {
+    uint64_t total = size + sizeof(_Header);
     int mod = total % alignof(_Header);
     if (mod) {
         total += alignof(_Header) - mod;
@@ -12,9 +12,9 @@ uint32_t ArenaAllocator::_aligned_size_with_padding(uint32_t size) {
     return total;
 }
 
-ArenaAllocator::ArenaAllocator(Allocator &backing, uint32_t size)
+ArenaAllocator::ArenaAllocator(Allocator &backing, uint64_t size)
     : _backing(&backing) {
-    uint32_t adjusted_size = _aligned_size_with_padding(size);
+    uint64_t adjusted_size = _aligned_size_with_padding(size);
     _mem = _backing->allocate(adjusted_size, alignof(_Header));
     memset(_mem, 0, adjusted_size);
     _top_header = (_Header *)_mem;
@@ -23,9 +23,9 @@ ArenaAllocator::ArenaAllocator(Allocator &backing, uint32_t size)
     _total_allocated = 0;
 }
 
-void *ArenaAllocator::allocate(uint32_t size, uint32_t align) {
+void *ArenaAllocator::allocate(uint64_t size, uint64_t align) {
     char *after_header, *aligned_start;
-    uint32_t pad_size;
+    uint64_t pad_size;
 
     if (size % alignof(_Header) != 0) {
         log_err("ArenaAllocator - size not multiple of header\n");
@@ -46,12 +46,12 @@ void *ArenaAllocator::allocate(uint32_t size, uint32_t align) {
                 name());
     }
 
-    pad_size = (uint32_t)(aligned_start - after_header);
+    pad_size = (uint64_t)(aligned_start - after_header);
 
     // wasted
     _wasted += sizeof(_Header) + pad_size;
 
-    for (uint32_t *p = (uint32_t *)after_header; p != (uint32_t *)aligned_start;
+    for (uint64_t *p = (uint64_t *)after_header; p != (uint64_t *)aligned_start;
          ++p) {
         p[0] = HEADER_PAD_VALUE;
     }
@@ -71,8 +71,8 @@ void ArenaAllocator::deallocate(void *p) {
     assert(false && "You must not call this");
 }
 
-uint32_t ArenaAllocator::allocated_size(void *p) {
-    uint32_t *pad = (uint32_t *)p;
+uint64_t ArenaAllocator::allocated_size(void *p) {
+    uint64_t *pad = (uint64_t *)p;
     while (pad[-1] == HEADER_PAD_VALUE) {
         --pad;
     }

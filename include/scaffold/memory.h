@@ -14,10 +14,10 @@ namespace foundation {
 class Allocator {
   public:
     /// Default alignment for memory allocations.
-    static constexpr uint32_t DEFAULT_ALIGN = alignof(void *);
+    static constexpr uint64_t DEFAULT_ALIGN = alignof(void *);
 
     /// Maximum name size for any allocator including the '\0' character
-    static constexpr uint32_t ALLOCATOR_NAME_SIZE = 32;
+    static constexpr uint64_t ALLOCATOR_NAME_SIZE = 32;
 
     // Ctor
     Allocator();
@@ -27,13 +27,13 @@ class Allocator {
 
     /// Allocates the specified amount of memory aligned to the specified
     /// alignment.
-    virtual void *allocate(uint32_t size, uint32_t align = DEFAULT_ALIGN) = 0;
+    virtual void *allocate(uint64_t size, uint64_t align = DEFAULT_ALIGN) = 0;
 
     /// Frees an allocation previously made with allocate(). If `p` is nullptr,
     /// then simply returns doing nothing.
     virtual void deallocate(void *p) = 0;
 
-    static const uint32_t SIZE_NOT_TRACKED = 0xffffffffu;
+    static const uint64_t SIZE_NOT_TRACKED = ~uint64_t(0);
 
     /// Returns the amount of usable memory allocated at p. p must be a pointer
     /// returned by allocate() that has not yet been deallocated. The value
@@ -45,7 +45,7 @@ class Allocator {
     ///
     /// Not all allocators support tracking the size of individual allocations.
     /// An allocator that doesn't suppor it will return SIZE_NOT_TRACKED.
-    virtual uint32_t allocated_size(void *p) = 0;
+    virtual uint64_t allocated_size(void *p) = 0;
 
     /// Returns the total amount of memory allocated by this allocator. Note
     /// that the
@@ -55,7 +55,7 @@ class Allocator {
     ///
     /// If the allocator doesn't track memory, this function returns
     /// SIZE_NOT_TRACKED.
-    virtual uint32_t total_allocated() = 0;
+    virtual uint64_t total_allocated() = 0;
 
     /// Returns the name of this allocator. If no name was explicitly set by a
     /// call to `set_name` method, returns the `this` pointer stringified.
@@ -66,7 +66,7 @@ class Allocator {
     /// length of the string _including_ the '\0' character. Most allocators
     /// names should be known at compile time, so you can just use
     /// sizeof(literal) to obtain the size including the '\0'.
-    void set_name(const char *name, uint32_t len);
+    void set_name(const char *name, uint64_t len);
 
     /// Allocators cannot be copied.
     Allocator(const Allocator &other) = delete;
@@ -98,7 +98,7 @@ class ArenaAllocator;
 namespace memory_globals {
 /// Initializes the global memory allocators. scratch_buffer_size is the size of
 /// the memory buffer used by the scratch allocators.
-void init(uint32_t scratch_buffer_size = 4 << 20);
+void init(uint64_t scratch_buffer_size = 4 << 20);
 
 /// Returns a default memory allocator that can be used for most allocations.
 ///
@@ -126,11 +126,11 @@ void shutdown();
 } // namespace memory_globals
 
 namespace memory {
-inline void *align_forward(void *p, uint32_t align);
-inline void *pointer_add(void *p, uint32_t bytes);
-inline const void *pointer_add(const void *p, uint32_t bytes);
-inline void *pointer_sub(void *p, uint32_t bytes);
-inline const void *pointer_sub(const void *p, uint32_t bytes);
+inline void *align_forward(void *p, uint64_t align);
+inline void *pointer_add(void *p, uint64_t bytes);
+inline const void *pointer_add(const void *p, uint64_t bytes);
+inline void *pointer_sub(void *p, uint64_t bytes);
+inline const void *pointer_sub(const void *p, uint64_t bytes);
 }
 
 // ---------------------------------------------------------------
@@ -139,29 +139,29 @@ inline const void *pointer_sub(const void *p, uint32_t bytes);
 
 // Aligns p to the specified alignment by moving it forward if necessary
 // and returns the result.
-inline void *memory::align_forward(void *p, uint32_t align) {
+inline void *memory::align_forward(void *p, uint64_t align) {
     uintptr_t pi = uintptr_t(p);
-    const uint32_t mod = pi % align;
+    const uint64_t mod = pi % align;
     if (mod)
         pi += (align - mod);
     return (void *)pi;
 }
 
 /// Returns the result of advancing p by the specified number of bytes
-inline void *memory::pointer_add(void *p, uint32_t bytes) {
+inline void *memory::pointer_add(void *p, uint64_t bytes) {
     return (void *)((char *)p + bytes);
 }
 
-inline const void *memory::pointer_add(const void *p, uint32_t bytes) {
+inline const void *memory::pointer_add(const void *p, uint64_t bytes) {
     return (const void *)((const char *)p + bytes);
 }
 
 /// Returns the result of moving p back by the specified number of bytes
-inline void *memory::pointer_sub(void *p, uint32_t bytes) {
+inline void *memory::pointer_sub(void *p, uint64_t bytes) {
     return (void *)((char *)p - bytes);
 }
 
-inline const void *memory::pointer_sub(const void *p, uint32_t bytes) {
+inline const void *memory::pointer_sub(const void *p, uint64_t bytes) {
     return (const void *)((const char *)p - bytes);
 }
 }

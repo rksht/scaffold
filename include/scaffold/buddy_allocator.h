@@ -39,7 +39,7 @@ namespace foundation {
 // bitset.
 
 /// The implementation proper of the `BuddyAllocator` class template.
-template <uint64_t buffer_size, uint32_t _min_buddy_size>
+template <uint64_t buffer_size, uint64_t _min_buddy_size>
 class BuddyAllocator : public Allocator {
 
   private:
@@ -82,27 +82,27 @@ class BuddyAllocator : public Allocator {
 
   private:
     /// Returns the size of any buddy that resides at the given `level`
-    static inline constexpr uint64_t _buddy_size_at_level(uint32_t level) {
+    static inline constexpr uint64_t _buddy_size_at_level(uint64_t level) {
         return buffer_size >> (uint64_t)level;
     }
 
   private:
-    static constexpr uint32_t _num_levels =
+    static constexpr uint64_t _num_levels =
         log2_ceil(buffer_size / _min_buddy_size) + 1;
 
     /// (static) Last level (for convenience)
-    static constexpr uint32_t _last_level = _num_levels - 1;
+    static constexpr uint64_t _last_level = _num_levels - 1;
 
     /// (static) Minimum buddy size power
-    static constexpr uint32_t _min_buddy_size_power =
+    static constexpr uint64_t _min_buddy_size_power =
         log2_ceil(_min_buddy_size);
 
     /// (static) Number of buddy indices
-    static constexpr uint32_t _num_indices = 1 << _last_level;
+    static constexpr uint64_t _num_indices = 1 << _last_level;
 
   public:
     /// (static) Alignment
-    static constexpr uint32_t _buddy_alignment = _min_buddy_size;
+    static constexpr uint64_t _buddy_alignment = _min_buddy_size;
 
   private:
     /// Pointers to free lists of each level
@@ -114,10 +114,10 @@ class BuddyAllocator : public Allocator {
     /// latter determinining the size of the buddy, so we do need to store the
     /// level of any allocated buddy alongside as the API for deallocate only
     /// takes the pointer to the start address of the buddy to be deallocated
-    SmallIntArray<1, _num_indices, uint32_t> _index_allocated;
+    SmallIntArray<1, _num_indices, uint64_t> _index_allocated;
 
     /// Level at which the buddy - denoted by its i:is residing
-    SmallIntArray<log2_ceil(_num_levels), _num_indices, uint32_t>
+    SmallIntArray<log2_ceil(_num_levels), _num_indices, uint64_t>
         _level_of_index;
 
     /// To support total_allocated() call
@@ -131,8 +131,8 @@ class BuddyAllocator : public Allocator {
 
     /// We always specify all sizes in units of bytes (except buddy indices).
     /// The maximum buffer size is 4GB, with is 2 << 32, and not possible to
-    /// represent using uint32_t. So we always use uint64_t for specifying the
-    /// size in bytes and uint32_t for other stuff like level number and index.
+    /// represent using uint64_t. So we always use uint64_t for specifying the
+    /// size in bytes and uint64_t for other stuff like level number and index.
     static_assert(buffer_size <= uint64_t(4) << 30,
                   "Buffer size should not exceed 4-GB");
 
@@ -169,16 +169,16 @@ class BuddyAllocator : public Allocator {
         }
     }
 
-    uint32_t total_allocated() override { return _total_allocated; }
+    uint64_t total_allocated() override { return _total_allocated; }
 
-    uint32_t allocated_size(void *p) override {
+    uint64_t allocated_size(void *p) override {
         const uint64_t idx = _buddy_index((BuddyHead *)p);
-        const uint32_t level = _level_of_index.get(idx);
+        const uint64_t level = _level_of_index.get(idx);
         return _buddy_size_at_level(level);
     }
 
     /// Allocation implementation
-    void *allocate(uint32_t size, uint32_t align) override {
+    void *allocate(uint64_t size, uint64_t align) override {
         (void)align; // unused
         size = clip_to_power_of_2(size);
 
@@ -193,7 +193,7 @@ class BuddyAllocator : public Allocator {
         int level = _last_level;
         debug("Allocating buddy of size %u bytes", size);
         while (true) {
-            const uint64_t buddy_size = _buddy_size_at_level((uint32_t)level);
+            const uint64_t buddy_size = _buddy_size_at_level((uint64_t)level);
 
             // Either buddies are not big enough  or none are free, either
             // way, need to go to upper level
@@ -209,7 +209,7 @@ class BuddyAllocator : public Allocator {
             // of 2, break it in half and put the buddies in the lower level
             // just below, and check the lower level
             if (buddy_size > size) {
-                uint32_t index = _buddy_index(_free_lists[level]);
+                uint64_t index = _buddy_index(_free_lists[level]);
                 dbg_print_levels(index, index + _buddies_contained(level));
                 debug("BuddyAlloc::Allocate::Break i:%u - level - %d", index,
                       level);
@@ -222,7 +222,7 @@ class BuddyAllocator : public Allocator {
                 BuddyHead *h = _free_lists[level];
                 const uint64_t index = _buddy_index(h);
 
-                log_assert(_level_of_index.get(index) == (uint32_t)level,
+                log_assert(_level_of_index.get(index) == (uint64_t)level,
                            "BuddyAlloc - Bad index - %lu, Freelist level = %d, "
                            "Stored level = %u",
                            index, level, _level_of_index.get(index));
@@ -236,7 +236,7 @@ class BuddyAllocator : public Allocator {
                                             : next_index);
                 h->remove_self_from_list(_free_lists, level);
                 // Set each to allocated status
-                for (uint32_t b = index, e = index + _buddies_contained(level);
+                for (uint64_t b = index, e = index + _buddies_contained(level);
                      b < e; ++b) {
                     _index_allocated.set(b, 1);
                 }
@@ -265,13 +265,13 @@ class BuddyAllocator : public Allocator {
 
         // Get the index of the buddy as known from the address and then the
         // level and size of this buddy
-        uint32_t idx = _buddy_index(h);
-        const uint32_t original_level = _level_of_index.get(idx);
-        uint32_t level = original_level;
+        uint64_t idx = _buddy_index(h);
+        const uint64_t original_level = _level_of_index.get(idx);
+        uint64_t level = original_level;
 
         assert(_index_allocated.get(idx));
 
-        const uint64_t size = _buddy_size_at_level((uint32_t)level);
+        const uint64_t size = _buddy_size_at_level((uint64_t)level);
 
         if (!((int64_t)_total_allocated - (int64_t)size >= 0)) {
             log_err("BuddyAlloc::Unallocated index (index_allocated = %d? "
@@ -306,9 +306,9 @@ class BuddyAllocator : public Allocator {
                   original_level - level, level);
             dbg_print_levels();
             const uint64_t size = _buddy_size_at_level(level);
-            const uint32_t buddies_inside = _buddies_contained(level);
-            uint32_t left_idx = _buddy_index(left);
-            uint32_t right_idx = left_idx + buddies_inside;
+            const uint64_t buddies_inside = _buddies_contained(level);
+            uint64_t left_idx = _buddy_index(left);
+            uint64_t right_idx = left_idx + buddies_inside;
             // Suppose that a buddy head is pointing to a buddy currently
             // located at level 'n'. The level can be 'chunked' into
             // _buddies_contained(n) buddies of size _buddy_size_at_level(n). We
@@ -316,7 +316,7 @@ class BuddyAllocator : public Allocator {
             // pointing at level n, if we see level n as such an array. If that
             // index is odd, the buddy we should merge with is located to th
             // eleft, otherwise it's to the right.
-            const uint32_t level_idx = left_idx / (1 << (_last_level - level));
+            const uint64_t level_idx = left_idx / (1 << (_last_level - level));
             if (level_idx % 2 != 0) {
                 tmp = left;
                 left = (BuddyHead *)((char *)left - size);
@@ -394,23 +394,23 @@ class BuddyAllocator : public Allocator {
 
     /// Returns index of the buddy i.e the offset in units of `min_buddy_size`
     /// chunks
-    uint32_t _buddy_index(BuddyHead *p) const {
+    uint64_t _buddy_index(BuddyHead *p) const {
         assert((char *)p >= (char *)_mem);
         assert((char *)p <= (char *)_mem + buffer_size);
         const uint64_t diff = (char *)p - (char *)_mem;
         // debug("diff = %lu", diff);
-        return uint32_t(diff >> _min_buddy_size_power);
+        return uint64_t(diff >> _min_buddy_size_power);
     }
 
-    constexpr uint32_t _buddies_contained(uint32_t level) const {
+    constexpr uint64_t _buddies_contained(uint64_t level) const {
         return 1 << (_last_level - level);
     }
 
     /// Breaks the top free buddy into two, level must be < _last_level
     /// (ensured by the assertion in `allocate`). Updates the `free_list` and
     /// returns pointer to the first of the two resulting headers.
-    BuddyHead *_break_free(uint32_t level) {
-        const uint32_t new_level = level + 1;
+    BuddyHead *_break_free(uint64_t level) {
+        const uint64_t new_level = level + 1;
 
         BuddyHead *h_level = _free_lists[level];
         BuddyHead *h1 = h_level;
@@ -443,7 +443,7 @@ class BuddyAllocator : public Allocator {
         return h1;
     }
 
-    void _push_free(BuddyHead *h, uint32_t level) {
+    void _push_free(BuddyHead *h, uint64_t level) {
         assert(h->is_meaningless() && "Must be meaningless");
         assert(h != _free_lists[level] && "This really should not happen");
 
@@ -453,24 +453,24 @@ class BuddyAllocator : public Allocator {
             _free_lists[level]->_prev = h;
         }
         _free_lists[level] = h;
-        const uint32_t index = _buddy_index(h);
-        const uint32_t last = index + _buddies_contained(level);
+        const uint64_t index = _buddy_index(h);
+        const uint64_t last = index + _buddies_contained(level);
         debug("BuddyAlloc::Setting levels - h = %p, level = %u, index = %u, "
               "last = %u",
               h, level, index, last);
         _level_of_index.set_range(index, last, level);
-        for (uint32_t b = index; b < last; ++b) {
+        for (uint64_t b = index; b < last; ++b) {
             _index_allocated.set(b, 0);
         }
     }
 
     // A check to ensure we did the correct math :)
     void _check_buddy_index(BuddyHead *p) {
-        uint32_t index = _buddy_index(p);
-        uint32_t level = _level_of_index.get(index);
-        uint32_t buddies_inside = _buddies_contained(level);
+        uint64_t index = _buddy_index(p);
+        uint64_t level = _level_of_index.get(index);
+        uint64_t buddies_inside = _buddies_contained(level);
 
-        uint32_t mod = index % buddies_inside;
+        uint64_t mod = index % buddies_inside;
         if (mod != 0) {
             log_err("Buddy block of size %u can never begin at index %u and be "
                     "at level %u",
@@ -480,8 +480,8 @@ class BuddyAllocator : public Allocator {
     }
 
     /// Prints which level each buddy is allocated in (Only used for debugging)
-    void dbg_print_levels(uint32_t start = 0,
-                          uint32_t end = _num_indices) const {
+    void dbg_print_levels(uint64_t start = 0,
+                          uint64_t end = _num_indices) const {
 #ifdef BUDDY_ALLOC_LEVEL_LOGGING
         using namespace string_stream;
         Buffer b(memory_globals::default_allocator());
@@ -502,7 +502,7 @@ class BuddyAllocator : public Allocator {
         }
         fprintf(stderr, "\n--\n");
 
-        for (uint32_t i = start; i < end; ++i) {
+        for (uint64_t i = start; i < end; ++i) {
             b << i << "-" << (_index_allocated.get(i) ? "[x]" : "[]") << "\t";
             tab(b, 8);
             if (array::size(b) >= 80) {
@@ -515,7 +515,7 @@ class BuddyAllocator : public Allocator {
         }
         fprintf(stderr, "\n--\n");
 
-        for (uint32_t i = 0; i < _num_levels; ++i) {
+        for (uint64_t i = 0; i < _num_levels; ++i) {
             BuddyHead *h = _free_lists[i];
             while (h) {
                 fprintf(stderr, "%lu at %u\n", _buddy_index(h), i);

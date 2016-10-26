@@ -30,7 +30,11 @@ target_include_directories(scaffold PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
 
 option(BUDDY_ALLOC_LEVEL_LOGGING "Log buddy allocator" off)
+option(MALLOC_ALLOC_DONT_TRACK_SIZE "Don't track size in MallocAllocator" off)
 
 if(BUDDY_ALLOC_LEVEL_LOGGING)
   add_compile_options("-DBUDDY_ALLOC_LEVEL_LOGGING")
+endif()
+if(MALLOC_ALLOC_DONT_TRACK_SIZE)
+  add_compile_options("-DMALLOC_ALLOC_DONT_TRACK_SIZE")
 endif()
