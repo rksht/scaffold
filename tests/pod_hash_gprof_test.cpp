@@ -29,12 +29,8 @@ int main() {
 
         for (uint64_t i = 0; i < MAX_ENTRIES; ++i) {
             auto ret = pod_hash::get(h, i);
-            assert(ret.present);
-            assert(ret.value == 0xdeadbeeflu);
-            if (!ret.present) {
-                log_err("Should not happen - ret.value = %lu", ret.value);
-                abort();
-            }
+            assert(ret != end(h));
+            assert(ret->value == 0xdeadbeeflu);
         }
         fprintf(stderr, "Done\n");
     }

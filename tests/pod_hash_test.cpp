@@ -1,6 +1,7 @@
-#include <scaffold/pod_hash.h>
+#include <scaffold/debug.h>
 #include <scaffold/memory.h>
 #include <scaffold/murmur_hash.h>
+#include <scaffold/pod_hash.h>
 #include <scaffold/pod_hash_usuals.h>
 
 #include <assert.h>
@@ -53,20 +54,32 @@ int main() {
             assert(pod_hash::set_default(h, d, 0lu) == i * i);
         }
 
-        printf("Max chain length: %i\n", pod_hash::max_chain_length(h));
+        log_info("Max chain length: %i\n", pod_hash::max_chain_length(h));
 
+        PodHash<Data, uint64_t> new_hash = h;
+
+        uint64_t i = 0;
         for (const auto &e : h) {
-            printf("id = %lu\n", e.key.id);
+            assert(e.value == i * i);
+            i++;
+        }
+
+        i = 0;
+        for (const auto &e : new_hash) {
+            assert(e.value == i * i);
+            i++;
         }
 
         for (uint64_t i = 0; i < 1000; ++i) {
             Data d = {i, i, i};
+            auto res = pod_hash::get(h, d);
+            assert(res != end(h) && res->value == i * i);
             pod_hash::remove(h, d);
         }
 
         for (uint64_t i = 0; i < 1000; ++i) {
             Data d = {i, i, i};
-            assert(pod_hash::has(h, d) == false);
+            assert(!pod_hash::has(h, d));
         }
 
         PodHash<char, uint64_t> h1(memory_globals::default_allocator(),

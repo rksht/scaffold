@@ -1,4 +1,5 @@
 #pragma once
+#include "murmur_hash.h"
 #include "pod_hash.h"
 #include <assert.h>
 
