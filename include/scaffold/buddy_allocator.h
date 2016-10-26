@@ -154,10 +154,10 @@ class BuddyAllocator : public Allocator {
         _initialize();
 
         debug("BuddyAllocator::Initialized - buffer_size = %lu "
-              "_min_buddy_size = %u, _min_buddy_size_power = %u, "
-              "_num_levels = %u, num_indices = %u\n--",
+              "_min_buddy_size = %lu, _min_buddy_size_power = %lu, "
+              "_num_levels = %lu, num_indices = %lu\n--",
               buffer_size, _min_buddy_size, _min_buddy_size_power, _num_levels,
-              1 << _last_level);
+              1lu << _last_level);
     }
 
     ~BuddyAllocator() {
@@ -184,14 +184,14 @@ class BuddyAllocator : public Allocator {
 
         log_assert(
             size >= _min_buddy_size,
-            "Cannot allocate a buddy size smaller than the minimum size of %u",
+            "Cannot allocate a buddy size smaller than the minimum size of %lu",
             _min_buddy_size);
 
         log_assert(_buddy_alignment % align == 0,
                    "Aligned looser than _buddy_alignment");
 
         int level = _last_level;
-        debug("Allocating buddy of size %u bytes", size);
+        debug("Allocating buddy of size %lu bytes", size);
         while (true) {
             const uint64_t buddy_size = _buddy_size_at_level((uint64_t)level);
 
@@ -200,7 +200,7 @@ class BuddyAllocator : public Allocator {
             if (buddy_size < size || _free_lists[level] == nullptr) {
                 --level;
                 log_assert(level >= 0,
-                           "BuddyAllocator - Failed to allocated %u bytes",
+                           "BuddyAllocator - Failed to allocated %lu bytes",
                            size);
                 continue;
             }
@@ -211,7 +211,7 @@ class BuddyAllocator : public Allocator {
             if (buddy_size > size) {
                 uint64_t index = _buddy_index(_free_lists[level]);
                 dbg_print_levels(index, index + _buddies_contained(level));
-                debug("BuddyAlloc::Allocate::Break i:%u - level - %d", index,
+                debug("BuddyAlloc::Allocate::Break i:%lu - level - %d", index,
                       level);
                 _break_free(level);
                 dbg_print_levels(index, index + _buddies_contained(level));
@@ -224,7 +224,7 @@ class BuddyAllocator : public Allocator {
 
                 log_assert(_level_of_index.get(index) == (uint64_t)level,
                            "BuddyAlloc - Bad index - %lu, Freelist level = %d, "
-                           "Stored level = %u",
+                           "Stored level = %lu",
                            index, level, _level_of_index.get(index));
 
                 const uint64_t next_index = _buddies_contained(level);
@@ -242,8 +242,8 @@ class BuddyAllocator : public Allocator {
                 }
                 _total_allocated += size;
 
-                log_info("BuddyAllocator::Allocated::Level - %u, i:%lu (Size = "
-                         "%u)\n--",
+                log_info("BuddyAllocator::Allocated::Level - %i, i:%lu (Size = "
+                         "%lu)\n--",
                          level, index, size);
                 dbg_print_levels(index, next_index);
                 return (void *)h;
@@ -275,7 +275,7 @@ class BuddyAllocator : public Allocator {
 
         if (!((int64_t)_total_allocated - (int64_t)size >= 0)) {
             log_err("BuddyAlloc::Unallocated index (index_allocated = %d? "
-                    "i:%u, level - %d, size - %lu, _total_allocated - %lu",
+                    "i:%lu, level - %lu, size - %lu, _total_allocated - %lu",
                     int(_index_allocated.get(idx)), idx, level, size,
                     _total_allocated);
             abort();
@@ -295,14 +295,14 @@ class BuddyAllocator : public Allocator {
         BuddyHead *right = nullptr;
         BuddyHead *tmp = nullptr;
 
-        debug(
-            "BuddyAlloc::deallocate - set initial block headed by i:%u to free",
-            idx);
+        debug("BuddyAlloc::deallocate - set initial block headed by i:%lu to "
+              "free",
+              idx);
         dbg_print_levels(idx,
                          idx + 20 >= _num_indices ? _num_indices : idx + 20);
 
         while (level >= 1) {
-            debug("BuddyAlloc::MERGE START - %d, level - %d",
+            debug("BuddyAlloc::MERGE START - %lu, level - %lu",
                   original_level - level, level);
             dbg_print_levels();
             const uint64_t size = _buddy_size_at_level(level);
@@ -334,7 +334,7 @@ class BuddyAllocator : public Allocator {
                 !_index_allocated.get(right_idx) &&
                 _level_of_index.get(left_idx) ==
                     _level_of_index.get(right_idx)) {
-                debug("\tBEFORE MERGE - left i:%u and right i:%u", left_idx,
+                debug("\tBEFORE MERGE - left i:%lu and right i:%lu", left_idx,
                       right_idx);
 
                 // Print the surrounding buddy status
@@ -346,7 +346,7 @@ class BuddyAllocator : public Allocator {
                 --level;
                 _push_free(left, level);
 
-                debug("BuddyAlloc::AFTER MERGE - left i:%u and right i:%u",
+                debug("BuddyAlloc::AFTER MERGE - left i:%lu and right i:%lu",
                       left_idx, right_idx);
                 dbg_print_levels(idx, idx + 20 >= _num_indices ? _num_indices
                                                                : idx + 20);
@@ -356,8 +356,8 @@ class BuddyAllocator : public Allocator {
                 break;
             }
         }
-        debug("Done deallocating (and possible merge) Prev level = %i, Cur "
-              "level = %i i:%u, Size = -%lu)\n--",
+        debug("Done deallocating (and possible merge) Prev level = %lu, Cur "
+              "level = %lu i:%lu, Size = -%lu)\n--",
               original_level, level, idx, size);
     }
 
@@ -419,13 +419,13 @@ class BuddyAllocator : public Allocator {
 
 #ifndef NDEBUG
         if (!(_level_of_index.get(_buddy_index(h1)) == level)) {
-            log_err("h1's level(index = %u) = %u, but found in level %u",
+            log_err("h1's level(index = %lu) = %lu, but found in level %lu",
                     _buddy_index(h1), _level_of_index.get(_buddy_index(h1)),
                     level);
             abort();
         }
         if (!(_level_of_index.get(_buddy_index(h2)) == level)) {
-            log_err("h2's(index = %u) level = %u, but found in level %u",
+            log_err("h2's(index = %lu) level = %lu, but found in level %lu",
                     _buddy_index(h2), _level_of_index.get(_buddy_index(h2)),
                     level);
             abort();
@@ -455,8 +455,8 @@ class BuddyAllocator : public Allocator {
         _free_lists[level] = h;
         const uint64_t index = _buddy_index(h);
         const uint64_t last = index + _buddies_contained(level);
-        debug("BuddyAlloc::Setting levels - h = %p, level = %u, index = %u, "
-              "last = %u",
+        debug("BuddyAlloc::Setting levels - h = %p, level = %lu, index = %lu, "
+              "last = %lu",
               h, level, index, last);
         _level_of_index.set_range(index, last, level);
         for (uint64_t b = index; b < last; ++b) {
@@ -472,9 +472,10 @@ class BuddyAllocator : public Allocator {
 
         uint64_t mod = index % buddies_inside;
         if (mod != 0) {
-            log_err("Buddy block of size %u can never begin at index %u and be "
-                    "at level %u",
-                    buddies_inside << _min_buddy_size_power, index, level);
+            log_err(
+                "Buddy block of size %lu can never begin at index %lu and be "
+                "at level %lu",
+                buddies_inside << _min_buddy_size_power, index, level);
             abort();
         }
     }
@@ -518,7 +519,7 @@ class BuddyAllocator : public Allocator {
         for (uint64_t i = 0; i < _num_levels; ++i) {
             BuddyHead *h = _free_lists[i];
             while (h) {
-                fprintf(stderr, "%lu at %u\n", _buddy_index(h), i);
+                fprintf(stderr, "%lu at %lu\n", _buddy_index(h), i);
                 h = h->_next;
             }
         }

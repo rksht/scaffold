@@ -5,6 +5,7 @@
 #include "memory.h"
 
 #include <algorithm> // std::swap
+#include <functional>
 #include <iterator>
 #include <memory> // std::move
 #include <stdint.h>
@@ -43,11 +44,11 @@ struct PodHash : std::iterator<std::random_access_iterator_tag,
     using const_iterator = typename foundation::Array<Entry>::const_iterator;
 
     /// Type of hashing function
-    using HashFunc = uint64_t (*)(K const &key);
+    using HashFunc = std::function<uint64_t(K const &key)>;
 
     /// Type of equal operator function - operator== can't be used as it doesn't
     /// work on non-class or non-enumerator types.
-    using EqualFunc = bool (*)(K const &k1, K const &k2);
+    using EqualFunc = std::function<bool(K const &k1, K const &k2)>;
 
     /// Array mapping a hash to an entry index
     foundation::Array<uint32_t> _hashes;
@@ -67,25 +68,6 @@ struct PodHash : std::iterator<std::random_access_iterator_tag,
             EqualFunc equal_func)
         : _hashes(hash_alloc), _entries(entry_alloc), _hash_func(hash_func),
           _equal_func(equal_func) {}
-
-    /// Move constructor
-    PodHash(PodHash &&other)
-        : _hashes{std::move(other._hashes)},
-          _entries{std::move(other._entries)}, _hash_func{other._hash_func},
-          _equal_func{other._equal_func} {}
-
-    /// Move assignment
-    PodHash &operator=(PodHash &&other) {
-        if (this != &other) {
-            _hashes = std::move(other._hashes);
-            _entries = std::move(other._entries);
-            _hash_func = other._hash_func;
-            _equal_func = other._equal_func;
-        }
-        return *this;
-    }
-
-    PodHash(const PodHash &other);
 };
 
 // -- Iterators on PodHash
@@ -432,16 +414,5 @@ uint32_t max_chain_length(const PodHash<K, V> &h) {
     return max_length;
 }
 } // namespace pod_hash
-
-// The copy constructor for PodHash<K, V>
-template <typename K, typename V>
-PodHash<K, V>::PodHash(const PodHash<K, V> &other)
-    : _hashes(*other._hashes._allocator), _entries(*other._entries._allocator),
-      _hash_func(other._hash_func), _equal_func(other._equal_func) {
-    array::reserve(_entries, array::size(other._entries));
-    for (const Entry &e : other) {
-        pod_hash::set(*this, e.key, e.value);
-    }
-}
 
 } // namespace foundation

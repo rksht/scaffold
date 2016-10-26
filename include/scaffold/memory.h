@@ -20,7 +20,7 @@ class Allocator {
     static constexpr uint64_t ALLOCATOR_NAME_SIZE = 32;
 
     // Ctor
-    Allocator();
+    Allocator() {}
 
     // Dtor
     virtual ~Allocator() {}
@@ -59,7 +59,7 @@ class Allocator {
 
     /// Returns the name of this allocator. If no name was explicitly set by a
     /// call to `set_name` method, returns the `this` pointer stringified.
-    const char *name();
+    const char *name() { return _name; }
 
     /// Sets the name of the allocator. The name must fit within
     /// `ALLOCATOR_NAME_SIZE` characters and must not be empty. `len` is the

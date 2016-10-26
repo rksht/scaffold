@@ -7,6 +7,7 @@
 #define _POSIX_C_SOURCE 200112L
 #endif
 #endif
+
 #include <assert.h>
 #include <iostream>
 #include <new>
@@ -15,12 +16,6 @@
 #include <string.h>
 
 namespace foundation {
-
-// Some definitions for `class Allocator`'s member functions
-Allocator::Allocator() { memset(_name, 0, ALLOCATOR_NAME_SIZE); }
-
-const char *Allocator::name() { return _name; }
-
 void Allocator::set_name(const char *name, uint64_t len) {
     assert(len < ALLOCATOR_NAME_SIZE && "Allocator name too large");
     memcpy(_name, name, len);
@@ -87,24 +82,38 @@ class MallocAllocator : public Allocator {
     }
 
     ~MallocAllocator() {
-        // Check that we don't have any memory leaks when allocator is
-        // destroyed.
+// Check that we don't have any memory leaks when allocator is
+// destroyed.
+#ifndef MALLOC_ALLOC_DONT_TRACK_SIZE
         assert(_total_allocated == 0);
+#endif
     }
 
 #ifdef MALLOC_ALLOC_DONT_TRACK_SIZE
     virtual void *allocate(uint64_t size, uint64_t align) override {
+        int ret;
         void *p = nullptr;
-        if (posix_memalign(&p, align, size) != 0) {
-            log_err("MallocAllocator failed to allocate");
+
+        // The minimum alignment required for posix_memalign
+        if (align % alignof(void *) != 0) {
+            align = alignof(void *);
+        }
+
+        if ((ret = posix_memalign(&p, align, size)) != 0) {
+            log_err(
+                "MallocAllocator failed to allocate - error = %s, align = %lu",
+                ret == EINVAL ? "EINVAL" : "ENOMEM", align);
             abort();
         }
         return p;
     }
 
-    virtual void *deallocate(void *p) override { free(p); }
+    virtual void deallocate(void *p) override { free(p); }
 
-    virtual uint64_t allocated_size(void *p) { return SIZE_NOT_TRACKED; }
+    virtual uint64_t allocated_size(void *p) {
+        (void)p;
+        return SIZE_NOT_TRACKED;
+    }
 #else
     virtual void *allocate(uint64_t size, uint64_t align) override {
         const uint64_t ts = size_with_padding(size, align);
@@ -267,13 +276,23 @@ namespace foundation {
 namespace memory_globals {
 
 /// Allocator names should be defined here statically...
-static const char default_allocator_name[] = "Default Allocator";
-static const char default_scratch_allocator_name[] =
-    "Default scratch allocator";
+static const char default_allocator_name[] = "default_alloc";
+static const char default_scratch_allocator_name[] = "default_scratch_alloc";
 // static const char default_arena_allocator_name[] = "Default arena allocator";
 
 /// ... And add the initialization code here ...
 void init(uint64_t scratch_buffer_size) {
+#ifdef MALLOC_ALLOC_DONT_TRACK_SIZE
+    log_info("MallocAllocator is NOT tracking size");
+#else
+    log_info("MallocAllocator is tracking size");
+#endif
+
+#ifndef BUDDY_ALLOC_LEVEL_LOGGING
+    log_info("BuddyAllocator will not log level state");
+#else
+    log_info("BuddyAllocator WILL log level state");
+#endif
     _memory_globals.default_allocator =
         new (_memory_globals._default_allocator) MallocAllocator{};
     _memory_globals.default_scratch_allocator =
