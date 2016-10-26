@@ -28,8 +28,10 @@ template <typename T> const T &back(const Array<T> &a);
 
 /// Changes the size of the array (does not reallocate memory unless necessary).
 template <typename T> void resize(Array<T> &a, uint32_t new_size);
-/// Removes all items in the array (does not free memory).
+/// Removes all items in the array but does not free memory
 template <typename T> void clear(Array<T> &a);
+/// Removes all items in the array and frees memory
+template <typename T> void free(Array<T> &a);
 /// Reallocates the array to the specified capacity.
 template <typename T> void set_capacity(Array<T> &a, uint32_t new_capacity);
 /// Makes sure that the array has at least the specified capacity. (If not,
@@ -81,6 +83,12 @@ template <typename T> inline const T &back(const Array<T> &a) {
 }
 
 template <typename T> inline void clear(Array<T> &a) { resize(a, 0); }
+
+template <typename T> inline void free(Array<T> &a) {
+    a._allocator->deallocate(a._data);
+    a._data = nullptr;
+    a._size = 0;
+}
 template <typename T> inline void trim(Array<T> &a) {
     set_capacity(a, a._size);
 }

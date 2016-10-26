@@ -1,8 +1,9 @@
-
 #pragma once
 
 #include "memory_types.h"
 #include "types.h"
+
+#include <type_traits>
 
 /// All collection types assume that they are used to store POD objects. I.e.
 /// they:
@@ -16,6 +17,9 @@
 namespace foundation {
 /// Dynamically resizable array of POD objects.
 template <typename T> struct Array {
+    static_assert(std::is_trivially_copy_assignable<T>::value,
+                  "Only supports trivially copy-assignable elements");
+
     Array(Allocator &a);
     ~Array();
     Array(const Array &other);
@@ -33,6 +37,8 @@ template <typename T> struct Array {
     iterator end() { return _data + _size; }
     const_iterator begin() const { return _data; }
     const_iterator end() const { return _data + _size; }
+    const_iterator cbegin() const { return _data; }
+    const_iterator cend() const { return _data + _size; }
 
     Allocator *_allocator;
     uint32_t _size;
