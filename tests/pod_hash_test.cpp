@@ -72,8 +72,9 @@ int main() {
 
         for (uint64_t i = 0; i < 1000; ++i) {
             Data d = {i, i, i};
-            auto res = pod_hash::get(h, d);
+            PodHash<Data, uint64_t>::iterator res = pod_hash::get(h, d);
             assert(res != end(h) && res->value == i * i);
+            res->value = i * i * i;
             pod_hash::remove(h, d);
         }
 
