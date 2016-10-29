@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.4)
 
 # Compile flags
-add_compile_options("-std=c++14" "-Wall" "-Wextra" "-Werror")
+add_compile_options("-Wall" "-Wextra" "-Werror")
 
 # sanitizer
 option(USE_MEMORY_SANITIZER "use memory sanitizer" off)
