@@ -19,8 +19,7 @@ class Allocator {
     /// Maximum name size for any allocator including the '\0' character
     static constexpr uint64_t ALLOCATOR_NAME_SIZE = 32;
 
-    // Ctor
-    Allocator() {}
+    Allocator() = default;
 
     // Dtor
     virtual ~Allocator() {}

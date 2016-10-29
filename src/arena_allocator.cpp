@@ -13,7 +13,7 @@ uint64_t ArenaAllocator::_aligned_size_with_padding(uint64_t size) {
 }
 
 ArenaAllocator::ArenaAllocator(Allocator &backing, uint64_t size)
-    : _backing(&backing) {
+    : _backing{&backing} {
     uint64_t adjusted_size = _aligned_size_with_padding(size);
     _mem = _backing->allocate(adjusted_size, alignof(_Header));
     memset(_mem, 0, adjusted_size);

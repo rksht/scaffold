@@ -90,7 +90,7 @@ class MallocAllocator : public Allocator {
     }
 
 #ifdef MALLOC_ALLOC_DONT_TRACK_SIZE
-    virtual void *allocate(uint64_t size, uint64_t align) override {
+    void *allocate(uint64_t size, uint64_t align) override {
         int ret;
         void *p = nullptr;
 
@@ -108,14 +108,14 @@ class MallocAllocator : public Allocator {
         return p;
     }
 
-    virtual void deallocate(void *p) override { free(p); }
+    void deallocate(void *p) override { free(p); }
 
-    virtual uint64_t allocated_size(void *p) {
+    uint64_t allocated_size(void *p) override {
         (void)p;
         return SIZE_NOT_TRACKED;
     }
 #else
-    virtual void *allocate(uint64_t size, uint64_t align) override {
+    void *allocate(uint64_t size, uint64_t align) override {
         const uint64_t ts = size_with_padding(size, align);
         Header *h = (Header *)malloc(ts);
         void *p = data_pointer(h, align);
@@ -125,7 +125,7 @@ class MallocAllocator : public Allocator {
         return p;
     }
 
-    virtual void deallocate(void *p) override {
+    void deallocate(void *p) override {
         if (!p)
             return;
 
@@ -134,12 +134,10 @@ class MallocAllocator : public Allocator {
         free(h);
     }
 
-    virtual uint64_t allocated_size(void *p) override {
-        return header(p)->size;
-    }
+    uint64_t allocated_size(void *p) override { return header(p)->size; }
 #endif
 
-    virtual uint64_t total_allocated() override { return _total_allocated; }
+    uint64_t total_allocated() override { return _total_allocated; }
 };
 
 /// An allocator used to allocate temporary "scratch" memory. The allocator
@@ -192,7 +190,7 @@ class ScratchAllocator : public Allocator {
         return p >= _free || p < _allocate;
     }
 
-    virtual void *allocate(uint64_t size, uint64_t align) {
+    void *allocate(uint64_t size, uint64_t align) override {
         assert(align % 4 == 0);
         size = ((size + 3) / 4) * 4;
 
@@ -220,7 +218,7 @@ class ScratchAllocator : public Allocator {
         return data;
     }
 
-    virtual void deallocate(void *p) {
+    void deallocate(void *p) override {
         if (!p)
             return;
 
@@ -246,12 +244,12 @@ class ScratchAllocator : public Allocator {
         }
     }
 
-    virtual uint64_t allocated_size(void *p) {
+    uint64_t allocated_size(void *p) override {
         Header *h = header(p);
         return h->size - ((char *)p - (char *)h);
     }
 
-    virtual uint64_t total_allocated() { return _end - _begin; }
+    uint64_t total_allocated() override { return _end - _begin; }
 };
 
 /// This struct should contain all allocators required by the

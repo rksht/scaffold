@@ -9,6 +9,9 @@ namespace foundation {
 ///
 /// Memory allocated with a TempAllocator does not have to be deallocated. It is
 /// automatically deallocated when the TempAllocator is destroyed.
+/// It's easiest to this allocator as a local variable, tying its lifetime to a
+/// scope. Otherwise, if you create this allocator on the heap, make sure to
+/// call the destructor after all objects using it are dead.
 template <int BUFFER_SIZE> class TempAllocator : public Allocator {
   public:
     /// Creates a new temporary allocator using the specified backing allocator.
@@ -16,17 +19,17 @@ template <int BUFFER_SIZE> class TempAllocator : public Allocator {
         Allocator &backing = memory_globals::default_scratch_allocator());
     virtual ~TempAllocator();
 
-    virtual void *allocate(uint64_t size, uint64_t align = DEFAULT_ALIGN);
+    void *allocate(uint64_t size, uint64_t align = DEFAULT_ALIGN) override;
 
     /// Deallocation is a NOP for the TempAllocator. The memory is automatically
     /// deallocated when the TempAllocator is destroyed.
-    virtual void deallocate(void *) {}
+    void deallocate(void *) override {}
 
     /// Returns SIZE_NOT_TRACKED.
-    virtual uint64_t allocated_size(void *) { return SIZE_NOT_TRACKED; }
+    uint64_t allocated_size(void *) override { return SIZE_NOT_TRACKED; }
 
     /// Returns SIZE_NOT_TRACKED.
-    virtual uint64_t total_allocated() { return SIZE_NOT_TRACKED; }
+    uint64_t total_allocated() override { return SIZE_NOT_TRACKED; }
 
   private:
     char _buffer[BUFFER_SIZE]; //< Local stack buffer for allocations.
