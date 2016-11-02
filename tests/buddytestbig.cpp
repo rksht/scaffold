@@ -1,20 +1,26 @@
-#include "buddy_allocator.h"
+#include <scaffold/buddy_allocator.h>
 
-#include <new>
 #include <iostream>
+#include <new>
 #include <random>
 #include <set>
 #include <time.h>
+
+using BA = foundation::BuddyAllocator;
 
 constexpr uint32_t BUFFER_SIZE = 1 << 30;   // 1 GB
 constexpr uint32_t SMALLEST_SIZE = 4 << 10; // 4 KB
 constexpr uint32_t NUM_INDICES = BUFFER_SIZE / SMALLEST_SIZE;
 /*constexpr uint32_t NUM_LEVELS = log2_ceil(NUM_INDICES) + 1;*/
 
-template <uint32_t bytes>
-using Block = std::array<uint32_t, bytes / sizeof(uint32_t)>;
+template <uint32_t bytes> using Block = std::array<uint32_t, bytes / sizeof(uint32_t)>;
 
 using SmallestBlock = Block<SMALLEST_SIZE>;
+
+template <typename BlockTy> constexpr uint64_t _align_of() {
+    return alignof(BlockTy) < BA::align_factor() ? BA::align_factor() : alignof(BlockTy);
+}
+
 
 using Block_8KB = Block<8 << 10>;
 
@@ -25,10 +31,8 @@ int main(int argc, char **argv) {
 
     foundation::memory_globals::init();
     {
-        using BA = foundation::BuddyAllocator<BUFFER_SIZE, 19>;
-        BA ba(foundation::memory_globals::default_allocator());
-        std::cerr << "SIZE OF SMALLEST ARRAY = " << sizeof(SmallestBlock)
-                  << std::endl;
+        BA ba(BUFFER_SIZE, 19, foundation::memory_globals::default_allocator());
+        std::cerr << "SIZE OF SMALLEST ARRAY = " << sizeof(SmallestBlock) << std::endl;
 
         std::default_random_engine dre(seed);
         std::uniform_int_distribution<int> d(1, 10);
@@ -44,8 +48,8 @@ int main(int argc, char **argv) {
             }
 
             if (d(dre) < 3) {
-                SmallestBlock &p1 = *((SmallestBlock *)ba.allocate(
-                    sizeof(SmallestBlock), alignof(SmallestBlock)));
+                SmallestBlock &p1 =
+                    *((SmallestBlock *)ba.allocate(sizeof(SmallestBlock), _align_of<SmallestBlock>()));
                 new (&p1) SmallestBlock();
 
                 allocateds.insert((void *)&p1);
@@ -68,8 +72,7 @@ int main(int argc, char **argv) {
             r = d(dre);
 
             if (r >= 8) {
-                Block_8KB &p2 = *((Block_8KB *)ba.allocate(sizeof(Block_8KB),
-                                                           alignof(Block_8KB)));
+                Block_8KB &p2 = *((Block_8KB *)ba.allocate(sizeof(Block_8KB), _align_of<Block_8KB>()));
                 new (&p2) Block_8KB();
                 allocateds.insert((void *)&p2);
                 // ba.print_level_map();
