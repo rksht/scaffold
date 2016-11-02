@@ -14,100 +14,102 @@
 
 namespace foundation {
 
-/// A data type that holds `num_int` packed unsigned integers which are
-/// representable with `bits_per_int` bits.
-template <unsigned bits_per_int, unsigned num_ints, typename T = unsigned long,
-          typename GetTy = T>
-struct SmallIntArray {
-  private:
-    constexpr static unsigned _num_bits = sizeof(T) * 8;
-    constexpr static unsigned _ints_per_word = _num_bits / bits_per_int;
-    constexpr static unsigned _num_words = ceil_div(num_ints, _ints_per_word);
+template <typename Word = unsigned long, typename GetTy = Word> struct DySmallIntArray {
 
-    static_assert(bits_per_int <= _num_bits,
-                  "SmallIntArray - Bits per small integer too big");
-
-    static_assert(std::is_integral<T>::value,
-                  "SmallIntArray - Not an integral base type");
-
-    static_assert(num_ints > 0, "SmallIntArray - I don't allow this");
-
-    /// Array to store the stuff
-    Array<T> _words;
+    static_assert(std::is_integral<Word>::value, "DySmallIntArray - Not an integral base type");
 
   private:
-    constexpr static T _front_mask() { return (1 << bits_per_int) - 1; }
+    constexpr static unsigned _num_bits = sizeof(Word) * 8;
 
-    T _word(unsigned idx) const {
+    unsigned _bits_per_int;  // Bits required per integer
+    unsigned _ints_per_word; // Number of such integers per word
+    unsigned _num_ints;      // Number of such integers to store
+    unsigned _num_words;     // Number of such words required
+    Array<Word> _words;
+
+  private:
+    Word _front_mask() const { return (1 << _bits_per_int) - 1; }
+
+    Word _word(unsigned idx) const {
         const unsigned word_idx = idx / _ints_per_word;
         return _words[word_idx];
     }
 
-    T &_word(unsigned idx) {
+    Word _mask(unsigned offset) const { return _front_mask() << (offset * _bits_per_int); }
+
+    Word &_word(unsigned idx) {
         const unsigned word_idx = idx / _ints_per_word;
         return _words[word_idx];
-    }
-
-    constexpr static T _mask(unsigned offset) {
-        return _front_mask() << (offset * bits_per_int);
     }
 
   public:
     class const_iterator {
       private:
-        const SmallIntArray *_sa;
+        const DySmallIntArray *_sa;
         int _idx;
 
       public:
         const_iterator() = delete;
 
         const_iterator(const const_iterator &other)
-            : _sa(other._sa), _idx(other._idx) {}
+            : _sa(other._sa)
+            , _idx(other._idx) {}
 
-        const_iterator(const SmallIntArray *sa, int idx) : _sa(sa), _idx(idx) {}
+        const_iterator(const DySmallIntArray *sa, unsigned idx)
+            : _sa(sa)
+            , _idx(idx) {}
 
         const_iterator &operator++() {
             ++_idx;
             return *this;
         }
 
-        bool operator==(const const_iterator &other) {
-            return _idx == other._idx;
-        }
+        bool operator==(const const_iterator &other) { return _idx == other._idx; }
 
-        bool operator!=(const const_iterator &other) {
-            return _idx != other._idx;
-        }
+        bool operator!=(const const_iterator &other) { return _idx != other._idx; }
 
-        T operator*() { return _sa->get(_idx); }
+        Word operator*() { return _sa->get(_idx); }
     };
 
   public:
     /// Returns the amount of memory the underlying array would require,
     /// clipped to nearest power of 2.
-    constexpr static size_t space_required() {
-        return clip_to_power_of_2(_num_words * sizeof(T));
+    static constexpr size_t space_required(unsigned bits_per_int, unsigned num_ints) {
+        const auto ints_per_word = _num_bits / bits_per_int;
+        const auto num_words = ceil_div(num_ints, ints_per_word);
+        return clip_to_power_of_2(num_words * sizeof(Word));
     }
 
-    /// Ctor - sets all to 0
-    SmallIntArray(Allocator &allocator = memory_globals::default_allocator())
-        : _words{allocator} {
+    /// Ctor. Creates an array that holds `num_int` packed unsigned integers
+    /// which are representable with at least `_bits_per_int` bits.
+    DySmallIntArray(unsigned bits_per_int, unsigned num_ints,
+                    Allocator &allocator = memory_globals::default_allocator())
+        : _bits_per_int{bits_per_int}
+        , _ints_per_word{_num_bits / _bits_per_int}
+        , _num_ints{num_ints}
+        , _num_words{ceil_div(_num_ints, _ints_per_word)}
+        , _words{allocator} {
+
+        assert(_bits_per_int <= _num_bits && "DySmallIntArray - Bits per small integer too big");
+
+        assert(_num_ints > 0 && "DySmallIntArray - I don't allow this");
+
         array::resize(_words, _num_words);
         assert(array::size(_words) == _num_words);
-        memset(_words._data, 0, sizeof(T) * _num_words);
+        memset(_words._data, 0, sizeof(Word) * _num_words);
     }
 
     /// Returns the `idx`-th integer
     GetTy get(unsigned idx) const {
         const unsigned offset = idx % _ints_per_word;
-        return GetTy((_word(idx) & _mask(offset)) >> (offset * bits_per_int));
+        return GetTy((_word(idx) & _mask(offset)) >> (offset * _bits_per_int));
     }
 
     /// Sets the `idx`-th integer
     void set(unsigned idx, GetTy the_int) {
         const unsigned offset = idx % _ints_per_word;
-        T word = _word(idx) & ~(_mask(offset));
-        _word(idx) = word | (the_int << (offset * bits_per_int));
+        Word word = _word(idx) & ~(_mask(offset));
+        _word(idx) = word | (the_int << (offset * _bits_per_int));
     }
 
     /// Sets the given range of indices to a given integer
@@ -116,9 +118,9 @@ struct SmallIntArray {
             return;
         }
 
-        // The word at which begin_idx is located in
+        // Wordhe word at which begin_idx is located in
         const unsigned begin_word_pos = begin_idx / _ints_per_word;
-        // The offset in that word where `begin_idx` is located in
+        // Wordhe offset in that word where `begin_idx` is located in
         const unsigned begin_word_offset = begin_idx % _ints_per_word;
         // ditto for `end_idx`
         const unsigned end_word_pos = end_idx / _ints_per_word;
@@ -134,25 +136,21 @@ struct SmallIntArray {
         }
 
         // Otherwise set the begin word and end words first...
-        for (unsigned idx = begin_idx,
-                      e = begin_idx + (_ints_per_word - begin_word_offset);
-             idx < e; ++idx) {
+        for (unsigned idx = begin_idx, e = begin_idx + (_ints_per_word - begin_word_offset); idx < e; ++idx) {
             set(idx, the_int);
         }
 
-        for (unsigned idx = end_word_pos * _ints_per_word; idx < end_idx;
-             ++idx) {
+        for (unsigned idx = end_word_pos * _ints_per_word; idx < end_idx; ++idx) {
             set(idx, the_int);
         }
 
         // Calculate the word once and set all the middle words
-        T n = 0;
+        Word n = 0;
         for (unsigned offset = 0; offset < _ints_per_word; ++offset) {
-            n = (n & ~(_mask(offset))) | (the_int << (offset * bits_per_int));
+            n = (n & ~(_mask(offset))) | (the_int << (offset * _bits_per_int));
         }
 
-        for (unsigned word_pos = begin_word_pos + 1; word_pos < end_word_pos;
-             ++word_pos) {
+        for (unsigned word_pos = begin_word_pos + 1; word_pos < end_word_pos; ++word_pos) {
             _words[word_pos] = n;
         }
     }
@@ -160,7 +158,7 @@ struct SmallIntArray {
     /// A forward const iterator
     const_iterator cbegin() const { return const_iterator{this, 0}; }
 
-    const_iterator cend() const { return const_iterator{this, num_ints}; }
+    const_iterator cend() const { return const_iterator{this, _num_ints}; }
 
     void print(FILE *f = stderr) const {
         int n = 0;
