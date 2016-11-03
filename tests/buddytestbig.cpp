@@ -4,11 +4,12 @@
 #include <new>
 #include <random>
 #include <set>
+#include <stdio.h>
 #include <time.h>
 
 using BA = foundation::BuddyAllocator;
 
-constexpr uint32_t BUFFER_SIZE = 1 << 30;   // 1 GB
+constexpr uint32_t BUFFER_SIZE = 16 << 20;  // 10 MB
 constexpr uint32_t SMALLEST_SIZE = 4 << 10; // 4 KB
 constexpr uint32_t NUM_INDICES = BUFFER_SIZE / SMALLEST_SIZE;
 /*constexpr uint32_t NUM_LEVELS = log2_ceil(NUM_INDICES) + 1;*/
@@ -21,18 +22,19 @@ template <typename BlockTy> constexpr uint64_t _align_of() {
     return alignof(BlockTy) < BA::align_factor() ? BA::align_factor() : alignof(BlockTy);
 }
 
-
 using Block_8KB = Block<8 << 10>;
 
 int main(int argc, char **argv) {
     uint64_t seed = argc >= 2 ? strtoull(argv[1], nullptr, 10) : 100;
 
-    log_info("--Seed = %lu", seed);
+    log_info("Seed used = %lu\n", seed);
 
     foundation::memory_globals::init();
     {
-        BA ba(BUFFER_SIZE, 19, foundation::memory_globals::default_allocator());
-        std::cerr << "SIZE OF SMALLEST ARRAY = " << sizeof(SmallestBlock) << std::endl;
+        BA ba(BUFFER_SIZE, SMALLEST_SIZE, foundation::memory_globals::default_allocator());
+        printf("SIZE OF SMALLEST ARRAY = %zu, SMALLEST_SIZE = %u\n", sizeof(SmallestBlock), SMALLEST_SIZE);
+        puts("Press enter to continue...");
+        getchar();
 
         std::default_random_engine dre(seed);
         std::uniform_int_distribution<int> d(1, 10);

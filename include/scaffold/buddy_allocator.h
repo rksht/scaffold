@@ -67,7 +67,7 @@ class BuddyAllocator : public Allocator {
 
   private:
     /// Returns the size of any buddy that resides at the given `level`
-    uint64_t _buddy_size_at_level(uint64_t level) { return _buffer_size >> (uint64_t)level; }
+    uint64_t _buddy_size_at_level(uint64_t level) { return _buffer_size >> level; }
 
   public:
     /// Each allocation must request an alignment of a multiple of
@@ -75,8 +75,9 @@ class BuddyAllocator : public Allocator {
     static uint64_t align_factor();
 
   public:
-    /// Creates a buddy allocator. `mem` must point to buffer of `size` bytes.
-    /// `main_allocator` is the allocator used to allocate the main buffer.
+    /// Creates a buddy allocator. It will manage  buddies of size
+    /// `min_buddy_size` in a buffer of `size` bytes. `size` must be a power
+    /// of 2. `main_allocator` is the allocator used to allocate that.
     /// `extra_allocator` is use to allocate the internal data structures.
     BuddyAllocator(uint64_t size, uint64_t min_buddy_size, Allocator &main_allocator,
                    Allocator &extra_allocator = memory_globals::default_allocator());
@@ -112,7 +113,7 @@ class BuddyAllocator : public Allocator {
         int mod = diff % _min_buddy_size;
         assert(mod == 0);
 #endif
-        return (_internal::BuddyHead *)p;
+        return static_cast<_internal::BuddyHead *>(p);
     }
 
     /// Returns index of the buddy i.e the offset in units of `min_buddy_size`
@@ -125,7 +126,7 @@ class BuddyAllocator : public Allocator {
         return uint64_t(diff >> _min_buddy_size_power);
     }
     /// Returns the number of smallest-buddies contained at this `level`
-    uint64_t _buddies_contained(uint64_t level) const { return 1 << (_last_level() - level); }
+    uint64_t _buddies_contained(uint64_t level) const { return uint64_t(1) << (_last_level() - level); }
 
     /// Breaks the top free buddy residing in the given `level` into two,
     /// level must be < _last_level() (ensured by the assertion in

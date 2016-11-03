@@ -72,6 +72,8 @@ BuddyAllocator::BuddyAllocator(uint64_t size, uint64_t min_buddy_size, Allocator
     , _extra_allocator{&extra_allocator}
     , _total_allocated{0} {
 
+    log_assert(clip_to_power_of_2(size) == size, "size given %lu is not a power of 2", size);
+
     // Allocate the buffer
     _mem = _main_allocator->allocate(size, align_factor());
     log_assert(_mem != nullptr, "Failed to allocated buffer");
@@ -86,7 +88,8 @@ BuddyAllocator::BuddyAllocator(uint64_t size, uint64_t min_buddy_size, Allocator
     _push_free((BuddyHead *)_mem, 0);
     _free_lists[0] = (BuddyHead *)_mem;
 
-    debug("BuddyAllocator::Initialized - _buffer_size = %lu\n"
+    debug("BuddyAllocator::Initialized\n"
+          "_buffer_size = %lu\n"
           "_min_buddy_size = %lu\n"
           "_min_buddy_size_power = %lu\n"
           "_num_levels = %lu\n"
@@ -124,7 +127,7 @@ void *BuddyAllocator::allocate(uint64_t size, uint64_t align) {
     int level = _last_level();
     debug("Allocating buddy of size %lu bytes", size);
     while (true) {
-        const uint64_t buddy_size = _buddy_size_at_level((uint64_t)level);
+        const uint64_t buddy_size = _buddy_size_at_level(uint64_t(level));
 
         // Either buddies are not big enough  or none are free, either
         // way, need to go to upper level
@@ -138,11 +141,11 @@ void *BuddyAllocator::allocate(uint64_t size, uint64_t align) {
         // of 2, break it in half and put the buddies in the lower level
         // just below, and check the lower level
         if (buddy_size > size) {
-            uint64_t index = _buddy_index(_free_lists[level]);
+            const uint64_t index = _buddy_index(_free_lists[level]);
             dbg_print_levels(index, index + _buddies_contained(level));
             debug("BuddyAlloc::Allocate::Break i:%lu - level - %d", index, level);
             _break_free(level);
-            dbg_print_levels(index, index + _buddies_contained(level));
+            // dbg_print_levels(index, index + _buddies_contained(level));
             ++level;
             dbg_print_levels(0, _num_indices);
         } else if (buddy_size == size) {
@@ -273,7 +276,8 @@ BuddyHead *BuddyAllocator::_break_free(uint64_t level) {
 
     BuddyHead *h_level = _free_lists[level];
     BuddyHead *h1 = h_level;
-    BuddyHead *h2 = (BuddyHead *)((char *)h_level + _buddy_size_at_level(new_level));
+    BuddyHead *h2 =
+        reinterpret_cast<BuddyHead *>(reinterpret_cast<char *>(h_level) + _buddy_size_at_level(new_level));
 
 #ifndef NDEBUG
     if (!(_level_of_index.get(_buddy_index(h1)) == level)) {
@@ -311,13 +315,15 @@ void BuddyAllocator::_push_free(BuddyHead *h, uint64_t level) {
     _free_lists[level] = h;
     const uint64_t index = _buddy_index(h);
     const uint64_t last = index + _buddies_contained(level);
-    debug("BuddyAlloc::Setting levels - h = %p, level = %lu, index = %lu, "
-          "last = %lu",
-          h, level, index, last);
+    debug("BuddyAlloc::Setting levels - h = %p, level = %lu, index = %lu, last = %lu", h, level, index, last);
     _level_of_index.set_range(index, last, level);
+    _index_allocated.set_range(index, last, 0);
+    debug("Pushed free, done setting %lu to %lu to level %lu", index, last, level);
+    /*
     for (uint64_t b = index; b < last; ++b) {
         _index_allocated.set(b, 0);
     }
+    */
 }
 
 void BuddyAllocator::_check_buddy_index(BuddyHead *p) const {
@@ -341,11 +347,9 @@ void BuddyAllocator::dbg_print_levels(uint64_t start, uint64_t end) const {
 #ifdef BUDDY_ALLOC_LEVEL_LOGGING
     using namespace string_stream;
     Buffer b(memory_globals::default_allocator());
-
     fprintf(stderr, "+--------LEVEL MAP--------+\n");
-
-    for (auto i = start; i < end; ++i) {
-        b << i << "=" << _level_of_index.get(i) << "\t";
+    for (int i = int(start); i < int(end); ++i) {
+        b << i << "= (" << _level_of_index.get(i) << ", " << (_index_allocated.get(i) ? "x" : "o") << ")\t";
         tab(b, 8);
         if (array::size(b) >= 80) {
             fprintf(stderr, "%s\n", c_str(b));
@@ -355,19 +359,6 @@ void BuddyAllocator::dbg_print_levels(uint64_t start, uint64_t end) const {
     if (array::size(b) != 0) {
         fprintf(stderr, "%s\n", c_str(b));
         array::clear(b);
-    }
-    fprintf(stderr, "\n--\n");
-
-    for (uint64_t i = start; i < end; ++i) {
-        b << i << "-" << (_index_allocated.get(i) ? "[x]" : "[]") << "\t";
-        tab(b, 8);
-        if (array::size(b) >= 80) {
-            fprintf(stderr, "%s\n", c_str(b));
-            array::clear(b);
-        }
-    }
-    if (array::size(b) != 0) {
-        fprintf(stderr, "%s\n", c_str(b));
     }
     fprintf(stderr, "\n--\n");
 

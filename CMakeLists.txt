@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(BUDDY_ALLOC_LEVEL_LOGGING)
-  messge("Turning level logging on")
+  message("Turning level logging on")
   add_definitions(-DBUDDY_ALLOC_LEVEL_LOGGING)
 endif()
 

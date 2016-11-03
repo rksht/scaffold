@@ -15,7 +15,6 @@
 namespace foundation {
 
 template <typename Word = unsigned long, typename GetTy = Word> struct DySmallIntArray {
-
     static_assert(std::is_integral<Word>::value, "DySmallIntArray - Not an integral base type");
 
   private:
@@ -112,7 +111,8 @@ template <typename Word = unsigned long, typename GetTy = Word> struct DySmallIn
         _word(idx) = word | (the_int << (offset * _bits_per_int));
     }
 
-    /// Sets the given range of indices to a given integer
+    /// Sets the given range of indices to a given integer. TODO: Perhaps use
+    /// memset for the case when `the_int = 0`
     void set_range(unsigned begin_idx, unsigned end_idx, GetTy the_int) {
         if (begin_idx >= end_idx) {
             return;
