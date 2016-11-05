@@ -15,9 +15,7 @@ template <uint32_t bytes> using Block = std::array<uint32_t, bytes / sizeof(uint
 
 using SmallestBlock = Block<SMALLEST_SIZE>;
 
-template <typename BlockTy> constexpr uint64_t _align_of() {
-    return alignof(BlockTy) < BA::align_factor() ? BA::align_factor() : alignof(BlockTy);
-}
+template <typename BlockTy> constexpr uint64_t _align_of() { return alignof(BlockTy); }
 
 using Block_8KB = Block<8 << 10>;
 

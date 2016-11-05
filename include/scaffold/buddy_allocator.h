@@ -1,16 +1,11 @@
 #pragma once
 
+#include <scaffold/memory.h>
+
 #include "const_log.h"
 #include "debug.h"
 #include "dysmallintarray.h"
 #include "memory.h"
-
-#include <assert.h>
-#include <limits>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 /// A "buddy allocator"
 
@@ -38,10 +33,6 @@ namespace foundation {
 // corresponding index i from the pointer passed and the level from the
 // bitset.
 
-// Calculations - Buffer size = 2**b. Min buddy size = 2**m. Number of indices
-// = 2**(b - m). I want the integer type for _num_indices to be able to hold
-// 2**(b - m) indices. For uint16_t, 16 >= (b - m), i.e b <= 16 + m. b = 16,
-
 namespace _internal {
 /// Forwardd declaring the type for headers used to chain the free buddies of
 /// a level as a doubly linked list. A BuddyHead itself does not identify a
@@ -65,15 +56,6 @@ class BuddyAllocator : public Allocator {
     Allocator *_extra_allocator;                // The allocator used to allocate the data structures
     uint64_t _total_allocated;                  // Total allocated at any moment
 
-  private:
-    /// Returns the size of any buddy that resides at the given `level`
-    uint64_t _buddy_size_at_level(uint64_t level) { return _buffer_size >> level; }
-
-  public:
-    /// Each allocation must request an alignment of a multiple of
-    /// align_factor().
-    static uint64_t align_factor();
-
   public:
     /// Creates a buddy allocator. It will manage  buddies of size
     /// `min_buddy_size` in a buffer of `size` bytes. `size` must be a power
@@ -90,43 +72,30 @@ class BuddyAllocator : public Allocator {
     /// Returns size allocated for block pointed to by p. p must be obtained
     /// from a call to `allocate'
     uint64_t allocated_size(void *p) override;
-    /// Allocates a block of `size` bytes (clipped to nearest power of 2).
-    /// `align` must be a multiple of `align_factor()`
+    /// Allocates a block of `size` bytes (clipped to nearest power of 2). The
+    /// returned pointer is aligned to a multiple of `align`.
     void *allocate(uint64_t size, uint64_t align) override;
     /// Deallocates the buddy. If p is null, then it's a nop.
     void deallocate(void *p) override;
 
   private:
+    /// Returns the size of any buddy that resides at the given `level`
+    inline uint64_t _buddy_size_at_level(uint64_t level) const;
+
     /// Just a helper
     uint64_t _last_level() const { return _num_levels - 1; }
     /// Returns pointer into buffer at the given offset
     void *_mem_at(uint64_t off) const { return (char *)_mem + off; }
     /// Returns the offset of the buddy
     uint64_t _off_at(void *p, int level) const { return ((char *)p - (char *)_mem) >> level; }
-
     /// Casts p to BuddyHead*. In debug mode, checks if p is indeed pointing
     /// to a buddy head.
-    _internal::BuddyHead *_head_at(void *p) {
-#ifndef NDEBUG
-        assert(p >= _mem);
-        uint64_t diff = (char *)p - (char *)_mem;
-        int mod = diff % _min_buddy_size;
-        assert(mod == 0);
-#endif
-        return static_cast<_internal::BuddyHead *>(p);
-    }
-
+    inline _internal::BuddyHead *_head_at(void *p);
     /// Returns index of the buddy i.e the offset in units of `min_buddy_size`
     /// chunks
-    uint64_t _buddy_index(_internal::BuddyHead *p) const {
-        assert((char *)p >= (char *)_mem);
-        assert((char *)p <= (char *)_mem + _buffer_size);
-        const uint64_t diff = (char *)p - (char *)_mem;
-        // debug("diff = %lu", diff);
-        return uint64_t(diff >> _min_buddy_size_power);
-    }
+    inline uint64_t _buddy_index(_internal::BuddyHead *p) const;
     /// Returns the number of smallest-buddies contained at this `level`
-    uint64_t _buddies_contained(uint64_t level) const { return uint64_t(1) << (_last_level() - level); }
+    inline uint64_t _buddies_contained(uint64_t level) const;
 
     /// Breaks the top free buddy residing in the given `level` into two,
     /// level must be < _last_level() (ensured by the assertion in

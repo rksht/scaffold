@@ -1,5 +1,12 @@
 #include <scaffold/buddy_allocator.h>
 
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdlib.h>
+#include <string.h>
+
 namespace foundation {
 
 namespace _internal {
@@ -55,7 +62,15 @@ struct BuddyHead {
 
 using _internal::BuddyHead;
 
-uint64_t BuddyAllocator::align_factor() { return alignof(BuddyHead); }
+static inline bool alignment_ok(uint64_t requested_align) {
+    if (requested_align < alignof(BuddyHead)) {
+        return alignof(BuddyHead) % requested_align == 0;
+    } else {
+        return requested_align % alignof(BuddyHead) == 0;
+    }
+}
+
+inline uint64_t BuddyAllocator::_buddy_size_at_level(uint64_t level) const { return _buffer_size >> level; }
 
 BuddyAllocator::BuddyAllocator(uint64_t size, uint64_t min_buddy_size, Allocator &main_allocator,
                                Allocator &extra_allocator)
@@ -75,7 +90,7 @@ BuddyAllocator::BuddyAllocator(uint64_t size, uint64_t min_buddy_size, Allocator
     log_assert(clip_to_power_of_2(size) == size, "size given %lu is not a power of 2", size);
 
     // Allocate the buffer
-    _mem = _main_allocator->allocate(size, align_factor());
+    _mem = _main_allocator->allocate(size, alignof(BuddyHead));
     log_assert(_mem != nullptr, "Failed to allocated buffer");
 
     // Create the free list array
@@ -121,8 +136,7 @@ void *BuddyAllocator::allocate(uint64_t size, uint64_t align) {
     log_assert(size >= _min_buddy_size, "Cannot allocate a buddy size smaller than the minimum size of %lu",
                _min_buddy_size);
 
-    log_assert(align % align_factor() == 0, "Aligment %lu not a multiple of align_factor %lu", align,
-               align_factor());
+    log_assert(alignment_ok(align), "Alignment of %lu is not valid", align);
 
     int level = _last_level();
     debug("Allocating buddy of size %lu bytes", size);
@@ -269,6 +283,28 @@ void BuddyAllocator::deallocate(void *p) {
     debug("Done deallocating (and possible merge) Prev level = %lu, Cur "
           "level = %lu i:%lu, Size = -%lu)\n--",
           original_level, level, idx, size);
+}
+
+inline _internal::BuddyHead *BuddyAllocator::_head_at(void *p) {
+#ifndef NDEBUG
+    assert(p >= _mem);
+    uint64_t diff = (char *)p - (char *)_mem;
+    int mod = diff % _min_buddy_size;
+    assert(mod == 0);
+#endif
+    return static_cast<_internal::BuddyHead *>(p);
+}
+
+inline uint64_t BuddyAllocator::_buddy_index(_internal::BuddyHead *p) const {
+    assert((char *)p >= (char *)_mem);
+    assert((char *)p <= (char *)_mem + _buffer_size);
+    const uint64_t diff = (char *)p - (char *)_mem;
+    // debug("diff = %lu", diff);
+    return uint64_t(diff >> _min_buddy_size_power);
+}
+
+inline uint64_t BuddyAllocator::_buddies_contained(uint64_t level) const {
+    return uint64_t(1) << (_last_level() - level);
 }
 
 BuddyHead *BuddyAllocator::_break_free(uint64_t level) {

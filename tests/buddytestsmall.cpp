@@ -21,9 +21,6 @@ int main() {
         BA ba(BUFFER_SIZE, SMALLEST_SIZE, foundation::memory_globals::default_allocator());
         std::cout << "SIZE OF SMALLEST ARRAY = " << sizeof(SmallestBlock) << std::endl;
 
-        std::cout << "Buddy align_factor = " << BA::align_factor() << "\n";
-        std::cout << "Is aligned = " << (SMALLEST_SIZE % BA::align_factor() == 0) << "\n";
-
         auto b0 = ba.allocate(SMALLEST_SIZE, SMALLEST_SIZE);
         auto b1 = ba.allocate(SMALLEST_SIZE, SMALLEST_SIZE);
         auto b2 = ba.allocate(SMALLEST_SIZE, SMALLEST_SIZE);
