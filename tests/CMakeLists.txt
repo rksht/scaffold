@@ -66,3 +66,9 @@ target_link_libraries(pod_hash_gprof_test scaffold)
 if (USE_GPROF)
 	target_compile_options(pod_hash_gprof_test PRIVATE "-save-temps" "-pg")
 endif()
+
+
+##
+
+add_executable(quad_hash_test quad_hash_test.cpp)
+target_link_libraries(quad_hash_test scaffold)
