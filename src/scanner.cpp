@@ -5,21 +5,33 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+using namespace foundation;
+using namespace string_stream;
+
 namespace scanner {
 
 Scanner::Scanner(Buffer text, int mode)
-    : _text(std::move(text)), mode(mode), line(1), col(1), offset(0),
-      token_start(-1), current_tok(INVALID) {}
+    : _text(std::move(text))
+    , mode(mode)
+    , line(1)
+    , col(1)
+    , offset(0)
+    , token_start(-1)
+    , current_tok(INVALID) {}
 
 Scanner::Scanner(Scanner &&sc)
-    : _text(std::move(sc._text)), mode(sc.mode), line(sc.line), col(sc.col),
-      offset(sc.offset), token_start(sc.token_start),
-      current_tok(sc.current_tok) {}
+    : _text(std::move(sc._text))
+    , mode(sc.mode)
+    , line(sc.line)
+    , col(sc.col)
+    , offset(sc.offset)
+    , token_start(sc.token_start)
+    , current_tok(sc.current_tok) {}
 
-#define SET_TOK_AND_RET(s, tok)                                                \
-    do {                                                                       \
-        (s).current_tok = tok;                                                 \
-        return tok;                                                            \
+#define SET_TOK_AND_RET(s, tok)                                                                              \
+    do {                                                                                                     \
+        (s).current_tok = tok;                                                                               \
+        return tok;                                                                                          \
     } while (0)
 
 static inline char escape_code(char c) {
@@ -99,16 +111,14 @@ int next(Scanner &s) {
         s.col += endp - p;
         SET_TOK_AND_RET(s, ret);
     }
-    if (((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') || (*p == '_')) &&
-        (s.mode & SCAN_IDENTS)) {
+    if (((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') || (*p == '_')) && (s.mode & SCAN_IDENTS)) {
         s.token_start = p - array::begin(s._text);
         do {
             ++p;
             ++s.offset;
             ++s.col;
-        } while (p != e &&
-                 ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
-                  (*p == '_') || (*p >= '0' && *p <= '9')));
+        } while (p != e && ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') || (*p == '_') ||
+                            (*p >= '0' && *p <= '9')));
         SET_TOK_AND_RET(s, IDENT);
     }
     if (*p == '\n') {
@@ -177,8 +187,7 @@ void token_text(const Scanner &s, Buffer &b) {
 
 char *token_text(const Scanner &s, Allocator &a) {
     uint32_t length = s.offset - s.token_start;
-    char *buf = (char *)a.allocate(
-        length + 1, 4); // Aligning to 4 bytes in case scratch allocator is used
+    char *buf = (char *)a.allocate(length + 1, 4); // Aligning to 4 bytes in case scratch allocator is used
     memcpy(buf, c_str(s._text) + s.token_start, length);
     buf[length] = 0;
     return buf;

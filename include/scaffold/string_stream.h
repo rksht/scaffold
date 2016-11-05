@@ -1,10 +1,10 @@
 #pragma once
 
-#include "collection_types.h"
 #include "array.h"
+#include "collection_types.h"
 
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
 namespace foundation {
 /// Functions for operating on an Array<char> as a stream of characters,
@@ -40,14 +40,13 @@ Buffer &repeat(Buffer &b, uint32_t count, char c);
 const char *c_str(Buffer &b);
 
 /// Transfer the Buffer to an owning char*
-char* c_str(Buffer &&b);
+char *c_str(Buffer &&b);
 }
 
 namespace string_stream_internal {
 using namespace string_stream;
 
-template <typename T>
-inline Buffer &printf_small(Buffer &b, const char *fmt, const T &t) {
+template <typename T> inline Buffer &printf_small(Buffer &b, const char *fmt, const T &t) {
     char s[32];
     snprintf(s, 32, fmt, t);
     return (b << s);
@@ -60,21 +59,13 @@ inline Buffer &operator<<(Buffer &b, char c) {
     return b;
 }
 
-inline Buffer &operator<<(Buffer &b, const char *s) {
-    return push(b, s, strlen(s));
-}
+inline Buffer &operator<<(Buffer &b, const char *s) { return push(b, s, strlen(s)); }
 
-inline Buffer &operator<<(Buffer &b, float f) {
-    return string_stream_internal::printf_small(b, "%g", f);
-}
+inline Buffer &operator<<(Buffer &b, float f) { return string_stream_internal::printf_small(b, "%g", f); }
 
-inline Buffer &operator<<(Buffer &b, int32_t i) {
-    return string_stream_internal::printf_small(b, "%d", i);
-}
+inline Buffer &operator<<(Buffer &b, int32_t i) { return string_stream_internal::printf_small(b, "%d", i); }
 
-inline Buffer &operator<<(Buffer &b, uint32_t i) {
-    return string_stream_internal::printf_small(b, "%u", i);
-}
+inline Buffer &operator<<(Buffer &b, uint32_t i) { return string_stream_internal::printf_small(b, "%u", i); }
 
 inline Buffer &operator<<(Buffer &b, uint64_t i) {
     return string_stream_internal::printf_small(b, "%01llx", i);
@@ -94,12 +85,12 @@ inline const char *c_str(Buffer &b) {
     return array::begin(b);
 }
 
-inline char* c_str(Buffer &&b) {
+inline char *c_str(Buffer &&b) {
     // Ensure there is a \0 at the end of the buffer.
     Buffer b1(std::move(b));
     array::push_back(b1, '\0');
     array::pop_back(b1);
-    char* s = b1._data;
+    char *s = b1._data;
     b1._data = nullptr;
     b1._size = 0;
     b1._capacity = 0;

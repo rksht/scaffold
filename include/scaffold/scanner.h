@@ -6,10 +6,7 @@
 
 namespace scanner {
 
-using namespace foundation;
-using namespace memory_globals;
-using namespace string_stream;
-
+/// Each of these represent a class of tokens
 const int INT = -1;
 const int FLOAT = -2;
 const int STRING = -3;
@@ -21,14 +18,13 @@ const int ESCAPE = -8;
 const int INVALID = -9;
 
 enum Modes {
-    SCAN_INTS = 1 << -INT,
-    SCAN_FLOATS = 1 << -FLOAT,
-    SCAN_STRINGS = 1 << -STRING,
-    SCAN_IDENTS = 1 << -IDENT,
-    SCAN_SPACES = 1 << -SPACE,
-    SCAN_COMMENTS = 1 << -COMMENT,
-    SCAN_ESCAPES = 1 << -ESCAPE, // This will inteprete escape codes all
-                                 // throughout the string
+    SCAN_INTS = 1 << -INT,         // Scan integers?
+    SCAN_FLOATS = 1 << -FLOAT,     // Scan floats?
+    SCAN_STRINGS = 1 << -STRING,   // Scan string literals (e.g "Hello\n")
+    SCAN_IDENTS = 1 << -IDENT,     // Scan identifiers (e.g hello_911)
+    SCAN_SPACES = 1 << -SPACE,     // Scan white spaces
+    SCAN_COMMENTS = 1 << -COMMENT, // Scan comments (not yet implemented)
+    SCAN_ESCAPES = 1 << -ESCAPE,   // This will inteprete escape codes all throughout the string
 };
 
 /// This default mode is like scanning most simple languages
@@ -38,31 +34,36 @@ const int DEFAULT_MODE = SCAN_INTS | SCAN_FLOATS | SCAN_STRINGS | SCAN_IDENTS;
 /// scans characters one by one and also interpretes escape codes.
 const int WHOLESTRING_MODE = SCAN_SPACES | SCAN_ESCAPES;
 
-/// Contains the current state of the scanner
+using Buffer = foundation::string_stream::Buffer;
+
+/// Contains the current state of the scanner. As you see, most of the fields
+/// are public.
 struct Scanner {
-    mutable Buffer _text;
-    int mode;
-    int line;
-    int col;
-    int offset;
-    int token_start;
-    int current_tok;
-    long current_int;
-    double current_float;
+    mutable Buffer _text; // The text (this is mutable due to using c_str)
+    int mode;             // The mode
+    int line;             // Contains the line number if the *next* token. Starts with 1.
+    int col;              // Contains the column of the current line
+    int offset;           // Contains the length in characters of the last scanned token
+    int token_start;      // Contains the index of the starting position of the next token
+    int current_tok;      // Contains the last token-class that next() returned
+    long current_int;     // If next() returns INT, then contains that integer
+    double current_float; // If next() returns FLOAT, then contains that float
 
     Scanner(Buffer text, int mode = DEFAULT_MODE);
 
     Scanner(Scanner &&sc);
 };
 
-/// Returns the next token id
+/// Returns a number, which, if negative, denotes the next token's class. If
+/// positive, it is equal to the next character. This happens when none of the
+/// classes match.
 int next(Scanner &s);
 /// Returns a description of the given token id
 const char *desc(int token);
 /// Fills the buffer with the current token text
 void token_text(const Scanner &s, Buffer &b);
 /// Overload of token_text that returns a null terminated c-string
-char *token_text(const Scanner &s, Allocator &a);
+char *token_text(const Scanner &s, foundation::Allocator &a);
 
 /// Pushes into `b` all the characters from `raw` while decoding the escape
 /// codes in `raw` (e.g - The sequence of characters '\' and 'n' in `raw` will
