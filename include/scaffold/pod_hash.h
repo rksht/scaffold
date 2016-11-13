@@ -28,11 +28,9 @@ template <typename K, typename V> struct _Entry {
 
 /// 'PodHash' is similar hash table like the one in collection_types.h, but can
 /// use any 'trivially-copyassignable data type as key.
-template <typename K, typename V>
-struct PodHash : std::iterator<std::random_access_iterator_tag,
-                               pod_hash::_internal::_Entry<K, V>> {
-    static_assert(std::is_trivially_copy_assignable<K>::value,
-                  "Key type must be trivially copy assignable");
+template <typename K, typename V> struct PodHash {
+
+    static_assert(std::is_trivially_copy_assignable<K>::value, "Key type must be trivially copy assignable");
     static_assert(std::is_trivially_copy_assignable<V>::value,
                   "Value type must be trivially copy assignable");
 
@@ -63,37 +61,32 @@ struct PodHash : std::iterator<std::random_access_iterator_tag,
     EqualFunc _equal_func;
 
     /// Constructor
-    PodHash(foundation::Allocator &hash_alloc,
-            foundation::Allocator &entry_alloc, HashFunc hash_func,
+    PodHash(foundation::Allocator &hash_alloc, foundation::Allocator &entry_alloc, HashFunc hash_func,
             EqualFunc equal_func)
-        : _hashes(hash_alloc), _entries(entry_alloc), _hash_func(hash_func),
-          _equal_func(equal_func) {}
+        : _hashes(hash_alloc)
+        , _entries(entry_alloc)
+        , _hash_func(hash_func)
+        , _equal_func(equal_func) {}
 };
 
 // -- Iterators on PodHash
 
-template <typename K, typename V>
-typename PodHash<K, V>::const_iterator cbegin(const PodHash<K, V> &h) {
+template <typename K, typename V> typename PodHash<K, V>::const_iterator cbegin(const PodHash<K, V> &h) {
     return h._entries.begin();
 }
-template <typename K, typename V>
-typename PodHash<K, V>::const_iterator cend(const PodHash<K, V> &h) {
+template <typename K, typename V> typename PodHash<K, V>::const_iterator cend(const PodHash<K, V> &h) {
     return h._entries.end();
 }
-template <typename K, typename V>
-typename PodHash<K, V>::const_iterator begin(const PodHash<K, V> &h) {
+template <typename K, typename V> typename PodHash<K, V>::const_iterator begin(const PodHash<K, V> &h) {
     return h._entries.begin();
 }
-template <typename K, typename V>
-typename PodHash<K, V>::const_iterator end(const PodHash<K, V> &h) {
+template <typename K, typename V> typename PodHash<K, V>::const_iterator end(const PodHash<K, V> &h) {
     return h._entries.end();
 }
-template <typename K, typename V>
-typename PodHash<K, V>::iterator begin(PodHash<K, V> &h) {
+template <typename K, typename V> typename PodHash<K, V>::iterator begin(PodHash<K, V> &h) {
     return h._entries.begin();
 }
-template <typename K, typename V>
-typename PodHash<K, V>::iterator end(PodHash<K, V> &h) {
+template <typename K, typename V> typename PodHash<K, V>::iterator end(PodHash<K, V> &h) {
     return h._entries.end();
 }
 
@@ -109,30 +102,25 @@ template <typename K, typename V> void reserve(PodHash<K, V> &h, uint32_t size);
 
 /// Sets the given key's value (Can trigger a rehash if `key` doesn't already
 /// exist)
-template <typename K, typename V>
-void set(PodHash<K, V> &h, const K &key, const V &value);
+template <typename K, typename V> void set(PodHash<K, V> &h, const K &key, const V &value);
 
 /// Returns true if an entry with the given key is present.
-template <typename K, typename V>
-bool has(const PodHash<K, V> &h, const K &key);
+template <typename K, typename V> bool has(const PodHash<K, V> &h, const K &key);
 
 /// Returns an object containing the fields `bool present` and `V &value`. If
 /// a value is associated with the given key, present will be true and value
 /// will refer to the associated value. Otherwise present will be false.
-template <typename K, typename V>
-typename PodHash<K, V>::iterator get(const PodHash<K, V> &h, const K &key);
+template <typename K, typename V> typename PodHash<K, V>::iterator get(const PodHash<K, V> &h, const K &key);
 
 /// Sets the given key's associated value to the given default value if no
 /// entry is present with the given key. Returns reference to the value
 /// associated with the key. (Can trigger a rehash if `key` doesn't already
 /// exist)
-template <typename K, typename V>
-V &set_default(PodHash<K, V> &h, const K &key, const V &deffault);
+template <typename K, typename V> V &set_default(PodHash<K, V> &h, const K &key, const V &deffault);
 
 /// Returns constant reference to the key in the entry with the given key -
 /// does not modify the data structure
-template <typename K, typename V>
-const K &get_key(const PodHash<K, V> &h, K const &key, K const &deffault);
+template <typename K, typename V> const K &get_key(const PodHash<K, V> &h, K const &key, K const &deffault);
 
 /// Removes the entry with the given key
 template <typename K, typename V> void remove(PodHash<K, V> &h, const K &key);
@@ -152,18 +140,15 @@ struct FindResult {
 };
 
 // Forward declaration
-template <typename K, typename V>
-void rehash(PodHash<K, V> &h, uint32_t new_size);
+template <typename K, typename V> void rehash(PodHash<K, V> &h, uint32_t new_size);
 
 // Forward declaration
 template <typename K, typename V> void grow(PodHash<K, V> &h);
 
 // Forward declaration
-template <typename K, typename V>
-void insert(PodHash<K, V> &h, const K &key, const V &value);
+template <typename K, typename V> void insert(PodHash<K, V> &h, const K &key, const V &value);
 
-template <typename K, typename V>
-FindResult find(const PodHash<K, V> &h, const K &key) {
+template <typename K, typename V> FindResult find(const PodHash<K, V> &h, const K &key) {
     FindResult fr = {END_OF_LIST, END_OF_LIST, END_OF_LIST};
 
     if (foundation::array::size(h._hashes) == 0) {
@@ -183,8 +168,7 @@ FindResult find(const PodHash<K, V> &h, const K &key) {
 }
 
 // Pushes a new entry initialized with the given key
-template <typename K, typename V>
-uint32_t push_entry(PodHash<K, V> &h, const K &key) {
+template <typename K, typename V> uint32_t push_entry(PodHash<K, V> &h, const K &key) {
     typename PodHash<K, V>::Entry e;
     e.key = key;
     e.next = END_OF_LIST;
@@ -195,8 +179,7 @@ uint32_t push_entry(PodHash<K, V> &h, const K &key) {
 
 /// Searches for the given key and if not found adds a new entry for the key.
 /// Returns the entry index.
-template <typename K, typename V>
-uint32_t find_or_make(PodHash<K, V> &h, const K &key) {
+template <typename K, typename V> uint32_t find_or_make(PodHash<K, V> &h, const K &key) {
     const FindResult fr = find(h, key);
     if (fr.entry_i != END_OF_LIST) {
         return fr.entry_i;
@@ -212,8 +195,7 @@ uint32_t find_or_make(PodHash<K, V> &h, const K &key) {
 }
 
 /// Makes a new entry and appends it to the appropriate chain
-template <typename K, typename V>
-uint32_t make(PodHash<K, V> &h, const K &key) {
+template <typename K, typename V> uint32_t make(PodHash<K, V> &h, const K &key) {
     const FindResult fr = find(h, key);
     const uint32_t ei = push_entry(h, key);
 
@@ -228,17 +210,14 @@ uint32_t make(PodHash<K, V> &h, const K &key) {
 
 /// Allocates a new array for the hashes and recomputes the hashes of the
 /// already allocated values
-template <typename K, typename V>
-void rehash(PodHash<K, V> &h, uint32_t new_size) {
+template <typename K, typename V> void rehash(PodHash<K, V> &h, uint32_t new_size) {
     // create a new hash table
-    PodHash<K, V> new_hash(*h._hashes._allocator, *h._entries._allocator,
-                           h._hash_func, h._equal_func);
+    PodHash<K, V> new_hash(*h._hashes._allocator, *h._entries._allocator, h._hash_func, h._equal_func);
 
     // Don't need the previous hashes.
     foundation::array::free(h._hashes);
     foundation::array::resize(new_hash._hashes, new_size);
-    foundation::array::reserve(new_hash._entries,
-                               foundation::array::size(h._entries));
+    foundation::array::reserve(new_hash._entries, foundation::array::size(h._entries));
 
     // Empty out hashes
     for (uint32_t &entry_i : new_hash._hashes) {
@@ -264,16 +243,14 @@ template <typename K, typename V> void grow(PodHash<K, V> &h) {
 /// too.
 template <typename K, typename V> bool full(const PodHash<K, V> &h) {
     const float max_load_factor = 0.7;
-    return foundation::array::size(h._entries) >=
-           foundation::array::size(h._hashes) * max_load_factor;
+    return foundation::array::size(h._entries) >= foundation::array::size(h._hashes) * max_load_factor;
 }
 
 /// Inserts an entry by simply appending to the chain, so if no chain already
 /// exists for the given key, it's same as creating a new entry. Otherwise, it
 /// just adds a new entry to the chain, and does not overwrite any entry having
 /// the same key
-template <typename K, typename V>
-void insert(PodHash<K, V> &h, const K &key, const V &value) {
+template <typename K, typename V> void insert(PodHash<K, V> &h, const K &key, const V &value) {
     if (foundation::array::size(h._hashes) == 0) {
         grow(h);
     }
@@ -286,8 +263,7 @@ void insert(PodHash<K, V> &h, const K &key, const V &value) {
 }
 
 /// Erases the entry found
-template <typename K, typename V>
-void erase(PodHash<K, V> &h, const FindResult &fr) {
+template <typename K, typename V> void erase(PodHash<K, V> &h, const FindResult &fr) {
     if (fr.entry_prev == END_OF_LIST) {
         h._hashes[fr.hash_i] = h._entries[fr.entry_i].next;
     } else {
@@ -299,8 +275,7 @@ void erase(PodHash<K, V> &h, const FindResult &fr) {
         return;
     }
 
-    h._entries[fr.entry_i] =
-        h._entries[foundation::array::size(h._entries) - 1];
+    h._entries[fr.entry_i] = h._entries[foundation::array::size(h._entries) - 1];
     foundation::array::pop_back(h._entries);
     FindResult last = find(h, h._entries[fr.entry_i].key);
 
@@ -312,8 +287,7 @@ void erase(PodHash<K, V> &h, const FindResult &fr) {
 }
 
 /// Finds entry with the given key and removes it
-template <typename K, typename V>
-void find_and_erase(PodHash<K, V> &h, const K &key) {
+template <typename K, typename V> void find_and_erase(PodHash<K, V> &h, const K &key) {
     const FindResult fr = find(h, key);
     if (fr.entry_i != END_OF_LIST) {
         erase(h, fr);
@@ -327,13 +301,11 @@ void find_and_erase(PodHash<K, V> &h, const K &key) {
 namespace foundation {
 namespace pod_hash {
 
-template <typename K, typename V>
-void reserve(PodHash<K, V> &h, uint32_t size) {
+template <typename K, typename V> void reserve(PodHash<K, V> &h, uint32_t size) {
     _internal::rehash(h, size);
 }
 
-template <typename K, typename V>
-void set(PodHash<K, V> &h, const K &key, const V &value) {
+template <typename K, typename V> void set(PodHash<K, V> &h, const K &key, const V &value) {
     if (foundation::array::size(h._hashes) == 0) {
         _internal::grow(h);
     }
@@ -349,8 +321,7 @@ template <typename K, typename V> bool has(PodHash<K, V> &h, const K &key) {
     return fr.entry_i != _internal::END_OF_LIST;
 }
 
-template <typename K, typename V>
-typename PodHash<K, V>::iterator get(const PodHash<K, V> &h, const K &key) {
+template <typename K, typename V> typename PodHash<K, V>::iterator get(const PodHash<K, V> &h, const K &key) {
     _internal::FindResult fr = _internal::find(h, key);
     if (fr.entry_i == _internal::END_OF_LIST) {
         return h._entries.end();
@@ -358,8 +329,7 @@ typename PodHash<K, V>::iterator get(const PodHash<K, V> &h, const K &key) {
     return h._entries.begin() + fr.entry_i;
 }
 
-template <typename K, typename V>
-V &set_default(PodHash<K, V> &h, const K &key, const V &deffault) {
+template <typename K, typename V> V &set_default(PodHash<K, V> &h, const K &key, const V &deffault) {
     _internal::FindResult fr = _internal::find(h, key);
     if (fr.entry_i == _internal::END_OF_LIST) {
         if (foundation::array::size(h._hashes) == 0) {
@@ -376,8 +346,7 @@ V &set_default(PodHash<K, V> &h, const K &key, const V &deffault) {
 }
 
 /// Returns a const reference to the key. Use when using the hash as a set.
-template <typename K, typename V>
-const K &get_key(const PodHash<K, V> &h, K const &key, K const &deffault) {
+template <typename K, typename V> const K &get_key(const PodHash<K, V> &h, K const &key, K const &deffault) {
     _internal::FindResult fr = _internal::find(h, key);
     if (fr.entry_i == _internal::END_OF_LIST) {
         return deffault;
@@ -391,8 +360,7 @@ template <typename K, typename V> void remove(PodHash<K, V> &h, const K &key) {
 }
 
 /// Finds the maximum chain length in the hash table.
-template <typename K, typename V>
-uint32_t max_chain_length(const PodHash<K, V> &h) {
+template <typename K, typename V> uint32_t max_chain_length(const PodHash<K, V> &h) {
     uint32_t max_length = 0;
 
     for (uint32_t i = 0; i < foundation::array::size(h._entries); ++i) {

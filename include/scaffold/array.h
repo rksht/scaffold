@@ -51,36 +51,20 @@ template <typename T> void pop_back(Array<T> &a);
 }
 
 namespace array {
-template <typename T> inline uint32_t size(const Array<T> &a) {
-    return a._size;
-}
-template <typename T> inline bool any(const Array<T> &a) {
-    return a._size != 0;
-}
-template <typename T> inline bool empty(const Array<T> &a) {
-    return a._size == 0;
-}
+template <typename T> inline uint32_t size(const Array<T> &a) { return a._size; }
+template <typename T> inline bool any(const Array<T> &a) { return a._size != 0; }
+template <typename T> inline bool empty(const Array<T> &a) { return a._size == 0; }
 
 /// Keeping these two `begin` and `end` functions in this namespace to be
 /// compatible with the original foundation code.
-template <typename T> typename Array<T>::iterator begin(Array<T> &a) {
-    return a.begin();
-}
+template <typename T> typename Array<T>::iterator begin(Array<T> &a) { return a.begin(); }
 
-template <typename T> inline typename Array<T>::iterator end(Array<T> &a) {
-    return a.end();
-}
+template <typename T> inline typename Array<T>::iterator end(Array<T> &a) { return a.end(); }
 
 template <typename T> inline T &front(Array<T> &a) { return a._data[0]; }
-template <typename T> inline const T &front(const Array<T> &a) {
-    return a._data[0];
-}
-template <typename T> inline T &back(Array<T> &a) {
-    return a._data[a._size - 1];
-}
-template <typename T> inline const T &back(const Array<T> &a) {
-    return a._data[a._size - 1];
-}
+template <typename T> inline const T &front(const Array<T> &a) { return a._data[0]; }
+template <typename T> inline T &back(Array<T> &a) { return a._data[a._size - 1]; }
+template <typename T> inline const T &back(const Array<T> &a) { return a._data[a._size - 1]; }
 
 template <typename T> inline void clear(Array<T> &a) { resize(a, 0); }
 
@@ -89,9 +73,7 @@ template <typename T> inline void free(Array<T> &a) {
     a._data = nullptr;
     a._size = 0;
 }
-template <typename T> inline void trim(Array<T> &a) {
-    set_capacity(a, a._size);
-}
+template <typename T> inline void trim(Array<T> &a) { set_capacity(a, a._size); }
 
 template <typename T> void resize(Array<T> &a, uint32_t new_size) {
     if (new_size > a._capacity) {
@@ -118,8 +100,7 @@ template <typename T> void set_capacity(Array<T> &a, uint32_t new_capacity) {
 
     T *new_data = 0;
     if (new_capacity > 0) {
-        new_data =
-            (T *)a._allocator->allocate(sizeof(T) * new_capacity, alignof(T));
+        new_data = (T *)a._allocator->allocate(sizeof(T) * new_capacity, alignof(T));
         memcpy(new_data, a._data, sizeof(T) * a._size);
     }
     a._allocator->deallocate(a._data);
@@ -145,7 +126,10 @@ template <typename T> inline void pop_back(Array<T> &a) { a._size--; }
 
 template <typename T>
 inline Array<T>::Array(Allocator &allocator)
-    : _allocator(&allocator), _size(0), _capacity(0), _data(nullptr) {}
+    : _allocator(&allocator)
+    , _size(0)
+    , _capacity(0)
+    , _data(nullptr) {}
 
 template <typename T> inline Array<T>::~Array() {
     if (_data) {
@@ -159,7 +143,10 @@ template <typename T> inline Array<T>::~Array() {
 
 template <typename T>
 Array<T>::Array(const Array<T> &other)
-    : _allocator(other._allocator), _size(0), _capacity(0), _data(0) {
+    : _allocator(other._allocator)
+    , _size(0)
+    , _capacity(0)
+    , _data(0) {
     const uint32_t n = other._size;
     array::set_capacity(*this, n);
     memcpy(_data, other._data, sizeof(T) * n);
@@ -168,8 +155,10 @@ Array<T>::Array(const Array<T> &other)
 
 template <typename T>
 Array<T>::Array(Array<T> &&other)
-    : _allocator(other._allocator), _size(other._size),
-      _capacity(other._capacity), _data(other._data) {
+    : _allocator(other._allocator)
+    , _size(other._size)
+    , _capacity(other._capacity)
+    , _data(other._data) {
     other._size = 0;
     other._capacity = 0;
     other._data = nullptr;
@@ -198,11 +187,7 @@ template <typename T> Array<T> &Array<T>::operator=(Array<T> &&other) {
     return *this;
 }
 
-template <typename T> inline T &Array<T>::operator[](uint32_t i) {
-    return _data[i];
-}
+template <typename T> inline T &Array<T>::operator[](uint32_t i) { return _data[i]; }
 
-template <typename T> inline const T &Array<T>::operator[](uint32_t i) const {
-    return _data[i];
-}
+template <typename T> inline const T &Array<T>::operator[](uint32_t i) const { return _data[i]; }
 }

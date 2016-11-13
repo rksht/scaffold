@@ -1,4 +1,5 @@
 #include <scaffold/array.h>
+#include <scaffold/debug.h>
 #include <scaffold/hash.h>
 #include <scaffold/memory.h>
 #include <scaffold/murmur_hash.h>
@@ -12,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define ASSERT(x) assert(x)
+#define ASSERT(x) log_assert(x, "TEST FAILED")
 
 namespace {
 using namespace foundation;
@@ -101,6 +102,7 @@ void test_temp_allocator() {
     memory_globals::shutdown();
 }
 
+/*
 void test_arena() {
     memory_globals::init();
     Allocator &a = memory_globals::default_arena_allocator();
@@ -121,6 +123,7 @@ void test_arena() {
 
     memory_globals::shutdown();
 }
+*/
 
 void test_hash() {
     memory_globals::init();
@@ -261,7 +264,7 @@ int main(int, char **) {
     test_array();
     test_scratch();
     test_temp_allocator();
-    test_arena();
+    /*test_arena();*/
     test_hash();
     test_multi_hash();
     test_murmur_hash();

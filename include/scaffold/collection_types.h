@@ -23,8 +23,9 @@ template <typename T> struct Array {
     Array(Allocator &a);
     ~Array();
     Array(const Array &other);
-    Array(Array<T> &&other); // move
     Array &operator=(const Array &other);
+    // Move ctor and assign
+    Array(Array &&other);
     Array &operator=(Array &&other);
 
     using iterator = T *;
@@ -49,6 +50,13 @@ template <typename T> struct Array {
 /// A double-ended queue/ring buffer.
 template <typename T> struct Queue {
     Queue(Allocator &a);
+
+    Queue(const Queue &other) = default;
+    Queue &operator=(const Queue &other) = default;
+
+    Queue(Queue &&other);
+    Queue &operator=(Queue &&other);
+
 
     T &operator[](uint32_t i);
     const T &operator[](uint32_t i) const;

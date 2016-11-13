@@ -5,6 +5,11 @@ include_directories(${PROJECT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR})
 
 ##
 
+add_executable(foundation_test foundation_test.cpp)
+target_link_libraries(foundation_test scaffold)
+
+##
+
 add_executable(buddytestsmall buddytestsmall.cpp)
 target_link_libraries(buddytestsmall scaffold)
 add_executable(buddytest buddytest.cpp)

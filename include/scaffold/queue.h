@@ -1,5 +1,5 @@
-#include "collection_types.h"
 #include "array.h"
+#include "collection_types.h"
 
 namespace foundation {
 namespace queue {
@@ -40,14 +40,13 @@ template <typename T> const T *end_front(const Queue<T> &q);
 
 namespace queue_internal {
 // Can only be used to increase the capacity.
-template <typename T>
-void increase_capacity(Queue<T> &q, uint32_t new_capacity) {
+template <typename T> void increase_capacity(Queue<T> &q, uint32_t new_capacity) {
     uint32_t end = array::size(q._data);
     array::resize(q._data, new_capacity);
     if (q._offset + q._size > end) {
         uint32_t end_items = end - q._offset;
-        memmove(array::begin(q._data) + new_capacity - end_items,
-                array::begin(q._data) + q._offset, end_items * sizeof(T));
+        memmove(array::begin(q._data) + new_capacity - end_items, array::begin(q._data) + q._offset,
+                end_items * sizeof(T));
         q._offset += new_capacity - end;
     }
 }
@@ -61,13 +60,9 @@ template <typename T> void grow(Queue<T> &q, uint32_t min_capacity = 0) {
 }
 
 namespace queue {
-template <typename T> inline uint32_t size(const Queue<T> &q) {
-    return q._size;
-}
+template <typename T> inline uint32_t size(const Queue<T> &q) { return q._size; }
 
-template <typename T> inline uint32_t space(const Queue<T> &q) {
-    return array::size(q._data) - q._size;
-}
+template <typename T> inline uint32_t space(const Queue<T> &q) { return array::size(q._data) - q._size; }
 
 template <typename T> void reserve(Queue<T> &q, uint32_t size) {
     if (size > q._size)
@@ -116,27 +111,45 @@ template <typename T> void push(Queue<T> &q, const T *items, uint32_t n) {
     q._size += n;
 }
 
-template <typename T> inline T *begin_front(Queue<T> &q) {
-    return array::begin(q._data) + q._offset;
-}
+template <typename T> inline T *begin_front(Queue<T> &q) { return array::begin(q._data) + q._offset; }
 template <typename T> inline const T *begin_front(const Queue<T> &q) {
     return array::begin(q._data) + q._offset;
 }
 template <typename T> T *end_front(Queue<T> &q) {
     uint32_t end = q._offset + q._size;
-    return end > array::size(q._data) ? array::end(q._data)
-                                      : array::begin(q._data) + end;
+    return end > array::size(q._data) ? array::end(q._data) : array::begin(q._data) + end;
 }
 template <typename T> const T *end_front(const Queue<T> &q) {
     uint32_t end = q._offset + q._size;
-    return end > array::size(q._data) ? array::end(q._data)
-                                      : array::begin(q._data) + end;
+    return end > array::size(q._data) ? array::end(q._data) : array::begin(q._data) + end;
 }
 }
 
 template <typename T>
 inline Queue<T>::Queue(Allocator &allocator)
-    : _data(allocator), _size(0), _offset(0) {}
+    : _data(allocator)
+    , _size(0)
+    , _offset(0) {}
+
+template <typename T>
+Queue<T>::Queue(Queue<T> &&other)
+    : _data(std::move(other._data))
+    , _size(other._size)
+    , _offset(other._offset) {
+    other._size = 0;
+    other._offset = 0;
+}
+
+template <typename T> Queue<T> &Queue<T>::operator=(Queue<T> &&other) {
+    if (this != &other) {
+        _data = std::move(other._data);
+        _size = other._size;
+        _offset = other._offset;
+        other._size = 0;
+        other._offset = 0;
+    }
+    return *this;
+}
 
 template <typename T> inline T &Queue<T>::operator[](uint32_t i) {
     return _data[(i + _offset) % array::size(_data)];
@@ -145,4 +158,4 @@ template <typename T> inline T &Queue<T>::operator[](uint32_t i) {
 template <typename T> inline const T &Queue<T>::operator[](uint32_t i) const {
     return _data[(i + _offset) % array::size(_data)];
 }
-}
+} // namespace queue
