@@ -48,6 +48,11 @@ target_link_libraries(array_test scaffold)
 
 ##
 
+add_executable(queue_test queue_test.cpp)
+target_link_libraries(queue_test scaffold)
+
+##
+
 add_executable(buddy_array_test buddy_array_test.cpp)
 target_link_libraries(buddy_array_test scaffold)
 
