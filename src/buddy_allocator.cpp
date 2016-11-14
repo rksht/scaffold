@@ -176,11 +176,9 @@ void *BuddyAllocator::allocate(uint64_t size, uint64_t align) {
             dbg_print_levels(index, next_index >= _num_indices ? _num_indices : next_index);
             h->remove_self_from_list(_free_lists, level);
             // Set each to allocated status
-            for (uint64_t b = index, e = index + _buddies_contained(level); b < e; ++b) {
-                _index_allocated.set(b, 1);
-            }
-            _total_allocated += size;
+            _index_allocated.set_range(index, index + _buddies_contained(level), 1);
 
+            _total_allocated += size;
             log_info("BuddyAllocator::Allocated::Level - %i, i:%lu (Size = %lu)\n--", level, index, size);
             dbg_print_levels(index, next_index);
             return (void *)h;
