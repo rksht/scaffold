@@ -8,8 +8,8 @@
 
 using BA = foundation::BuddyAllocator;
 
-constexpr uint32_t BUFFER_SIZE = 1 << 20;   // 1 MB
-constexpr uint32_t SMALLEST_SIZE = 2 << 10; // 2 KB
+constexpr uint32_t BUFFER_SIZE = 400 << 10;  // 400 KB
+constexpr uint32_t SMALLEST_SIZE = 32 << 10; // 32 KB
 
 template <uint32_t bytes> using Block = std::array<uint32_t, bytes / sizeof(uint32_t)>;
 
@@ -17,12 +17,10 @@ using SmallestBlock = Block<SMALLEST_SIZE>;
 
 template <typename BlockTy> constexpr uint64_t _align_of() { return alignof(BlockTy); }
 
-using Block_8KB = Block<8 << 10>;
+using Block_64KB = Block<64 << 10>;
 
 int main(int argc, char **argv) {
     uint64_t seed = argc >= 2 ? strtoull(argv[1], nullptr, 10) : 100;
-
-    assert(clip_to_power_of_2(32768) == 32768);
 
     foundation::memory_globals::init();
     {
@@ -59,8 +57,8 @@ int main(int argc, char **argv) {
             r = d(dre);
 
             if (r >= 8) {
-                Block_8KB &p2 = *((Block_8KB *)ba.allocate(sizeof(Block_8KB), _align_of<Block_8KB>()));
-                new (&p2) Block_8KB();
+                Block_64KB &p2 = *((Block_64KB *)ba.allocate(sizeof(Block_64KB), _align_of<Block_64KB>()));
+                new (&p2) Block_64KB();
                 allocateds.insert((void *)&p2);
             }
 
