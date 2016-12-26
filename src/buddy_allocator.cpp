@@ -11,6 +11,9 @@ namespace foundation {
 
 namespace buddy_allocator_internal {
 struct BuddyHead {
+    // I could rid of the prev pointer. It sure makes removing a buddy easier,
+    // and it won't usually be the case that leaf-buddies will be smaller that
+    // 16 bytes.
     BuddyHead *_next;
     BuddyHead *_prev;
 
