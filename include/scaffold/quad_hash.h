@@ -125,6 +125,12 @@ uint32_t find(const QuadHash<K, V, Params> &h, const K &key);
 template <typename K, typename V, typename Params>
 void set(QuadHash<K, V, Params> &h, const K &key, const V &value);
 
+/// Inserts the given key but does not take any value to associate with the
+/// key. Returns the index of the values array. (You must create some value
+/// there yourself!)
+template <typename K, typename V, typename Params>
+uint32_t insert_key(QuadHash<K, V, Params> &h, const K &key);
+
 /// Removes the key if it exists
 template <typename K, typename V, typename Params> void remove(QuadHash<K, V, Params> &h, const K &key);
 
@@ -310,6 +316,29 @@ void set(QuadHash<K, V, Params> &h, const K &key, const V &value) {
     }
 
     log_assert(0, "Impossible");
+}
+
+template <typename K, typename V, typename Params>
+uint32_t insert_key(QuadHash<K, V, Params> &h, const K &key) {
+    // Implementation is essentially the same as `set`. Just returning the
+    // index where we inserted.
+    using nil_ty = typename Params::QuadNilTy;
+
+    quad_hash_internal::rehash_if_needed(h);
+
+    uint64_t idx = h._hash_fn(key);
+
+    for (uint32_t i = 0; i < array::size(h._keys); ++i) {
+        idx = (idx + i) % array::size(h._keys);
+        if (h._equal_fn(h._keys[idx], nil_ty::get()) || h._equal_fn(h._keys[idx], key)) {
+            h._keys[idx] = key;
+            ++h._num_valid;
+            return idx;
+        }
+    }
+
+    log_assert(0, "Impossible");
+    return NOT_FOUND;
 }
 
 template <typename K, typename V, typename Params> void remove(QuadHash<K, V, Params> &h, const K &key) {
