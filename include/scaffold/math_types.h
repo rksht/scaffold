@@ -5,13 +5,13 @@
 #include <emmintrin.h>
 
 namespace foundation {
-struct Vector2 {
+struct alignas(16) Vector2 {
     float x, y;
 };
 
 struct Vector4;
 
-struct Vector3 {
+struct alignas(16) Vector3 {
     float x, y, z;
 
     Vector3() = default;
@@ -26,7 +26,7 @@ struct Vector3 {
         , z(z) {}
 };
 
-struct Vector4 {
+struct alignas(16) Vector4 {
     float x, y, z, w;
 
     Vector4() = default;
@@ -52,15 +52,15 @@ constexpr Vector3::Vector3(const Vector4 &v)
     , y(v.y)
     , z(v.z) {}
 
-struct Quaternion {
+struct alignas(16) Quaternion {
     float x, y, z, w;
 };
 
-struct Matrix3x3 {
+struct alignas(16) Matrix3x3 {
     Vector3 x, y, z;
 };
 
-struct Matrix4x4 {
+struct alignas(16) Matrix4x4 {
     Vector4 x, y, z, t;
 };
 
