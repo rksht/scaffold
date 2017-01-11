@@ -5,13 +5,13 @@
 #include <emmintrin.h>
 
 namespace foundation {
-struct alignas(16) Vector2 {
+struct Vector2 {
     float x, y;
 };
 
 struct Vector4;
 
-struct alignas(16) Vector3 {
+struct Vector3 {
     float x, y, z;
 
     Vector3() = default;
