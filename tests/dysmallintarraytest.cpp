@@ -9,12 +9,12 @@
 
 #include <stdlib.h> // rand()
 
-using foundation::PodHash;
-using namespace foundation::pod_hash;
-using foundation::DySmallIntArray;
+using fo::PodHash;
+using namespace fo::pod_hash;
+using fo::DySmallIntArray;
 
 TEST_CASE("DySmallIntArray<> working correctly", "[DySmallIntArray<>_works]") {
-    foundation::memory_globals::init();
+    fo::memory_globals::init();
     {
         DySmallIntArray<> smallints{4, 512};
         smallints.set(0, 9);
@@ -49,9 +49,9 @@ TEST_CASE("DySmallIntArray<> working correctly", "[DySmallIntArray<>_works]") {
             srand(0xbeef);
 
             PodHash<int, int> is_set(
-                foundation::memory_globals::default_allocator(),
-                foundation::memory_globals::default_allocator(),
-                foundation::usual_hash<int>, foundation::usual_equal<int>);
+                fo::memory_globals::default_allocator(),
+                fo::memory_globals::default_allocator(),
+                fo::usual_hash<int>, fo::usual_equal<int>);
 
             SECTION("Use as a bitset") {
                 for (int i = 0; i < 1000; ++i) {
@@ -113,18 +113,18 @@ TEST_CASE("DySmallIntArray<> working correctly", "[DySmallIntArray<>_works]") {
 #endif
         }
     }
-    foundation::memory_globals::shutdown();
+    fo::memory_globals::shutdown();
 }
 
 TEST_CASE("DySmallIntArray<> with TempAllocator",
           "[DySmallIntArray<>_tempallocator]") {
-    foundation::memory_globals::init();
+    fo::memory_globals::init();
     {
         using Sia = DySmallIntArray<>;
 
         const auto space = Sia::space_required(4, 512);
         REQUIRE(space == 256);
-        foundation::TempAllocator<space> temp_alloc;
+        fo::TempAllocator<space> temp_alloc;
         Sia smallints{4, 512, temp_alloc};
 
         smallints.set(0, 9);
@@ -153,5 +153,5 @@ TEST_CASE("DySmallIntArray<> with TempAllocator",
             REQUIRE(smallints.get(0) == 7);
         }
     }
-    foundation::memory_globals::shutdown();
+    fo::memory_globals::shutdown();
 }

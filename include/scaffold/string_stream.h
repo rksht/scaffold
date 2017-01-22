@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
-namespace foundation {
+namespace fo {
 /// Functions for operating on an Array<char> as a stream of characters,
 /// useful for string formatting, etc.
 namespace string_stream {

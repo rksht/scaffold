@@ -2,7 +2,7 @@
 
 #include <stdarg.h>
 
-namespace foundation {
+namespace fo {
 namespace string_stream {
 Buffer &printf(Buffer &b, const char *format, ...) {
     va_list args;

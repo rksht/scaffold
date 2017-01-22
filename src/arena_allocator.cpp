@@ -2,7 +2,7 @@
 #include <scaffold/debug.h>
 #include <string.h>
 
-namespace foundation {
+namespace fo {
 uint64_t ArenaAllocator::_aligned_size_with_padding(uint64_t size) {
     uint64_t total = size + sizeof(_Header);
     int mod = total % alignof(_Header);

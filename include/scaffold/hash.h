@@ -3,7 +3,7 @@
 #include "array.h"
 #include "collection_types.h"
 
-namespace foundation {
+namespace fo {
 
 /// The hash function stores its data in a "list-in-an-array" where
 /// indices are used instead of pointers.

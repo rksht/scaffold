@@ -19,7 +19,7 @@
 
 namespace probed_hash {
 
-using namespace foundation;
+using namespace fo;
 
 /// Denotes an invalid index or key.
 static constexpr uint64_t TOMBSTONE = std::numeric_limits<uint64_t>::max();
@@ -159,7 +159,7 @@ uint64_t probed_hash_set_default(ProbedHash<T> &h, uint64_t key,
 
 // argument 0 is the number of entries to insert
 static void BM_probed_hash_insertion(benchmark::State &bm_state) {
-    using namespace foundation;
+    using namespace fo;
     using namespace probed_hash;
 
     memory_globals::init();
@@ -191,7 +191,7 @@ static void BM_probed_hash_insertion(benchmark::State &bm_state) {
 
 // argument 0 is the number of entries to insert
 static void BM_uint_hash_insertion(benchmark::State &bm_state) {
-    using namespace foundation;
+    using namespace fo;
 
     memory_globals::init();
     {
@@ -218,7 +218,7 @@ static void BM_uint_hash_insertion(benchmark::State &bm_state) {
 
 // argument 0 is the number of entries to insert
 static void BM_pod_hash_insertion(benchmark::State &bm_state) {
-    using namespace foundation;
+    using namespace fo;
     using namespace probed_hash;
 
     memory_globals::init();
@@ -263,7 +263,7 @@ static void BM_pod_hash_insertion(benchmark::State &bm_state) {
 
 // argument 0 is the number of entries to insert
 static void BM_probed_hash_search(benchmark::State &bm_state) {
-    using namespace foundation;
+    using namespace fo;
     using namespace probed_hash;
 
     memory_globals::init();
@@ -298,7 +298,7 @@ static void BM_probed_hash_search(benchmark::State &bm_state) {
 }
 
 static void BM_pod_hash_search(benchmark::State &bm_state) {
-    using namespace foundation;
+    using namespace fo;
     using namespace pod_hash;
 
     memory_globals::init();
@@ -347,7 +347,7 @@ static void BM_pod_hash_search(benchmark::State &bm_state) {
 }
 
 static void BM_uint_hash_search(benchmark::State &bm_state) {
-    using namespace foundation;
+    using namespace fo;
     using namespace pod_hash;
 
     memory_globals::init();

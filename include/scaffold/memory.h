@@ -5,7 +5,7 @@
 #include "memory_types.h"
 #include "types.h"
 
-namespace foundation {
+namespace fo {
 /// Base class for memory allocators.
 ///
 /// Note: Regardless of which allocator is used, prefer to allocate memory in

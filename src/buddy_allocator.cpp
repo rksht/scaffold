@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-namespace foundation {
+namespace fo {
 
 namespace buddy_allocator_internal {
 struct BuddyHead {
@@ -452,4 +452,4 @@ void BuddyAllocator::dbg_print_levels(uint64_t start, uint64_t end) const {
     (void)end;
 #endif
 }
-} // namespace foundation
+} // namespace fo

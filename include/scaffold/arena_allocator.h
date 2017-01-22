@@ -3,7 +3,7 @@
 #include "memory.h"
 #include <cassert>
 
-namespace foundation {
+namespace fo {
 
 /// An ArenaAllocator allocates a buffer and bumps a pointer on each allocation.
 /// It does not support deallocating allocations individually. Instead it will
@@ -43,4 +43,4 @@ class ArenaAllocator : public Allocator {
 
     uint64_t total_allocated() override { return _total_allocated; }
 };
-} // namespace foundation
+} // namespace fo

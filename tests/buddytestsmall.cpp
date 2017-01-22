@@ -15,10 +15,10 @@ using SmallestBlock = Block<SMALLEST_SIZE>;
 using Block_8KB = Block<8 << 10>;
 
 int main() {
-    foundation::memory_globals::init();
+    fo::memory_globals::init();
     {
-        using BA = foundation::BuddyAllocator;
-        BA ba(BUFFER_SIZE, SMALLEST_SIZE, foundation::memory_globals::default_allocator());
+        using BA = fo::BuddyAllocator;
+        BA ba(BUFFER_SIZE, SMALLEST_SIZE, fo::memory_globals::default_allocator());
         std::cout << "SIZE OF SMALLEST ARRAY = " << sizeof(SmallestBlock) << std::endl;
 
         auto b0 = ba.allocate(SMALLEST_SIZE, SMALLEST_SIZE);
@@ -34,5 +34,5 @@ int main() {
         // dbg here
         std::cout << ba.total_allocated() << "\n";
     }
-    foundation::memory_globals::shutdown();
+    fo::memory_globals::shutdown();
 }

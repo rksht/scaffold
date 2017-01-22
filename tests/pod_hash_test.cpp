@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-using namespace foundation;
+using namespace fo;
 
 struct Data {
     uint64_t id;

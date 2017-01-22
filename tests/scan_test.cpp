@@ -3,12 +3,12 @@
 #include "memory.h"
 #include "scanner.cpp"
 
-namespace ss = foundation::string_stream;
-namespace mg = foundation::memory_globals;
+namespace ss = fo::string_stream;
+namespace mg = fo::memory_globals;
 
 ss::Buffer read_file(FILE *f) {
     using namespace ss;
-    foundation::Allocator &alloc = mg::default_allocator();
+    fo::Allocator &alloc = mg::default_allocator();
     Buffer text = Buffer(alloc);
     char c = fgetc(f);
     while (c != EOF) {

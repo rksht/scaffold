@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <new>
 
-using namespace foundation;
+using namespace fo;
 
 constexpr auto BUFFER_SIZE = 64u;
 using TA = TempAllocator<BUFFER_SIZE>;

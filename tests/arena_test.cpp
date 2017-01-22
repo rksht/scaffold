@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <utility>
 
-using namespace foundation;
+using namespace fo;
 using namespace memory_globals;
 
 struct Student {

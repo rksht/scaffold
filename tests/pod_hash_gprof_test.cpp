@@ -4,7 +4,7 @@
 #include <scaffold/pod_hash_usuals.h>
 
 int main() {
-    using namespace foundation;
+    using namespace fo;
     using namespace pod_hash;
 
     memory_globals::init();

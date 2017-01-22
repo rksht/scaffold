@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <type_traits>
 
-namespace foundation {
+namespace fo {
 
 /// A data type that holds `num_int` packed unsigned integers which are
 /// representable with `bits_per_int` bits.

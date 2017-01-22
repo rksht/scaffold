@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <algorithm>
 
-using namespace foundation;
+using namespace fo;
 
 struct WordStore {
     PodHash<char *, char *> string_id;

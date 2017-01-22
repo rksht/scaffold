@@ -2,7 +2,7 @@
 
 #include "memory.h"
 
-namespace foundation {
+namespace fo {
 /// A temporary memory allocator that primarily allocates memory from a
 /// local stack buffer of size BUFFER_SIZE. If that memory is exhausted it will
 /// use the backing allocator (typically a scratch allocator).

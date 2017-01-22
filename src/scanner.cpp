@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-using namespace foundation;
+using namespace fo;
 using namespace string_stream;
 
 namespace scanner {

@@ -14,7 +14,7 @@
 /// If you want to store items that are not PODs, use something other than these
 /// collection
 /// classes.
-namespace foundation {
+namespace fo {
 /// Dynamically resizable array of POD objects.
 template <typename T> struct Array {
     static_assert(std::is_trivially_copy_assignable<T>::value,

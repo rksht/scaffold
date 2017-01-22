@@ -4,7 +4,7 @@
 
 #include <emmintrin.h>
 
-namespace foundation {
+namespace fo {
 struct Vector2 {
     float x, y;
 };

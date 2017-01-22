@@ -9,7 +9,7 @@
 
 /// A "buddy allocator"
 
-namespace foundation {
+namespace fo {
 
 // The algorithm is due to
 //
@@ -96,4 +96,4 @@ class BuddyAllocator : public Allocator {
 
 }; // class BuddyAllocator
 
-} // namespace foundation
+} // namespace fo

@@ -16,7 +16,7 @@
 #define ASSERT(x) log_assert(x, "TEST FAILED")
 
 namespace {
-using namespace foundation;
+using namespace fo;
 
 void test_memory() {
     memory_globals::init();

@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <time.h>
 
-using BA = foundation::BuddyAllocator;
+using BA = fo::BuddyAllocator;
 
 constexpr uint32_t BUFFER_SIZE = 16 << 20;  // 10 MB
 constexpr uint32_t SMALLEST_SIZE = 4 << 10; // 4 KB
@@ -27,9 +27,9 @@ int main(int argc, char **argv) {
 
     log_info("Seed used = %lu\n", seed);
 
-    foundation::memory_globals::init();
+    fo::memory_globals::init();
     {
-        BA ba(BUFFER_SIZE, SMALLEST_SIZE, foundation::memory_globals::default_allocator());
+        BA ba(BUFFER_SIZE, SMALLEST_SIZE, fo::memory_globals::default_allocator());
         printf("SIZE OF SMALLEST ARRAY = %zu, SMALLEST_SIZE = %u\n", sizeof(SmallestBlock), SMALLEST_SIZE);
         puts("Press enter to continue...");
         getchar();
@@ -97,6 +97,6 @@ int main(int argc, char **argv) {
             ba.deallocate(p);
         }
     }
-    foundation::memory_globals::shutdown();
+    fo::memory_globals::shutdown();
     fprintf(stderr, "Seed = %lu\n", seed);
 }

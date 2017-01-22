@@ -1,6 +1,6 @@
 #include <scaffold/murmur_hash.h>
 
-namespace foundation {
+namespace fo {
 uint64_t murmur_hash_64(const void *key, uint32_t len, uint64_t seed) {
     const uint64_t m = 0xc6a4a7935bd1e995ULL;
     const uint32_t r = 47;

@@ -34,7 +34,7 @@ const int DEFAULT_MODE = SCAN_INTS | SCAN_FLOATS | SCAN_STRINGS | SCAN_IDENTS;
 /// scans characters one by one and also interpretes escape codes.
 const int WHOLESTRING_MODE = SCAN_SPACES | SCAN_ESCAPES;
 
-using Buffer = foundation::string_stream::Buffer;
+using Buffer = fo::string_stream::Buffer;
 
 /// Contains the current state of the scanner. As you see, most of the fields
 /// are public.
@@ -63,7 +63,7 @@ const char *desc(int token);
 /// Fills the buffer with the current token text
 void token_text(const Scanner &s, Buffer &b);
 /// Overload of token_text that returns a null terminated c-string
-char *token_text(const Scanner &s, foundation::Allocator &a);
+char *token_text(const Scanner &s, fo::Allocator &a);
 
 /// Pushes into `b` all the characters from `raw` while decoding the escape
 /// codes in `raw` (e.g - The sequence of characters '\' and 'n' in `raw` will

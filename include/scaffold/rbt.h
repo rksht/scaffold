@@ -8,7 +8,7 @@
 #include <stdlib.h> // abort()
 
 /// Namespace rbt contains a non-owning red-black tree implementation.
-namespace foundation {
+namespace fo {
 
 namespace rbt {
 
@@ -67,10 +67,10 @@ template <typename K, typename V> struct RBT {
     } * _nil;
 
     /// The allocator that allocates the nil node
-    foundation::Allocator *_nil_alloc;
+    fo::Allocator *_nil_alloc;
 
     /// Constructor
-    RBT(foundation::Allocator &a) {
+    RBT(fo::Allocator &a) {
         _nil = (Nil *)a.allocate(sizeof(Nil), alignof(Nil));
         _nil->_color = BLACK;
         _nil->_parent = nullptr;
@@ -354,4 +354,4 @@ RBNode<K, V> *RBT<K, V>::_remove_fix(RBNode<K, V> *x) {
     return x;
 }
 } // namespace rbt
-} // namespace foundation
+} // namespace fo

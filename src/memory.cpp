@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-namespace foundation {
+namespace fo {
 void Allocator::set_name(const char *name, uint64_t len) {
     assert(len < ALLOCATOR_NAME_SIZE && "Allocator name too large");
     memcpy(_name, name, len);
@@ -24,7 +24,7 @@ void Allocator::set_name(const char *name, uint64_t len) {
 
 namespace {
 
-using namespace foundation;
+using namespace fo;
 
 // Header stored at the beginning of a memory allocation to indicate the
 // size of the allocated data.
@@ -269,7 +269,7 @@ struct MemoryGlobals {
 MemoryGlobals _memory_globals;
 } // anon namespace
 
-namespace foundation {
+namespace fo {
 
 namespace memory_globals {
 
@@ -319,4 +319,4 @@ void shutdown() {
     _memory_globals = MemoryGlobals();
 }
 } // namespace memory_globals
-} // namespace foundation
+} // namespace fo

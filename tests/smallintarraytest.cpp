@@ -8,12 +8,12 @@
 
 #include <stdlib.h> // rand()
 
-using foundation::PodHash;
-using namespace foundation::pod_hash;
-using foundation::SmallIntArray;
+using fo::PodHash;
+using namespace fo::pod_hash;
+using fo::SmallIntArray;
 
 TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
-    foundation::memory_globals::init();
+    fo::memory_globals::init();
     {
         SmallIntArray<4, 512> smallints;
         smallints.set(0, 9);
@@ -48,9 +48,9 @@ TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
             srand(0xbeef);
 
             PodHash<int, int> is_set(
-                foundation::memory_globals::default_allocator(),
-                foundation::memory_globals::default_allocator(),
-                foundation::usual_hash<int>, foundation::usual_equal<int>);
+                fo::memory_globals::default_allocator(),
+                fo::memory_globals::default_allocator(),
+                fo::usual_hash<int>, fo::usual_equal<int>);
 
             SECTION("Use as a bitset") {
                 for (int i = 0; i < 1000; ++i) {
@@ -112,17 +112,17 @@ TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
 #endif
         }
     }
-    foundation::memory_globals::shutdown();
+    fo::memory_globals::shutdown();
 }
 
 TEST_CASE("SmallIntArray with TempAllocator", "[SmallIntArray_temp]") {
-    foundation::memory_globals::init();
+    fo::memory_globals::init();
     {
         using Sia = SmallIntArray<4, 512, uint32_t>;
 
         REQUIRE(Sia::space_required() == 256);
 
-        foundation::TempAllocator<Sia::space_required()> temp_alloc;
+        fo::TempAllocator<Sia::space_required()> temp_alloc;
 
         Sia smallints{temp_alloc};
 
@@ -152,5 +152,5 @@ TEST_CASE("SmallIntArray with TempAllocator", "[SmallIntArray_temp]") {
             REQUIRE(smallints.get(0) == 7);
         }
     }
-    foundation::memory_globals::shutdown();
+    fo::memory_globals::shutdown();
 }

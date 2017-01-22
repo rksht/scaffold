@@ -8,9 +8,9 @@
 
 #include <stdio.h>
 
-namespace foundation {
+namespace fo {
 
-/// Functions operating on foundation::Array
+/// Functions operating on fo::Array
 namespace array {
 /// The number of elements in the array.
 template <typename T> uint32_t size(const Array<T> &a);
@@ -56,7 +56,7 @@ template <typename T> inline bool any(const Array<T> &a) { return a._size != 0; 
 template <typename T> inline bool empty(const Array<T> &a) { return a._size == 0; }
 
 /// Keeping these two `begin` and `end` functions in this namespace to be
-/// compatible with the original foundation code.
+/// compatible with the original fo code.
 template <typename T> typename Array<T>::iterator begin(Array<T> &a) { return a.begin(); }
 
 template <typename T> inline typename Array<T>::iterator end(Array<T> &a) { return a.end(); }

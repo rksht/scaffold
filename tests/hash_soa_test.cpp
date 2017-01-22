@@ -26,7 +26,7 @@ template <int size_in_bytes> struct Obj {
 
 namespace probed_hash {
 
-using namespace foundation;
+using namespace fo;
 
 /// Denotes an invalid index or key.
 static constexpr uint64_t TOMBSTONE = std::numeric_limits<uint64_t>::max();
@@ -159,7 +159,7 @@ uint64_t probed_hash_set_default(ProbedHash<T> &h, uint64_t key,
 
 #if 1
 int main() {
-    using namespace foundation;
+    using namespace fo;
     using namespace probed_hash;
 
     memory_globals::init();
@@ -203,7 +203,7 @@ int main() {
 
 #include <stdio.h>
 
-using namespace foundation;
+using namespace fo;
 using namespace probed_hash;
 
 struct WordStore {

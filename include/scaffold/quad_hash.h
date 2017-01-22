@@ -9,7 +9,7 @@
 
 #include <type_traits> // std::conditional
 
-namespace foundation {
+namespace fo {
 /// An open-addressed hash table demands two requirements of the type of the
 /// keys it will hold. First, there must be a value that is used to denote a
 /// 'nil' key, and second, there must be a value that denotes a 'deleted' key.
@@ -30,9 +30,9 @@ template <typename K> struct QuadDefault {
 
 /// Forward declaraing QuadHash
 template <typename K, typename V, typename Params = QuadDefault<K>> struct QuadHash;
-} // namespace foundation
+} // namespace fo
 
-namespace foundation {
+namespace fo {
 namespace quad_hash {
 
 /// Iterator for QuadHash
@@ -74,9 +74,9 @@ template <typename K, typename V, typename Params, bool is_const = true> struct 
     inline Iterator operator--(int);
 };
 } // namespace quad_hash
-} // namespace foundation
+} // namespace fo
 
-namespace foundation {
+namespace fo {
 /// The open-addressed hash table
 template <typename K, typename V, typename Params> struct QuadHash {
 
@@ -107,9 +107,9 @@ template <typename K, typename V, typename Params> struct QuadHash {
     iterator begin();
     iterator end();
 };
-} // namespace foundation
+} // namespace fo
 
-namespace foundation {
+namespace fo {
 namespace quad_hash {
 /// Denotes that key is not found
 constexpr uint32_t NOT_FOUND = 0xffffffffu;
@@ -135,13 +135,13 @@ uint32_t insert_key(QuadHash<K, V, Params> &h, const K &key);
 template <typename K, typename V, typename Params> void remove(QuadHash<K, V, Params> &h, const K &key);
 
 } // namespace quad_hash
-} // namespace foundation
+} // namespace fo
 
 //
 // ------ Implementations ------
 //
 
-namespace foundation {
+namespace fo {
 namespace quad_hash {
 
 template <typename K, typename V, typename Params, bool is_const>
@@ -219,9 +219,9 @@ Iterator<K, V, Params, is_const> Iterator<K, V, Params, is_const>::operator--(in
 }
 
 } // namespace quad_hash
-} // namespace foundation
+} // namespace fo
 
-namespace foundation {
+namespace fo {
 template <typename K, typename V, typename Params>
 QuadHash<K, V, Params>::QuadHash(Allocator &allocator, uint32_t initial_size,
                                  typename QuadHash<K, V, Params>::HashFn hash_fn,
@@ -239,9 +239,9 @@ QuadHash<K, V, Params>::QuadHash(Allocator &allocator, uint32_t initial_size,
         k = nil_ty::get();
     }
 }
-} // namespace foundation
+} // namespace fo
 
-namespace foundation {
+namespace fo {
 namespace quad_hash_internal {
 
 template <typename K, typename V, typename Params> void rehash_if_needed(QuadHash<K, V, Params> &h) {
@@ -274,9 +274,9 @@ template <typename K, typename V, typename Params> void rehash_if_needed(QuadHas
 }
 
 } // namespace quad_hash_internal
-} // namespace foundation
+} // namespace fo
 
-namespace foundation {
+namespace fo {
 namespace quad_hash {
 
 template <typename K, typename V, typename Params>
@@ -352,4 +352,4 @@ template <typename K, typename V, typename Params> void remove(QuadHash<K, V, Pa
 }
 
 } // namespace quad_hash
-} // namespace foundation
+} // namespace fo

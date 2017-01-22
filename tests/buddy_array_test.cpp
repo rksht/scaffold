@@ -9,7 +9,7 @@ constexpr uint32_t SMALLEST_SIZE = 8;      // 8 bytes
 template <size_t size> struct alignas(16) Ob { char _arr[size]; };
 
 int main() {
-    using namespace foundation;
+    using namespace fo;
 
     memory_globals::init();
     {

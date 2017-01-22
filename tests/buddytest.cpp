@@ -6,7 +6,7 @@
 #include <set>
 #include <time.h>
 
-using BA = foundation::BuddyAllocator;
+using BA = fo::BuddyAllocator;
 
 constexpr uint32_t BUFFER_SIZE = 400 << 10;  // 400 KB
 constexpr uint32_t SMALLEST_SIZE = 32 << 10; // 32 KB
@@ -22,9 +22,9 @@ using Block_64KB = Block<64 << 10>;
 int main(int argc, char **argv) {
     uint64_t seed = argc >= 2 ? strtoull(argv[1], nullptr, 10) : 100;
 
-    foundation::memory_globals::init();
+    fo::memory_globals::init();
     {
-        BA ba(BUFFER_SIZE, SMALLEST_SIZE, foundation::memory_globals::default_allocator());
+        BA ba(BUFFER_SIZE, SMALLEST_SIZE, fo::memory_globals::default_allocator());
         std::cerr << "SIZE OF SMALLEST ARRAY = " << sizeof(SmallestBlock) << std::endl;
 
         std::default_random_engine dre(seed);
@@ -82,6 +82,6 @@ int main(int argc, char **argv) {
 
         std::cerr << "BuddyAllocator object size = " << sizeof(ba) << "\n";
     }
-    foundation::memory_globals::shutdown();
+    fo::memory_globals::shutdown();
     fprintf(stderr, "Seed used = %lu\n", seed);
 }

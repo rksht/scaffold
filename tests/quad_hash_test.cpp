@@ -3,7 +3,7 @@
 
 #include <scaffold/quad_hash.h>
 
-namespace foundation {
+namespace fo {
 
 // QuadNil for our uint64_t
 template <> struct QuadNil<uint64_t> {
@@ -17,13 +17,13 @@ template <> struct QuadDeleted<uint64_t> {
 }
 
 TEST_CASE("QuadHash find", "[QuadHash_find]") {
-    foundation::memory_globals::init();
+    fo::memory_globals::init();
 
-    auto &alloc = foundation::memory_globals::default_allocator();
+    auto &alloc = fo::memory_globals::default_allocator();
 
-    using hash_type = foundation::QuadHash<uint64_t, uint64_t>;
+    using hash_type = fo::QuadHash<uint64_t, uint64_t>;
 
-    namespace quad_hash = foundation::quad_hash;
+    namespace quad_hash = fo::quad_hash;
 
     {
         hash_type h{alloc, 16, [](const auto &i) { return i & 0xffffffffu; },
@@ -39,18 +39,18 @@ TEST_CASE("QuadHash find", "[QuadHash_find]") {
         }
     }
 
-    foundation::memory_globals::shutdown();
+    fo::memory_globals::shutdown();
 }
 
 TEST_CASE("QuadHash remove", "[QuadHash_remove_rehash]") {
-    foundation::memory_globals::init();
+    fo::memory_globals::init();
 
-    auto &alloc = foundation::memory_globals::default_allocator();
+    auto &alloc = fo::memory_globals::default_allocator();
 
-    using hash_type = foundation::QuadHash<uint64_t, uint64_t>;
+    using hash_type = fo::QuadHash<uint64_t, uint64_t>;
 
-    namespace quad_hash = foundation::quad_hash;
-    namespace array = foundation::array;
+    namespace quad_hash = fo::quad_hash;
+    namespace array = fo::array;
 
     {
         hash_type h{alloc, 16, [](const auto &i) { return i & 0xffffffffu; },
@@ -78,18 +78,18 @@ TEST_CASE("QuadHash remove", "[QuadHash_remove_rehash]") {
         }
     }
 
-    foundation::memory_globals::shutdown();
+    fo::memory_globals::shutdown();
 }
 
 TEST_CASE("QuadHash key insert only", "[QuadHash_insert_key]") {
-    foundation::memory_globals::init();
+    fo::memory_globals::init();
 
-    auto &alloc = foundation::memory_globals::default_allocator();
+    auto &alloc = fo::memory_globals::default_allocator();
 
-    using hash_type = foundation::QuadHash<uint64_t, uint64_t>;
+    using hash_type = fo::QuadHash<uint64_t, uint64_t>;
 
-    namespace quad_hash = foundation::quad_hash;
-    namespace array = foundation::array;
+    namespace quad_hash = fo::quad_hash;
+    namespace array = fo::array;
 
     {
         hash_type h{alloc, 16, [](const auto &i) { return i & 0xffffffffu; },
@@ -118,5 +118,5 @@ TEST_CASE("QuadHash key insert only", "[QuadHash_insert_key]") {
         }
     }
 
-    foundation::memory_globals::shutdown();
+    fo::memory_globals::shutdown();
 }

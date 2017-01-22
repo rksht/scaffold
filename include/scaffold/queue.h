@@ -1,7 +1,7 @@
 #include "array.h"
 #include "collection_types.h"
 
-namespace foundation {
+namespace fo {
 namespace queue {
 /// Returns the number of items in the queue.
 template <typename T> uint32_t size(const Queue<T> &q);
@@ -27,7 +27,7 @@ template <typename T> void push(Queue<T> &q, const T *items, uint32_t n);
 
 /// Returns the begin and end of the continuous chunk of elements at
 /// the start of the queue. (Note that this chunk does not necessarily
-/// contain all the elements in the queue (if the queue wraps around
+/// contain all the elements in the queue if the queue wraps around
 /// the array).
 ///
 /// This is useful for when you want to process many queue elements at

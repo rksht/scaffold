@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <type_traits>
 
-namespace foundation {
+namespace fo {
 
 namespace pod_hash {
 namespace _internal {
@@ -38,8 +38,8 @@ template <typename K, typename V> struct PodHash {
 
     /// Both are const_iterator to the underlying array because we don't allow
     /// changing keys.
-    using iterator = typename foundation::Array<Entry>::const_iterator;
-    using const_iterator = typename foundation::Array<Entry>::const_iterator;
+    using iterator = typename fo::Array<Entry>::const_iterator;
+    using const_iterator = typename fo::Array<Entry>::const_iterator;
 
     /// Type of hashing function
     using HashFunc = std::function<uint64_t(K const &key)>;
@@ -49,10 +49,10 @@ template <typename K, typename V> struct PodHash {
     using EqualFunc = std::function<bool(K const &k1, K const &k2)>;
 
     /// Array mapping a hash to an entry index
-    foundation::Array<uint32_t> _hashes;
+    fo::Array<uint32_t> _hashes;
 
     /// Array of entries
-    foundation::Array<Entry> _entries;
+    fo::Array<Entry> _entries;
 
     /// The hash function to use
     HashFunc _hash_func;
@@ -61,7 +61,7 @@ template <typename K, typename V> struct PodHash {
     EqualFunc _equal_func;
 
     /// Constructor
-    PodHash(foundation::Allocator &hash_alloc, foundation::Allocator &entry_alloc, HashFunc hash_func,
+    PodHash(fo::Allocator &hash_alloc, fo::Allocator &entry_alloc, HashFunc hash_func,
             EqualFunc equal_func)
         : _hashes(hash_alloc)
         , _entries(entry_alloc)
@@ -90,10 +90,10 @@ template <typename K, typename V> typename PodHash<K, V>::iterator end(PodHash<K
     return h._entries.end();
 }
 
-} // namespace foundation
+} // namespace fo
 
 /// -- Functions to operate on PodHash
-namespace foundation {
+namespace fo {
 namespace pod_hash {
 
 /// Reserve space for `size` keys. Does not reserve space for the entries
@@ -127,7 +127,7 @@ template <typename K, typename V> void remove(PodHash<K, V> &h, const K &key);
 }
 }
 
-namespace foundation {
+namespace fo {
 namespace pod_hash {
 namespace _internal {
 
@@ -151,11 +151,11 @@ template <typename K, typename V> void insert(PodHash<K, V> &h, const K &key, co
 template <typename K, typename V> FindResult find(const PodHash<K, V> &h, const K &key) {
     FindResult fr = {END_OF_LIST, END_OF_LIST, END_OF_LIST};
 
-    if (foundation::array::size(h._hashes) == 0) {
+    if (fo::array::size(h._hashes) == 0) {
         return fr;
     }
 
-    fr.hash_i = h._hash_func(key) % foundation::array::size(h._hashes);
+    fr.hash_i = h._hash_func(key) % fo::array::size(h._hashes);
     fr.entry_i = h._hashes[fr.hash_i];
     while (fr.entry_i != END_OF_LIST) {
         if (h._equal_func(h._entries[fr.entry_i].key, key)) {
@@ -172,8 +172,8 @@ template <typename K, typename V> uint32_t push_entry(PodHash<K, V> &h, const K 
     typename PodHash<K, V>::Entry e;
     e.key = key;
     e.next = END_OF_LIST;
-    uint32_t ei = foundation::array::size(h._entries);
-    foundation::array::push_back(h._entries, e);
+    uint32_t ei = fo::array::size(h._entries);
+    fo::array::push_back(h._entries, e);
     return ei;
 }
 
@@ -215,9 +215,9 @@ template <typename K, typename V> void rehash(PodHash<K, V> &h, uint32_t new_siz
     PodHash<K, V> new_hash(*h._hashes._allocator, *h._entries._allocator, h._hash_func, h._equal_func);
 
     // Don't need the previous hashes.
-    foundation::array::free(h._hashes);
-    foundation::array::resize(new_hash._hashes, new_size);
-    foundation::array::reserve(new_hash._entries, foundation::array::size(h._entries));
+    fo::array::free(h._hashes);
+    fo::array::resize(new_hash._hashes, new_size);
+    fo::array::reserve(new_hash._entries, fo::array::size(h._entries));
 
     // Empty out hashes
     for (uint32_t &entry_i : new_hash._hashes) {
@@ -233,7 +233,7 @@ template <typename K, typename V> void rehash(PodHash<K, V> &h, uint32_t new_siz
 }
 
 template <typename K, typename V> void grow(PodHash<K, V> &h) {
-    uint32_t new_size = foundation::array::size(h._entries) * 2 + 10;
+    uint32_t new_size = fo::array::size(h._entries) * 2 + 10;
     rehash(h, new_size);
 }
 
@@ -243,7 +243,7 @@ template <typename K, typename V> void grow(PodHash<K, V> &h) {
 /// too.
 template <typename K, typename V> bool full(const PodHash<K, V> &h) {
     const float max_load_factor = 0.7;
-    return foundation::array::size(h._entries) >= foundation::array::size(h._hashes) * max_load_factor;
+    return fo::array::size(h._entries) >= fo::array::size(h._hashes) * max_load_factor;
 }
 
 /// Inserts an entry by simply appending to the chain, so if no chain already
@@ -251,7 +251,7 @@ template <typename K, typename V> bool full(const PodHash<K, V> &h) {
 /// just adds a new entry to the chain, and does not overwrite any entry having
 /// the same key
 template <typename K, typename V> void insert(PodHash<K, V> &h, const K &key, const V &value) {
-    if (foundation::array::size(h._hashes) == 0) {
+    if (fo::array::size(h._hashes) == 0) {
         grow(h);
     }
 
@@ -270,13 +270,13 @@ template <typename K, typename V> void erase(PodHash<K, V> &h, const FindResult 
         h._entries[fr.entry_prev].next = h._entries[fr.entry_i].next;
     }
 
-    if (fr.entry_i == foundation::array::size(h._entries) - 1) {
-        foundation::array::pop_back(h._entries);
+    if (fr.entry_i == fo::array::size(h._entries) - 1) {
+        fo::array::pop_back(h._entries);
         return;
     }
 
-    h._entries[fr.entry_i] = h._entries[foundation::array::size(h._entries) - 1];
-    foundation::array::pop_back(h._entries);
+    h._entries[fr.entry_i] = h._entries[fo::array::size(h._entries) - 1];
+    fo::array::pop_back(h._entries);
     FindResult last = find(h, h._entries[fr.entry_i].key);
 
     if (last.entry_prev == END_OF_LIST) {
@@ -296,9 +296,9 @@ template <typename K, typename V> void find_and_erase(PodHash<K, V> &h, const K 
 
 } // namespace _internal
 } // namespace pod_hash
-} // namespace foundation
+} // namespace fo
 
-namespace foundation {
+namespace fo {
 namespace pod_hash {
 
 template <typename K, typename V> void reserve(PodHash<K, V> &h, uint32_t size) {
@@ -306,7 +306,7 @@ template <typename K, typename V> void reserve(PodHash<K, V> &h, uint32_t size) 
 }
 
 template <typename K, typename V> void set(PodHash<K, V> &h, const K &key, const V &value) {
-    if (foundation::array::size(h._hashes) == 0) {
+    if (fo::array::size(h._hashes) == 0) {
         _internal::grow(h);
     }
     const uint32_t ei = _internal::find_or_make(h, key);
@@ -332,7 +332,7 @@ template <typename K, typename V> typename PodHash<K, V>::iterator get(const Pod
 template <typename K, typename V> V &set_default(PodHash<K, V> &h, const K &key, const V &deffault) {
     _internal::FindResult fr = _internal::find(h, key);
     if (fr.entry_i == _internal::END_OF_LIST) {
-        if (foundation::array::size(h._hashes) == 0) {
+        if (fo::array::size(h._hashes) == 0) {
             _internal::grow(h);
         }
         const uint32_t ei = _internal::make(h, key);
@@ -363,7 +363,7 @@ template <typename K, typename V> void remove(PodHash<K, V> &h, const K &key) {
 template <typename K, typename V> uint32_t max_chain_length(const PodHash<K, V> &h) {
     uint32_t max_length = 0;
 
-    for (uint32_t i = 0; i < foundation::array::size(h._entries); ++i) {
+    for (uint32_t i = 0; i < fo::array::size(h._entries); ++i) {
         if (h._hashes[i] == _internal::END_OF_LIST) {
             continue;
         }
@@ -383,4 +383,4 @@ template <typename K, typename V> uint32_t max_chain_length(const PodHash<K, V> 
 }
 } // namespace pod_hash
 
-} // namespace foundation
+} // namespace fo

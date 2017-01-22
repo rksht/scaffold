@@ -1,5 +1,5 @@
 #pragma once
 
-namespace foundation {
+namespace fo {
 class Allocator;
 }

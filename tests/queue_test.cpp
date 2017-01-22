@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <assert.h>
 
-using namespace foundation;
+using namespace fo;
 
 int main() {
     memory_globals::init();

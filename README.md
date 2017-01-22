@@ -19,7 +19,7 @@ The containers in `collection_types.h`
 - `Queue<T>`
 - `Hash<T>`
 
-are mostly the same as in `foundation` library. `Array<T>` is made to support
+are mostly the same as in `fo` library. `Array<T>` is made to support
 move semantics.
 
 The `pod_hash.h` file contains a generalized implementation of `Hash<T>`,

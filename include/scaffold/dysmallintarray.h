@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <type_traits>
 
-namespace foundation {
+namespace fo {
 
 template <typename Word = unsigned long, typename GetTy = Word> struct DySmallIntArray {
     static_assert(std::is_integral<Word>::value, "DySmallIntArray - Not an integral base type");

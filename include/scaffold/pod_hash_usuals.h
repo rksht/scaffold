@@ -3,7 +3,7 @@
 #include "pod_hash.h"
 #include <assert.h>
 
-namespace foundation {
+namespace fo {
 // Templates for usual hash and equal functions. Undefined.
 template <typename T> uint64_t usual_hash(T const &k);
 template <typename T> bool usual_equal(T const &k1, T const &k2);
@@ -43,4 +43,4 @@ template <> inline bool usual_equal(uint64_t const &n1, uint64_t const &n2) {
     return n1 == n2;
 }
 
-} // namespace foundation
+} // namespace fo

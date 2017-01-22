@@ -7,7 +7,7 @@
 #include <iostream>
 #include <string>
 
-using namespace foundation::rbt;
+using namespace fo::rbt;
 using Tree = RBT<int, int>;
 const size_t num_nodes = 100;
 
@@ -40,7 +40,7 @@ void print_dot_format(const RBNode<int, int> *nil,
 
 int main() {
 
-    using namespace foundation;
+    using namespace fo;
 
     memory_globals::init();
 
@@ -59,7 +59,7 @@ int main() {
         }
 
         // Create the tree
-        Tree tree(foundation::memory_globals::default_allocator());
+        Tree tree(fo::memory_globals::default_allocator());
 
         // Insert the node pointers
         for (auto &node : node_store) {
