@@ -57,20 +57,20 @@ template <typename K, typename V, typename Params, bool is_const = true> struct 
   private:
     // Sets _cur_key to point to the next valid key. If no such key exists, it
     // will point to the end of the key array.
-    inline void _next_valid();
+    void _next_valid();
     // Sets _cur_key to point to the previous valid key. If no such key
     // exists, it will point to the end of the key array.
-    inline void _prev_valid();
+    void _prev_valid();
 
   public:
     Iterator(quad_hash_ty &q);
     inline bool operator==(const Iterator &other);
     inline bool operator!=(const Iterator &other);
     /// Increments until valid key is hit
-    Iterator &operator++();
+    inline Iterator &operator++();
     inline Iterator operator++(int);
     /// Decrements until valid key is hit
-    Iterator &operator--();
+    inline Iterator &operator--();
     inline Iterator operator--(int);
 };
 } // namespace quad_hash

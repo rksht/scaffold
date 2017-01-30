@@ -107,9 +107,8 @@ template <typename K, typename V> void set(PodHash<K, V> &h, const K &key, const
 /// Returns true if an entry with the given key is present.
 template <typename K, typename V> bool has(const PodHash<K, V> &h, const K &key);
 
-/// Returns an object containing the fields `bool present` and `V &value`. If
-/// a value is associated with the given key, present will be true and value
-/// will refer to the associated value. Otherwise present will be false.
+/// Returns an iterator to the entry containing given `key`, if present.
+/// Otherwise returns an iterator pointing to the end.
 template <typename K, typename V> typename PodHash<K, V>::iterator get(const PodHash<K, V> &h, const K &key);
 
 /// Sets the given key's associated value to the given default value if no
