@@ -114,11 +114,18 @@ namespace quad_hash {
 /// Denotes that key is not found
 constexpr uint32_t NOT_FOUND = 0xffffffffu;
 
-/// Returns -1 if given `key` is not associated with any value. Otherwise
-/// returns an integer i such that h->_values[i] contains the associated
-/// value.
+/// Returns NOT_FOUND if given `key` is not associated with any value.
+/// Otherwise returns an integer i such that calling `value` will return a
+/// reference to the value.
 template <typename K, typename V, typename Params>
 uint32_t find(const QuadHash<K, V, Params> &h, const K &key);
+
+/// Returns the value at the given index
+template <typename K, typename V, typename Params> V &value(QuadHash<K, V, Params> &h, uint32_t index);
+
+/// Returns the value at the given index (const reference)
+template <typename K, typename V, typename Params>
+const V &value(const QuadHash<K, V, Params> &h, uint32_t index);
 
 /// Associates the given value with the given key. May trigger a rehash if key
 /// doesn't exist already. Returns the position of the value.
@@ -295,6 +302,17 @@ uint32_t find(const QuadHash<K, V, Params> &h, const K &key) {
         }
     }
     return NOT_FOUND;
+}
+
+/// Returns the value at the given index
+template <typename K, typename V, typename Params> V &value(QuadHash<K, V, Params> &h, uint32_t index) {
+    assert(index != NOT_FOUND);
+    return h._values[index];
+}
+
+template <typename K, typename V, typename Params> V &value(const QuadHash<K, V, Params> &h, uint32_t index) {
+    assert(index != NOT_FOUND);
+    return h._values[index];
 }
 
 template <typename K, typename V, typename Params>

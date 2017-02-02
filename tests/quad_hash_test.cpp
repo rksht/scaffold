@@ -31,9 +31,9 @@ TEST_CASE("QuadHash find", "[QuadHash_find]") {
 
         for (uint64_t k = 0; k < 1024; ++k) {
             for (uint64_t prev_k = 0; prev_k < k; ++prev_k) {
-                auto idx = quad_hash::find(h, prev_k);
-                REQUIRE(idx != quad_hash::NOT_FOUND);
-                REQUIRE(h._values[idx] == 1024 - prev_k);
+                auto i = quad_hash::find(h, prev_k);
+                REQUIRE(i != quad_hash::NOT_FOUND);
+                REQUIRE(quad_hash::value(h, i) == 1024 - prev_k);
             }
             quad_hash::set(h, k, 1024 - k);
         }
@@ -74,7 +74,7 @@ TEST_CASE("QuadHash remove", "[QuadHash_remove_rehash]") {
         for (uint64_t k = 0; k < 1024; ++k) {
             uint32_t i = quad_hash::find(h, k);
             REQUIRE(i != quad_hash::NOT_FOUND);
-            REQUIRE(h._values[i] == 1024 - k);
+            REQUIRE(quad_hash::value(h, i) == 1024 - k);
         }
     }
 
@@ -114,7 +114,7 @@ TEST_CASE("QuadHash key insert only", "[QuadHash_insert_key]") {
         for (uint64_t k = 0; k < 1024; ++k) {
             uint32_t i = quad_hash::find(h, k);
             REQUIRE(i != quad_hash::NOT_FOUND);
-            REQUIRE(h._values[i] == 1024 - k);
+            REQUIRE(quad_hash::value(h, i) == 1024 - k);
         }
     }
 

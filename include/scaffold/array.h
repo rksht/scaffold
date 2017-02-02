@@ -26,6 +26,10 @@ template <typename T> const T &front(const Array<T> &a);
 template <typename T> T &back(Array<T> &a);
 template <typename T> const T &back(const Array<T> &a);
 
+/// Returns pointer to first element of array
+template <typename T> T *data(Array<T> &a);
+template <typename T> const T *data(const Array<T> &a);
+
 /// Changes the size of the array (does not reallocate memory unless necessary).
 template <typename T> void resize(Array<T> &a, uint32_t new_size);
 /// Removes all items in the array but does not free memory
@@ -65,6 +69,9 @@ template <typename T> inline T &front(Array<T> &a) { return a._data[0]; }
 template <typename T> inline const T &front(const Array<T> &a) { return a._data[0]; }
 template <typename T> inline T &back(Array<T> &a) { return a._data[a._size - 1]; }
 template <typename T> inline const T &back(const Array<T> &a) { return a._data[a._size - 1]; }
+
+template <typename T> T *data(Array<T> &a) { return (T *)a._data; }
+template <typename T> const T *data(const Array<T> &a) { return (const T *)a._data; }
 
 template <typename T> inline void clear(Array<T> &a) { resize(a, 0); }
 
