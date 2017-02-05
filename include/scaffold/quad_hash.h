@@ -87,6 +87,15 @@ template <typename K, typename V, typename Params> V &value(QuadHash<K, V, Param
 template <typename K, typename V, typename Params>
 const V &value(const QuadHash<K, V, Params> &h, uint32_t index);
 
+/// Returns the value associated with the given key. Key must exist.
+template <typename K, typename V, typename Params>
+const V &must_value(const QuadHash<K, V, Params> &h, const K &key);
+
+/// Returns the value associated with the given key (const reference). Key
+/// must exist.
+template <typename K, typename V, typename Params>
+const V &must_value(const QuadHash<K, V, Params> &h, const K &key);
+
 /// Associates the given value with the given key. May trigger a rehash if key
 /// doesn't exist already. Returns the position of the value.
 template <typename K, typename V, typename Params>
@@ -304,6 +313,19 @@ template <typename K, typename V, typename Params> V &value(const QuadHash<K, V,
     assert(index != NOT_FOUND);
     const V *values = (const V *)(h._buffer + h._values_offset);
     return values[index];
+}
+
+template <typename K, typename V, typename Params> V &must_value(QuadHash<K, V, Params> &h, const K &key) {
+    uint32_t i = find(h, key);
+    assert(i != NOT_FOUND);
+    return value(h, i);
+}
+
+template <typename K, typename V, typename Params>
+const V &must_value(const QuadHash<K, V, Params> &h, const K &key) {
+    uint32_t i = find(h, key);
+    assert(i != NOT_FOUND);
+    return value(h, i);
 }
 
 template <typename K, typename V, typename Params>
