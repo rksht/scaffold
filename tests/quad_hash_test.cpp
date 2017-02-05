@@ -66,7 +66,7 @@ TEST_CASE("QuadHash remove", "[QuadHash_remove_rehash]") {
         }
         // Insert that half again - should not reallocate array with larger
         // size
-        uint32_t size = array::size(h._keys);
+        uint32_t size = h._num_slots;
         for (uint64_t k = 0; k < 1024 / 2; ++k) {
             quad_hash::set(h, k, 1024 - k);
         }
@@ -97,7 +97,7 @@ TEST_CASE("QuadHash key insert only", "[QuadHash_insert_key]") {
 
         for (uint64_t k = 0; k < 1024; ++k) {
             auto index = quad_hash::insert_key(h, k);
-            h._values[index] = 1024 - k;
+            quad_hash::value(h, index) = 1024 - k;
         }
 
         // Remove half
@@ -106,7 +106,7 @@ TEST_CASE("QuadHash key insert only", "[QuadHash_insert_key]") {
         }
         // Insert that half again - should not reallocate array with larger
         // size
-        uint32_t size = array::size(h._keys);
+        uint32_t size = h._num_slots;
         for (uint64_t k = 0; k < 1024 / 2; ++k) {
             quad_hash::set(h, k, 1024 - k);
         }

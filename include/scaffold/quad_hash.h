@@ -33,50 +33,6 @@ template <typename K, typename V, typename Params = QuadDefault<K>> struct QuadH
 } // namespace fo
 
 namespace fo {
-namespace quad_hash {
-
-/// Iterator for QuadHash
-template <typename K, typename V, typename Params, bool is_const = true> struct Iterator {
-  private:
-    using nil_ty = typename Params::QuadNilTy;
-    using deleted_ty = typename Params::QuadDeletedTy;
-
-    // Key pointer should always be to const keys
-    using key_ptr = const K *;
-    // Value pointer will depend
-    using value_ptr = std::conditional_t<is_const, const V *, V *>;
-    using quad_hash_ty = std::conditional_t<is_const, QuadHash<K, V, Params>, const QuadHash<K, V, Params>>;
-
-    key_ptr _cur_key;
-    key_ptr _key_end;
-    key_ptr _key_start;
-    value_ptr _cur_value;
-    value_ptr _value_end;
-    value_ptr _value_start;
-
-  private:
-    // Sets _cur_key to point to the next valid key. If no such key exists, it
-    // will point to the end of the key array.
-    void _next_valid();
-    // Sets _cur_key to point to the previous valid key. If no such key
-    // exists, it will point to the end of the key array.
-    void _prev_valid();
-
-  public:
-    Iterator(quad_hash_ty &q);
-    inline bool operator==(const Iterator &other);
-    inline bool operator!=(const Iterator &other);
-    /// Increments until valid key is hit
-    inline Iterator &operator++();
-    inline Iterator operator++(int);
-    /// Decrements until valid key is hit
-    inline Iterator &operator--();
-    inline Iterator operator--(int);
-};
-} // namespace quad_hash
-} // namespace fo
-
-namespace fo {
 /// The open-addressed hash table
 template <typename K, typename V, typename Params> struct QuadHash {
 
@@ -88,24 +44,28 @@ template <typename K, typename V, typename Params> struct QuadHash {
     using HashFn = std::function<uint32_t(const K &)>;
     using EqualFn = std::function<bool(const K &, const K &)>;
 
-    HashFn _hash_fn;       // Hash function
-    EqualFn _equal_fn;     // Equal comparison
-    Array<K> _keys;        // Array containing keys
-    Array<V> _values;      // Array containing corresponding values
-    uint32_t _num_valid;   // Number of valid entries
-    uint32_t _num_deleted; // Number of deleted entries
+    uint32_t _num_valid;     // Number of valid entries
+    uint32_t _num_deleted;   // Number of deleted entries
+    uint32_t _num_slots;     // Number of slots (valid, deleted, nil)
+    HashFn _hash_fn;         // Hash function
+    EqualFn _equal_fn;       // Equal comparison
+    uint8_t *_buffer;        // Pointer to the buffer where we keep the keys and value arrays
+    uint32_t _keys_offset;   // Offset of keys array
+    uint32_t _values_offset; // Offset of values array
+    Allocator *_allocator;   // Buffer allocator
 
     /// Creates a hash table able to hold `initial_size` number of elements
     /// without rehashing.
     QuadHash(Allocator &allocator, uint32_t initial_size, HashFn hash_fn, EqualFn equal_fn);
-
-    /// Iterators
-    using iterator = quad_hash::Iterator<K, V, Params, false>;
-    using const_iterator = quad_hash::Iterator<K, V, Params, true>;
-    const_iterator begin() const;
-    const_iterator end() const;
-    iterator begin();
-    iterator end();
+    /// Copy-constructs
+    QuadHash(const QuadHash &other);
+    /// Move-constructs. The other table becomes invalid for all operations.
+    QuadHash(QuadHash &&other);
+    /// Copy assigns
+    QuadHash &operator=(const QuadHash &other);
+    /// Move assigns. The other table becomes invalid for all operations.
+    QuadHash &operator=(QuadHash &&other);
+    ~QuadHash();
 };
 } // namespace fo
 
@@ -144,87 +104,22 @@ template <typename K, typename V, typename Params> void remove(QuadHash<K, V, Pa
 } // namespace quad_hash
 } // namespace fo
 
-//
-// ------ Implementations ------
-//
+// --- Implementations
 
 namespace fo {
 namespace quad_hash {
+namespace internal {
 
-template <typename K, typename V, typename Params, bool is_const>
-void Iterator<K, V, Params, is_const>::_next_valid() {
-    while (_cur_key != _key_end) {
-        if (*_cur_key == nil_ty::get() || *_cur_key == deleted_ty::get()) {
-            ++_cur_key;
-            ++_cur_value;
-        } else {
-            return;
-        }
-    }
-}
+// Calculates key and value array offsets
+template <typename K, typename V, typename Params>
+uint32_t allocate_buffer(QuadHash<K, V, Params> *q, uint32_t num_slots);
 
-template <typename K, typename V, typename Params, bool is_const>
-void Iterator<K, V, Params, is_const>::_prev_valid() {
-    while (_cur_key >= _key_start) {
-        if (*_cur_key == nil_ty::get() || *_cur_key == deleted_ty::get()) {
-            --_cur_key;
-            --_cur_value;
-        }
-    }
-    _cur_key = _key_end;
-    _cur_value = nullptr;
-}
+// Destroys a hash table
+template <typename K, typename V, typename Params> void destroy(QuadHash<K, V, Params> *q, bool moved_from);
 
-template <typename K, typename V, typename Params, bool is_const>
-Iterator<K, V, Params, is_const>::Iterator(quad_hash_ty &q)
-    : _cur_key{array::begin(q._keys)}
-    , _key_end{array::end(q._keys)}
-    , _key_start{_cur_key}
-    , _cur_value{array::begin(q._values)}
-    , _value_end{array::end(q._values)}
-    , _value_start{_cur_value} {
-
-    // Maintain the invariant that the iterator always points to a valid key
-    if (*_cur_key == nil_ty::get() || *_cur_key == deleted_ty::get()) {
-        operator++();
-    }
-}
-
-template <typename K, typename V, typename Params, bool is_const>
-bool Iterator<K, V, Params, is_const>::operator==(const Iterator &other) {
-    return _cur_key == other._cur_key;
-}
-
-template <typename K, typename V, typename Params, bool is_const>
-bool Iterator<K, V, Params, is_const>::operator!=(const Iterator<K, V, Params, is_const> &other) {
-    return !(*this == other);
-}
-template <typename K, typename V, typename Params, bool is_const>
-Iterator<K, V, Params, is_const> &Iterator<K, V, Params, is_const>::operator++() {
-    _next_valid();
-    return *this;
-}
-
-template <typename K, typename V, typename Params, bool is_const>
-Iterator<K, V, Params, is_const> Iterator<K, V, Params, is_const>::operator++(int) {
-    Iterator saved{*this};
-    operator++();
-    return saved;
-}
-
-template <typename K, typename V, typename Params, bool is_const>
-Iterator<K, V, Params, is_const> &Iterator<K, V, Params, is_const>::operator--() {
-    _prev_valid();
-    return *this;
-}
-
-template <typename K, typename V, typename Params, bool is_const>
-Iterator<K, V, Params, is_const> Iterator<K, V, Params, is_const>::operator--(int) {
-    Iterator saved{*this};
-    operator--();
-    return saved;
-}
-
+// Rehashes
+template <typename K, typename V, typename Params> void rehash_if_needed(QuadHash<K, V, Params> &h);
+} // namespace internal
 } // namespace quad_hash
 } // namespace fo
 
@@ -233,33 +128,120 @@ template <typename K, typename V, typename Params>
 QuadHash<K, V, Params>::QuadHash(Allocator &allocator, uint32_t initial_size,
                                  typename QuadHash<K, V, Params>::HashFn hash_fn,
                                  typename QuadHash<K, V, Params>::EqualFn equal_fn)
-    : _hash_fn(hash_fn)
-    , _equal_fn(equal_fn)
-    , _keys(allocator)
-    , _values(allocator)
-    , _num_valid(0)
-    , _num_deleted(0) {
-    array::resize(_keys, clip_to_power_of_2(initial_size));
-    array::resize(_values, clip_to_power_of_2(initial_size));
+    : _num_valid(0)
+    , _num_deleted(0)
+    , _num_slots(0)
+    , _hash_fn(hash_fn)
+    , _equal_fn(equal_fn) {
+    _allocator = &allocator;
+
+    _num_slots = clip_to_power_of_2(initial_size);
+    quad_hash::internal::allocate_buffer(this, _num_slots);
+
+    K *keys = (K *)(_buffer + _keys_offset);
+
     using nil_ty = typename Params::QuadNilTy;
-    for (auto &k : _keys) {
-        k = nil_ty::get();
+    for (uint32_t i = 0; i < _num_slots; ++i) {
+        keys[i] = nil_ty::get();
     }
 }
+template <typename K, typename V, typename Params>
+QuadHash<K, V, Params>::QuadHash(const QuadHash &other)
+    : _num_valid(other._num_valid)
+    , _num_deleted(other._num_deleted)
+    , _num_slots(other._num_slots)
+    , _hash_fn(other._hash_fn)
+    , _equal_fn(other._equal_fn) {
+    _allocator = other._allocator;
+    uint32_t buffer_size = quad_hash::internal::allocate_buffer(this, _num_slots);
+    memcpy(_buffer, other._buffer, buffer_size);
+}
+template <typename K, typename V, typename Params>
+QuadHash<K, V, Params>::QuadHash(QuadHash<K, V, Params> &&other)
+    : _num_valid(other._num_valid)
+    , _num_deleted(other._num_deleted)
+    , _num_slots(other._num_slots)
+    , _hash_fn(other._hash_fn)
+    , _equal_fn(other._equal_fn)
+    , _buffer(other._buffer)
+    , _keys_offset(other._keys_offset)
+    , _values_offset(other._values_offset)
+    , _allocator(other._allocator) {
+    quad_hash::internal::destroy(&other, true);
+}
+
+template <typename K, typename V, typename Params>
+QuadHash<K, V, Params> &QuadHash<K, V, Params>::operator=(QuadHash &&other) {
+    if (this != &other) {
+        if (_allocator != nullptr) {
+            _allocator->deallocate(_buffer);
+        }
+        _num_valid = other._num_valid;
+        _num_deleted = other._num_deleted;
+        _num_slots = other._num_slots;
+        _hash_fn = other._hash_fn;
+        _equal_fn = other._equal_fn;
+        _buffer = other._buffer;
+        _keys_offset = other._keys_offset;
+        _values_offset = other._values_offset;
+        _allocator = other._allocator;
+        quad_hash::internal::destroy(&other, true);
+    }
+    return *this;
+}
+
+template <typename K, typename V, typename Params> QuadHash<K, V, Params>::~QuadHash() {
+    quad_hash::internal::destroy(this, false);
+}
+
 } // namespace fo
 
 namespace fo {
-namespace quad_hash_internal {
+namespace quad_hash {
+namespace internal {
+
+template <typename K, typename V, typename Params>
+uint32_t allocate_buffer(QuadHash<K, V, Params> *q, uint32_t num_slots) {
+    // Using the one with the stricter alignment. Larger one is kept first in the buffer.
+    constexpr uint16_t _buffer_align = alignof(K) > alignof(V) ? alignof(K) : alignof(V);
+    if (_buffer_align == alignof(K)) {
+        q->_keys_offset = 0;
+        q->_values_offset = sizeof(K) * num_slots;
+    } else {
+        q->_values_offset = 0;
+        q->_keys_offset = sizeof(V) * num_slots;
+    }
+    uint32_t buffer_size = sizeof(K) * num_slots + sizeof(V) * num_slots;
+    q->_buffer = (uint8_t *)q->_allocator->allocate(buffer_size, _buffer_align);
+    return buffer_size;
+}
+
+template <typename K, typename V, typename Params> void destroy(QuadHash<K, V, Params> *q, bool moved_from) {
+    // allocator non null denotes valid object
+    if (q->_allocator) {
+        // Only deallocate if this was not moved from
+        if (!moved_from) {
+            q->_allocator->deallocate(q->_buffer);
+        }
+        q->_allocator = nullptr;
+        q->_buffer = nullptr;
+        q->_num_deleted = 0;
+        q->_num_valid = 0;
+        q->_num_slots = 0;
+        q->_keys_offset = 0;
+        q->_values_offset = 0;
+    }
+}
 
 template <typename K, typename V, typename Params> void rehash_if_needed(QuadHash<K, V, Params> &h) {
     using nil_ty = typename Params::QuadNilTy;
     using deleted_ty = typename Params::QuadDeletedTy;
 
     static constexpr float max_load_factor = 0.5;
-    const uint32_t array_size = array::size(h._keys);
+    // const uint32_t array_size = array::size(h._keys);
 
-    const float real_load_factor = (h._num_valid + h._num_deleted) / float(array_size);
-    const float valid_load_factor = h._num_valid / float(array_size);
+    const float real_load_factor = (h._num_valid + h._num_deleted) / float(h._num_slots);
+    const float valid_load_factor = h._num_valid / float(h._num_slots);
 
     if (real_load_factor < max_load_factor) {
         return;
@@ -267,20 +249,24 @@ template <typename K, typename V, typename Params> void rehash_if_needed(QuadHas
 
     // Check and see if we do not actually need to double the size, since only
     // valid entries will be entered
-    uint32_t new_size = valid_load_factor >= max_load_factor ? array_size * 2 : array_size;
+    uint32_t new_size = valid_load_factor >= max_load_factor ? h._num_slots * 2 : h._num_slots;
 
-    QuadHash<K, V, Params> new_h{*h._keys._allocator, new_size, h._hash_fn, h._equal_fn};
+    QuadHash<K, V, Params> new_h{*h._allocator, new_size, h._hash_fn, h._equal_fn};
 
-    for (uint32_t i = 0; i < array_size; ++i) {
-        const K &key = h._keys[i];
+    K *keys = (K *)(h._buffer + h._keys_offset);
+    V *values = (V *)(h._buffer + h._values_offset);
+
+    for (uint32_t i = 0; i < h._num_slots; ++i) {
+        const K &key = keys[i];
         if (!h._equal_fn(key, nil_ty::get()) && !h._equal_fn(key, deleted_ty::get())) {
-            quad_hash::set(new_h, key, h._values[i]);
+            quad_hash::set(new_h, key, values[i]);
         }
     }
     std::swap(h, new_h);
 }
 
-} // namespace quad_hash_internal
+} // namespace internal
+} // namespace quad_hash
 } // namespace fo
 
 namespace fo {
@@ -292,12 +278,15 @@ uint32_t find(const QuadHash<K, V, Params> &h, const K &key) {
 
     uint32_t idx = h._hash_fn(key);
 
-    for (uint32_t i = 0; i < array::size(h._keys); ++i) {
-        idx = (idx + i) % array::size(h._keys);
-        if (h._equal_fn(h._keys[idx], key)) {
+    K *keys = (K *)(h._buffer + h._keys_offset);
+    V *values = (V *)(h._buffer + h._values_offset);
+
+    for (uint32_t i = 0; i < h._num_slots; ++i) {
+        idx = (idx + i) % h._num_slots;
+        if (h._equal_fn(keys[idx], key)) {
             return idx;
         }
-        if (h._equal_fn(h._keys[idx], nil_ty::get())) {
+        if (h._equal_fn(keys[idx], nil_ty::get())) {
             return NOT_FOUND;
         }
     }
@@ -307,27 +296,32 @@ uint32_t find(const QuadHash<K, V, Params> &h, const K &key) {
 /// Returns the value at the given index
 template <typename K, typename V, typename Params> V &value(QuadHash<K, V, Params> &h, uint32_t index) {
     assert(index != NOT_FOUND);
-    return h._values[index];
+    V *values = (V *)(h._buffer + h._values_offset);
+    return values[index];
 }
 
 template <typename K, typename V, typename Params> V &value(const QuadHash<K, V, Params> &h, uint32_t index) {
     assert(index != NOT_FOUND);
-    return h._values[index];
+    const V *values = (const V *)(h._buffer + h._values_offset);
+    return values[index];
 }
 
 template <typename K, typename V, typename Params>
 void set(QuadHash<K, V, Params> &h, const K &key, const V &value) {
     using nil_ty = typename Params::QuadNilTy;
 
-    quad_hash_internal::rehash_if_needed(h);
+    internal::rehash_if_needed(h);
 
     uint64_t idx = h._hash_fn(key);
 
-    for (uint32_t i = 0; i < array::size(h._keys); ++i) {
-        idx = (idx + i) % array::size(h._keys);
-        if (h._equal_fn(h._keys[idx], nil_ty::get()) || h._equal_fn(h._keys[idx], key)) {
-            h._keys[idx] = key;
-            h._values[idx] = value;
+    K *keys = (K *)(h._buffer + h._keys_offset);
+    V *values = (V *)(h._buffer + h._values_offset);
+
+    for (uint32_t i = 0; i < h._num_slots; ++i) {
+        idx = (idx + i) % h._num_slots;
+        if (h._equal_fn(keys[idx], nil_ty::get()) || h._equal_fn(keys[idx], key)) {
+            keys[idx] = key;
+            values[idx] = value;
             ++h._num_valid;
             return;
         }
@@ -342,14 +336,17 @@ uint32_t insert_key(QuadHash<K, V, Params> &h, const K &key) {
     // index where we inserted.
     using nil_ty = typename Params::QuadNilTy;
 
-    quad_hash_internal::rehash_if_needed(h);
+    internal::rehash_if_needed(h);
 
     uint64_t idx = h._hash_fn(key);
 
-    for (uint32_t i = 0; i < array::size(h._keys); ++i) {
-        idx = (idx + i) % array::size(h._keys);
-        if (h._equal_fn(h._keys[idx], nil_ty::get()) || h._equal_fn(h._keys[idx], key)) {
-            h._keys[idx] = key;
+    K *keys = (K *)(h._buffer + h._keys_offset);
+    V *values = (V *)(h._buffer + h._values_offset);
+
+    for (uint32_t i = 0; i < h._num_slots; ++i) {
+        idx = (idx + i) % h._num_slots;
+        if (h._equal_fn(keys[idx], nil_ty::get()) || h._equal_fn(keys[idx], key)) {
+            keys[idx] = key;
             ++h._num_valid;
             return idx;
         }
@@ -362,12 +359,13 @@ uint32_t insert_key(QuadHash<K, V, Params> &h, const K &key) {
 template <typename K, typename V, typename Params> void remove(QuadHash<K, V, Params> &h, const K &key) {
     using deleted_ty = typename Params::QuadDeletedTy;
 
+    K *keys = (K *)(h._buffer + h._keys_offset);
+
     uint32_t idx = find(h, key);
     if (idx != NOT_FOUND) {
-        h._keys[idx] = deleted_ty::get();
+        keys[idx] = deleted_ty::get();
         ++h._num_deleted;
     }
 }
-
 } // namespace quad_hash
 } // namespace fo
