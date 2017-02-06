@@ -199,6 +199,24 @@ QuadHash<K, V, Params> &QuadHash<K, V, Params>::operator=(QuadHash &&other) {
     return *this;
 }
 
+template <typename K, typename V, typename Params>
+QuadHash<K, V, Params> &QuadHash<K, V, Params>::operator=(const QuadHash &other) {
+    if (this != &other) {
+        if (_allocator != nullptr) {
+            _allocator->deallocate(_buffer);
+        }
+        _num_valid = other._num_valid;
+        _num_deleted = other._num_deleted;
+        _num_slots = other._num_slots;
+        _hash_fn = other._hash_fn;
+        _equal_fn = other._equal_fn;
+        _allocator = other._allocator;
+        uint32_t buffer_size = quad_hash::internal::allocate_buffer(this, _num_slots);
+        memcpy(_buffer, other._buffer, buffer_size);
+    }
+    return *this;
+}
+
 template <typename K, typename V, typename Params> QuadHash<K, V, Params>::~QuadHash() {
     quad_hash::internal::destroy(this, false);
 }
