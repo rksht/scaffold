@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <memory>   // std::move
 #include <stdlib.h> // abort()
+#include <type_traits>
 
 /// Namespace rbt contains a non-owning red-black tree implementation.
 namespace fo {
@@ -45,8 +46,11 @@ template <typename K, typename V> struct RBNode {
     const V &val() const { return _val; }
 
     RBNode(const K &key, const V &val)
-        : _color(BLACK), _parent(nullptr), _kids{nullptr, nullptr}, _key(key),
-          _val(val) {}
+        : _color(BLACK)
+        , _parent(nullptr)
+        , _kids{nullptr, nullptr}
+        , _key(key)
+        , _val(val) {}
 };
 
 /// RBT<K, V> represents a red black tree.
@@ -67,7 +71,7 @@ template <typename K, typename V> struct RBT {
     } * _nil;
 
     /// The allocator that allocates the nil node
-    fo::Allocator *_nil_alloc;
+    fo::Allocator *_allocator;
 
     /// Constructor
     RBT(fo::Allocator &a) {
@@ -78,28 +82,42 @@ template <typename K, typename V> struct RBT {
         _nil->_kids[1] = nullptr;
         _root = nil_node();
         _num_nodes = 0;
-        _nil_alloc = &a;
+        _allocator = &a;
     }
 
     ~RBT() {
-        if (_nil != nullptr) {
-            _nil_alloc->deallocate(_nil);
+        if (_allocator == nullptr) {
+            return;
         }
+
+        auto free_all = [&](RBNode<K, V> *n) {
+            if (n != this._nil_node) {
+                destroy(n->_kids[LEFT]);
+                destroy(n->_kids[RIGHT]);
+                _allocator->deallocate(n);
+            }
+        };
+
+        free_all(this._root);
+        _allocator->deallocate(_nil);
+        _allocator = nullptr;
         _root = nullptr;
         _nil = nullptr;
+        _num_nodes = 0;
     }
 
-    /// No copy construction. That would require the tree to own the nodes
-    /// hence have knowledge of how to allocate and deallocate nodes - which
-    /// it does not.
     RBT(const RBT<K, V> &other) = delete;
 
-    /// Move constructor
+    /// Move constructor. Invalidates the other tree. No further operations
+    /// should be done.
     RBT(RBT<K, V> &&other) {
         _root = other._root;
         _nil = other._nil;
+        _allocator = other._allocator;
+        other._allocator = nullptr;
         other._root = nullptr;
         other._nil = nullptr;
+        other._num_nodes = 0;
     }
 
     /// Insert a node
@@ -107,16 +125,19 @@ template <typename K, typename V> struct RBT {
 
     /// Removes the node given and returns it (return value same as the node
     /// given)
-    RBNode<K, V> *remove(RBNode<K, V> *n);
+    node_type *remove(const K &key);
 
-    /// Returns a pointer to the node with the given key
-    const RBNode<K, V> *get_node(const K &key) const;
-    RBNode<K, V> *get_node(const K &key);
+    // Returns pointer to the node with the given key. Null if it doesn't
+    // exist.
+    const node_type *get(const K &key) const;
+    node_type *get(const K &key);
+
+    /// Returns reference to the value at the given key. Key must exist, or it
+    /// will abort.
+    V &must_value(const K &key) const;
 
     /// Casts `Nil *` to `RBNode<K, V> *`
-    const RBNode<K, V> *nil_node() const {
-        return reinterpret_cast<RBNode<K, V> *>(_nil);
-    }
+    const RBNode<K, V> *nil_node() const { return reinterpret_cast<RBNode<K, V> *>(_nil); }
     RBNode<K, V> *nil_node() { return reinterpret_cast<RBNode<K, V> *>(_nil); }
 
     RBNode<K, V> *root() { return _root; }
@@ -132,24 +153,20 @@ template <typename K, typename V> struct RBT {
     template <int left, int right> void _rotate(RBNode<K, V> *n);
 
     // Bottom-up fixing for insertion
-    template <int left, int right>
-    inline RBNode<K, V> *_insert_fix(RBNode<K, V> *z);
+    template <int left, int right> inline RBNode<K, V> *_insert_fix(RBNode<K, V> *z);
 
     // Bottom-up fixing for deletion
-    template <int left, int right>
-    inline RBNode<K, V> *_remove_fix(RBNode<K, V> *x);
+    template <int left, int right> inline RBNode<K, V> *_remove_fix(RBNode<K, V> *x);
 };
 
 } // namespace rbt
 
 namespace rbt {
-template <typename K, typename V>
-static inline bool is_root(RBT<K, V> *t, RBNode<K, V> *n) {
+template <typename K, typename V> static inline bool is_root(RBT<K, V> *t, RBNode<K, V> *n) {
     return n->_parent == t->nil_node();
 }
 
-template <typename K, typename V>
-RBNode<K, V> *RBT<K, V>::get_node(const K &key) {
+template <typename K, typename V> RBNode<K, V> *RBT<K, V>::get(const K &key) {
     auto cur = _root;
     while (cur != nil_node()) {
         if (cur->_key == key) {
@@ -164,8 +181,7 @@ RBNode<K, V> *RBT<K, V>::get_node(const K &key) {
     return nullptr;
 }
 
-template <typename K, typename V>
-const RBNode<K, V> *RBT<K, V>::get_node(const K &key) const {
+template <typename K, typename V> const RBNode<K, V> *RBT<K, V>::get(const K &key) const {
     auto cur = _root;
     while (cur != nil_node()) {
         if (cur->_key == key) {
@@ -180,8 +196,19 @@ const RBNode<K, V> *RBT<K, V>::get_node(const K &key) const {
     return nullptr;
 }
 
-template <typename K, typename V>
-void RBT<K, V>::_graft(RBNode<K, V> *n1, RBNode<K, V> *n2) {
+template <typename K, typename V> const V &RBT<K, V>::must_value(const K &key) const {
+    auto node = get(k);
+    assert(node != nullptr && "Used must_value but key doesn't exist in tree");
+    return node->_val;
+}
+
+template <typename K, typename V> V &RBT<K, V>::must_value(const K &key) {
+    auto node = get(k);
+    assert(node != nullptr && "Used must_value but key doesn't exist in tree");
+    return node->_val;
+}
+
+template <typename K, typename V> void RBT<K, V>::_graft(RBNode<K, V> *n1, RBNode<K, V> *n2) {
     if (is_root(this, n1)) {
         _root = n2;
     } else if (n1->_parent->_kids[0] == n1) {
@@ -192,9 +219,9 @@ void RBT<K, V>::_graft(RBNode<K, V> *n1, RBNode<K, V> *n2) {
     n2->_parent = n1->_parent;
 }
 
-template <typename K, typename V> void RBT<K, V>::insert(RBNode<K, V> *n) {
+template <typename K, typename V> void RBT<K, V>::insert(const K &key, const V &value) {
     if (_root == nil_node()) {
-        _root = n;
+        _root = MAKE_NEW(_allocator, RBNode<K, V>, key, value);
         n->_color = BLACK;
         n->_parent = nil_node();
         n->_kids[LEFT] = nil_node();
@@ -215,10 +242,12 @@ template <typename K, typename V> void RBT<K, V>::insert(RBNode<K, V> *n) {
             cur = cur->_kids[RIGHT];
             dir = RIGHT;
         } else {
-            log_err("RBT - Inserted same-value key!!");
-            abort();
+            cur->_value = value;
+            return;
         }
     }
+
+    auto n = MAKE_NEW(_allocator, RBNode<K, V>, key, value);
     n->_color = RED;
     n->_parent = par;
     n->_kids[LEFT] = nil_node();
@@ -258,9 +287,7 @@ RBNode<K, V> *RBT<K, V>::_insert_fix(RBNode<K, V> *z) {
     return z;
 }
 
-template <typename K, typename V>
-template <int left, int right>
-void RBT<K, V>::_rotate(RBNode<K, V> *x) {
+template <typename K, typename V> template <int left, int right> void RBT<K, V>::_rotate(RBNode<K, V> *x) {
     auto y = x->_kids[right];
     x->_kids[right] = y->_kids[left];
     if (y->_kids[left] != nil_node()) {
@@ -278,8 +305,7 @@ void RBT<K, V>::_rotate(RBNode<K, V> *x) {
     x->_parent = y;
 }
 
-template <typename K, typename V>
-RBNode<K, V> *RBT<K, V>::remove(RBNode<K, V> *n) {
+template <typename K, typename V> RBNode<K, V> *RBT<K, V>::remove_node(RBNode<K, V> *n) {
     auto y = n;
     RBColor orig_color = n->_color;
     RBNode<K, V> *x;

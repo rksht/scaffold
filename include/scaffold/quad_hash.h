@@ -7,7 +7,7 @@
 #include <scaffold/debug.h>
 #include <scaffold/memory.h>
 
-#include <type_traits> // std::conditional
+#include <type_traits>
 
 namespace fo {
 /// An open-addressed hash table demands two requirements of the type of the
@@ -27,17 +27,15 @@ template <typename K> struct QuadDefault {
     using QuadNilTy = QuadNil<K>;
     using QuadDeletedTy = QuadNil<K>;
 };
-
-/// Forward declaraing QuadHash
-template <typename K, typename V, typename Params = QuadDefault<K>> struct QuadHash;
 } // namespace fo
 
 namespace fo {
-/// The open-addressed hash table
-template <typename K, typename V, typename Params> struct QuadHash {
 
-    static_assert(std::is_trivially_copy_assignable<K>::value, "Must be is_trivially_copy_assignable");
-    static_assert(std::is_trivially_copy_assignable<V>::value, "Must be is_trivially_copy_assignable");
+template <typename K, typename V, typename Params = QuadDefault<K>> struct QuadHash {
+    static_assert(std::is_trivially_destructible<K>::value, "");
+    static_assert(std::is_trivially_destructible<V>::value, "");
+    static_assert(std::is_trivially_copy_assignable<K>::value, "");
+    static_assert(std::is_trivially_copy_assignable<V>::value, "");
     static_assert(alignof(V) >= alignof(uint32_t), "Need this");
 
     /// Type of hash function
@@ -102,7 +100,7 @@ template <typename K, typename V, typename Params>
 void set(QuadHash<K, V, Params> &h, const K &key, const V &value);
 
 /// Inserts the given key but does not take any value to associate with the
-/// key. Returns the index of the values array. (You must create some value
+/// key. Returns the index into the values array. (You must create some value
 /// there yourself!)
 template <typename K, typename V, typename Params>
 uint32_t insert_key(QuadHash<K, V, Params> &h, const K &key);
@@ -230,8 +228,8 @@ namespace internal {
 template <typename K, typename V, typename Params>
 uint32_t allocate_buffer(QuadHash<K, V, Params> *q, uint32_t num_slots) {
     // Using the one with the stricter alignment. Larger one is kept first in the buffer.
-    constexpr uint16_t _buffer_align = alignof(K) > alignof(V) ? alignof(K) : alignof(V);
-    if (_buffer_align == alignof(K)) {
+    constexpr uint16_t buffer_align = alignof(K) > alignof(V) ? alignof(K) : alignof(V);
+    if (buffer_align == alignof(K)) {
         q->_keys_offset = 0;
         q->_values_offset = sizeof(K) * num_slots;
     } else {
@@ -239,7 +237,7 @@ uint32_t allocate_buffer(QuadHash<K, V, Params> *q, uint32_t num_slots) {
         q->_keys_offset = sizeof(V) * num_slots;
     }
     uint32_t buffer_size = sizeof(K) * num_slots + sizeof(V) * num_slots;
-    q->_buffer = (uint8_t *)q->_allocator->allocate(buffer_size, _buffer_align);
+    q->_buffer = (uint8_t *)q->_allocator->allocate(buffer_size, buffer_align);
     return buffer_size;
 }
 

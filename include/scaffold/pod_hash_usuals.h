@@ -8,7 +8,7 @@ namespace fo {
 template <typename T> uint64_t usual_hash(T const &k);
 template <typename T> bool usual_equal(T const &k1, T const &k2);
 
-// Define instantiations here
+// Define specializations here
 
 /// cstring hash
 template <> inline uint64_t usual_hash(char *const &s) {
