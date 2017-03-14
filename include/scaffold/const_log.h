@@ -9,11 +9,11 @@ namespace {
 /// to x.
 template <typename T> inline constexpr T clip_to_power_of_2(T x) {
     static_assert(std::is_integral<T>::value, "Must be integral");
-
     x = x - 1;
     x = x | (x >> 1);
     x = x | (x >> 2);
     x = x | (x >> 4);
+    x = x | (x >> 8);
     x = x | (x >> 16);
     return x + 1;
 }
