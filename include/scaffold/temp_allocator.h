@@ -7,11 +7,12 @@ namespace fo {
 /// local stack buffer of size BUFFER_SIZE. If that memory is exhausted it will
 /// use the backing allocator (typically a scratch allocator).
 ///
-/// Memory allocated with a TempAllocator does not have to be deallocated. It is
-/// automatically deallocated when the TempAllocator is destroyed.
-/// It's easiest to this allocator as a local variable, tying its lifetime to a
-/// scope. Otherwise, if you create this allocator on the heap, make sure to
-/// call the destructor after all objects using it are dead.
+/// Memory allocated with a TempAllocator does not have to be deallocated. It
+/// is automatically deallocated when the TempAllocator is destroyed.  It's
+/// easiest to this allocator as a local variable, tying its lifetime to a
+/// scope. Otherwise, if you create this allocator on the heap, or global
+/// storage make sure to  call the destructor after all objects using it are
+/// dead.
 template <int BUFFER_SIZE> class TempAllocator : public Allocator {
   public:
     /// Creates a new temporary allocator using the specified backing allocator.
@@ -64,9 +65,12 @@ TempAllocator<BUFFER_SIZE>::TempAllocator(Allocator &backing)
 }
 
 template <int BUFFER_SIZE> TempAllocator<BUFFER_SIZE>::~TempAllocator() {
-    void *p = *(void **)_buffer;
+    // Using this variable to prevent string-aliasing warnings. Looking at
+    // _buffer as if it's an array of (char *)s
+    char **p_buffer = (char **)_buffer;
+    char *p = p_buffer[0];
     while (p) {
-        void *next = *(void **)p;
+        char *next = *(char **)p;
         _backing.deallocate(p);
         p = next;
     }
@@ -79,12 +83,13 @@ void *TempAllocator<BUFFER_SIZE>::allocate(uint64_t size, uint64_t align) {
         // Total space to allocate is the size given plus the "next" pointer
         // which is stored at the head of the allocated region. Due to this we
         // can use the region only by entering a little into it. If v is the
-        // start location, we want the following to hold -
+        // start location as returned by the backing allocator, we want the
+        // following to hold -
         //
         //      v + sizeof(void *) + padding == 0 (modulo align)
-        // So the maximum padding needed will be when (v + sizeof(void *)) is 1
-        // modulo n, in which case padding will be (align - 1). We always use a
-        // padding of align bytes as a safe over-estimate.
+        // So the maximum padding needed will be when (v + sizeof(void *)) is
+        // 1 modulo n, in which case padding neede will be (align - 1). We
+        // always ask for align bytes more as a safe over-estimate.
         uint64_t to_allocate = sizeof(void *) + size + align;
         if (to_allocate < _chunk_size)
             to_allocate = _chunk_size;
