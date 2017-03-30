@@ -132,11 +132,13 @@ template <typename T> inline void pop_back(Array<T> &a) { a._size--; }
 }
 
 template <typename T>
-inline Array<T>::Array(Allocator &allocator)
+inline Array<T>::Array(Allocator &allocator, uint32_t initial_size)
     : _allocator(&allocator)
     , _size(0)
     , _capacity(0)
-    , _data(nullptr) {}
+    , _data(nullptr) {
+    array::resize(*this, initial_size);
+}
 
 template <typename T> inline Array<T>::~Array() {
     if (_data) {

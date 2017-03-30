@@ -20,7 +20,7 @@ template <typename T> struct Array {
     static_assert(std::is_trivially_copy_assignable<T>::value,
                   "Only supports trivially copy-assignable elements");
 
-    Array(Allocator &a);
+    Array(Allocator &a, uint32_t initial_size = 0);
     ~Array();
     Array(const Array &other);
     Array &operator=(const Array &other);
@@ -56,7 +56,6 @@ template <typename T> struct Queue {
 
     Queue(Queue &&other);
     Queue &operator=(Queue &&other);
-
 
     T &operator[](uint32_t i);
     const T &operator[](uint32_t i) const;
