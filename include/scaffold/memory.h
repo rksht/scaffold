@@ -19,7 +19,7 @@ class Allocator {
     /// Maximum name size for any allocator including the '\0' character
     static constexpr uint64_t ALLOCATOR_NAME_SIZE = 32;
 
-    Allocator() = default;
+    Allocator();
 
     // Dtor
     virtual ~Allocator() {}
@@ -77,16 +77,15 @@ class Allocator {
 };
 
 /// Creates a new object of type T using the allocator a to allocate the memory.
-#define MAKE_NEW(a, T, ...)                                                    \
-    (new ((a).allocate(sizeof(T), alignof(T))) T(__VA_ARGS__))
+#define MAKE_NEW(a, T, ...) (new ((a).allocate(sizeof(T), alignof(T))) T(__VA_ARGS__))
 
 /// Frees an object allocated with MAKE_NEW.
-#define MAKE_DELETE(a, T, p)                                                   \
-    do {                                                                       \
-        if (p) {                                                               \
-            (p)->~T();                                                         \
-            a.deallocate(p);                                                   \
-        }                                                                      \
+#define MAKE_DELETE(a, T, p)                                                                                 \
+    do {                                                                                                     \
+        if (p) {                                                                                             \
+            (p)->~T();                                                                                       \
+            a.deallocate(p);                                                                                 \
+        }                                                                                                    \
     } while (0)
 
 /// Fwd declaring the ArenaAllocator here
@@ -147,18 +146,14 @@ inline void *memory::align_forward(void *p, uint64_t align) {
 }
 
 /// Returns the result of advancing p by the specified number of bytes
-inline void *memory::pointer_add(void *p, uint64_t bytes) {
-    return (void *)((char *)p + bytes);
-}
+inline void *memory::pointer_add(void *p, uint64_t bytes) { return (void *)((char *)p + bytes); }
 
 inline const void *memory::pointer_add(const void *p, uint64_t bytes) {
     return (const void *)((const char *)p + bytes);
 }
 
 /// Returns the result of moving p back by the specified number of bytes
-inline void *memory::pointer_sub(void *p, uint64_t bytes) {
-    return (void *)((char *)p - bytes);
-}
+inline void *memory::pointer_sub(void *p, uint64_t bytes) { return (void *)((char *)p - bytes); }
 
 inline const void *memory::pointer_sub(const void *p, uint64_t bytes) {
     return (const void *)((const char *)p - bytes);

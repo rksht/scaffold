@@ -16,6 +16,9 @@
 #include <string.h>
 
 namespace fo {
+
+Allocator::Allocator() { strcpy(_name, "<Unnamed>"); };
+
 void Allocator::set_name(const char *name, uint64_t len) {
     assert(len < ALLOCATOR_NAME_SIZE && "Allocator name too large");
     memcpy(_name, name, len);
@@ -75,7 +78,8 @@ class MallocAllocator : public Allocator {
     }
 
   public:
-    MallocAllocator() : _total_allocated(0) {
+    MallocAllocator()
+        : _total_allocated(0) {
 #ifdef MALLOC_ALLOC_DONT_TRACK_SIZE
         _total_allocated = SIZE_NOT_TRACKED;
 #endif
@@ -100,9 +104,8 @@ class MallocAllocator : public Allocator {
         }
 
         if ((ret = posix_memalign(&p, align, size)) != 0) {
-            log_err(
-                "MallocAllocator failed to allocate - error = %s, align = %lu",
-                ret == EINVAL ? "EINVAL" : "ENOMEM", align);
+            log_err("MallocAllocator failed to allocate - error = %s, align = %lu",
+                    ret == EINVAL ? "EINVAL" : "ENOMEM", align);
             abort();
         }
         return p;
@@ -170,7 +173,8 @@ class ScratchAllocator : public Allocator {
     /// that don't fit in the ring buffer.
     ///
     /// size specifies the size of the ring buffer.
-    ScratchAllocator(Allocator &backing, uint64_t size) : _backing(backing) {
+    ScratchAllocator(Allocator &backing, uint64_t size)
+        : _backing(backing) {
         _begin = (char *)_backing.allocate(size);
         _end = _begin + size;
         _allocate = _begin;
@@ -257,8 +261,7 @@ class ScratchAllocator : public Allocator {
 /// this struct.
 struct MemoryGlobals {
     alignas(MallocAllocator) char _default_allocator[sizeof(MallocAllocator)];
-    alignas(ScratchAllocator) char _default_scratch_allocator[sizeof(
-        ScratchAllocator)];
+    alignas(ScratchAllocator) char _default_scratch_allocator[sizeof(ScratchAllocator)];
 
     // Don't like to have strict aliasing related warnings. I can spare a few
     // bytes to point to the above two chunks
@@ -291,24 +294,18 @@ void init(uint64_t scratch_buffer_size) {
 #else
     log_info("BuddyAllocator WILL log level state");
 #endif
-    _memory_globals.default_allocator =
-        new (_memory_globals._default_allocator) MallocAllocator{};
-    _memory_globals.default_scratch_allocator =
-        new (_memory_globals._default_scratch_allocator) ScratchAllocator{
-            *(MallocAllocator *)_memory_globals.default_allocator,
-            scratch_buffer_size};
+    _memory_globals.default_allocator = new (_memory_globals._default_allocator) MallocAllocator{};
+    _memory_globals.default_scratch_allocator = new (_memory_globals._default_scratch_allocator)
+        ScratchAllocator{*(MallocAllocator *)_memory_globals.default_allocator, scratch_buffer_size};
 
-    default_allocator().set_name(default_allocator_name,
-                                 sizeof(default_allocator_name));
-    default_scratch_allocator().set_name(
-        default_scratch_allocator_name, sizeof(default_scratch_allocator_name));
+    default_allocator().set_name(default_allocator_name, sizeof(default_allocator_name));
+    default_scratch_allocator().set_name(default_scratch_allocator_name,
+                                         sizeof(default_scratch_allocator_name));
 }
 
 Allocator &default_allocator() { return *_memory_globals.default_allocator; }
 
-Allocator &default_scratch_allocator() {
-    return *_memory_globals.default_scratch_allocator;
-}
+Allocator &default_scratch_allocator() { return *_memory_globals.default_scratch_allocator; }
 
 /// ... And add deallocation code here.
 void shutdown() {

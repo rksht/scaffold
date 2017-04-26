@@ -1,4 +1,4 @@
-## A set of C++ "things" thrown into a cauldron.
+## A set of utilities thrown into a cauldron.
 
 Almost always in progress. Meant to be easily modifiable and understandable.
 
@@ -10,6 +10,14 @@ Almost always in progress. Meant to be easily modifiable and understandable.
 * Some more allocators.
 
 * Some more data structures.
+
+## Drawbacks
+
+None of the stuff is thread-safe, including the memory allocators, which is a
+bummer for many. As of yet, I will simply put mutexes around allocation and
+deallocation if I need to modify the code. Then again, I'm only getting
+started with programming really seriously, so I will share my finds here
+later.
 
 ## Notes
 

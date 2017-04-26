@@ -82,3 +82,8 @@ endif()
 
 add_executable(quad_hash_test quad_hash_test.cpp)
 target_link_libraries(quad_hash_test scaffold)
+
+## 
+
+add_executable(pool_allocator_test pool_allocator_test.cpp)
+target_link_libraries(pool_allocator_test scaffold)
