@@ -71,7 +71,7 @@ PoolAllocator::~PoolAllocator() {
     _backing->deallocate(_mem);
 
     // Set self to non-owning state, just for catching errors.
-    memset(this, 0, sizeof(PoolAllocator));
+    this->_node_size = 0;
 }
 
 void *PoolAllocator::allocate(uint64_t size, uint64_t align) {

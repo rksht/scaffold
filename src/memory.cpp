@@ -1,12 +1,12 @@
-#include <scaffold/debug.h>
-#include <scaffold/memory.h>
-
 // For posix_memalign
 #ifdef MALLOC_ALLOC_DONT_TRACK_SIZE
 #if !defined(_POSIX_C_SOURCE) || (_POSIX_C_SOURCE < 200112L)
 #define _POSIX_C_SOURCE 200112L
 #endif
 #endif
+
+#include <scaffold/debug.h>
+#include <scaffold/memory.h>
 
 #include <assert.h>
 #include <iostream>
