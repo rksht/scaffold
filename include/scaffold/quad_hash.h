@@ -7,6 +7,8 @@
 #include <scaffold/debug.h>
 #include <scaffold/memory.h>
 
+#include <assert.h>
+#include <functional>
 #include <type_traits>
 
 namespace fo {
