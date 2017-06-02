@@ -34,8 +34,8 @@ add_executable(arena_test arena_test.cpp)
 target_link_libraries(arena_test scaffold)
 
 ##
-# add_executable(rbt_test rbt_test.cpp)
-# rget_link_libraries(rbt_test scaffold)
+add_executable(rbt_test rbt_test.cpp)
+target_link_libraries(rbt_test scaffold)
 
 ##
 add_executable(pod_hash_test pod_hash_test.cpp)

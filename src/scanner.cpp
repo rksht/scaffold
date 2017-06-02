@@ -174,7 +174,7 @@ const char *desc(int token) {
         return " ";
     default:
         assert(0 <= token && token <= 127);
-        snprintf(char_token, 1, "%c", (char)token);
+        snprintf(char_token, 2, "%c", (char)token);
         return char_token;
     }
 }

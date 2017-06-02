@@ -1,6 +1,7 @@
 #include <scaffold/array.h>
+#include <scaffold/debug.h>
 #include <scaffold/memory.h>
-#include <scaffold/rbt.h>
+#include <scaffold/rbt.bak.h>
 
 // For testing
 #include <algorithm>
@@ -11,7 +12,6 @@
 
 using namespace fo::rbt;
 using Tree = RBT<int, int>;
-const size_t num_nodes = 100;
 
 int id = 0;
 
@@ -48,24 +48,28 @@ int main() {
         constexpr int keyend = 1000;
         constexpr int num_inserts = 1000;
         std::default_random_engine dre(seed);
-        std::uniform_int_distribution(1, keyend);
+        std::uniform_int_distribution<int> dist(1, keyend);
 
         Tree tree(memory_globals::default_allocator());
         Array<int> arr_val(memory_globals::default_allocator());
         array::resize(arr_val, keyend);
         memset(array::data(arr_val), 0, keyend * sizeof(int));
 
-        for (int i = 0; i < num_inserts; ++i) {
-            int k = dist(dre);
-            int v = dist(dre);
+        Array<Tree::node_type> nodes(memory_globals::default_allocator());
+        array::resize(nodes, num_inserts);
 
-            tree.insert(k, v);
+        for (int i = 0; i < num_inserts; ++i) {
+            Tree::node_type *node = &nodes[i];
+            int k = i;
+            int v = dist(dre);
+            new (node) Tree::node_type(k, v);
+            tree.insert(node);
             arr_val[k] = v;
         }
 
         for (int i = 1; i < keyend; ++i) {
-            int v = tree.must_value(i);
-            assert(arr_val[k] == v);
+            int val = tree.get_node(i)->val();
+            log_assert(arr_val[i] == val, "");
         }
 
         print_dot_format(tree.nil_node(), tree._root);
