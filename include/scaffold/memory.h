@@ -129,7 +129,7 @@ inline void *pointer_add(void *p, uint64_t bytes);
 inline const void *pointer_add(const void *p, uint64_t bytes);
 inline void *pointer_sub(void *p, uint64_t bytes);
 inline const void *pointer_sub(const void *p, uint64_t bytes);
-}
+} // namespace memory
 
 // ---------------------------------------------------------------
 // Inline function implementations
@@ -158,4 +158,4 @@ inline void *memory::pointer_sub(void *p, uint64_t bytes) { return (void *)((cha
 inline const void *memory::pointer_sub(const void *p, uint64_t bytes) {
     return (const void *)((const char *)p - bytes);
 }
-}
+} // namespace fo

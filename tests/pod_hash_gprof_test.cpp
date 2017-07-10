@@ -24,7 +24,7 @@ int main() {
         pod_hash::reserve(h, MAX_ENTRIES);
 
         for (uint64_t i = 0; i < MAX_ENTRIES; ++i) {
-            pod_hash::set(h, i, 0xdeadbeeflu);
+			pod_hash::set(h, i, uint64_t(0xdeadbeeflu));
         }
 
         for (uint64_t i = 0; i < MAX_ENTRIES; ++i) {

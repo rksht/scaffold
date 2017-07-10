@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.4)
 
-add_compile_options("-Wall" "-Wextra")
+if (MSVC)
+	add_compile_options("-Wall")
+else()
+	add_compile_options("-Wall" "-Wextra" "-Wno-implicit-fallthrough")
+endif()
+
 include_directories(${PROJECT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR})
 
 ##

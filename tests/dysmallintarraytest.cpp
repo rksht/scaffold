@@ -81,7 +81,7 @@ TEST_CASE("DySmallIntArray<> working correctly", "[DySmallIntArray<>_works]") {
         }
 
         SECTION("iterator") {
-            const int num_ints = 9990;
+            const unsigned num_ints = 9990;
             DySmallIntArray<> ints{4, num_ints};
             int loop_count = 0;
             for (auto i = ints.cbegin(), e = ints.cend(); i != e; ++i) {

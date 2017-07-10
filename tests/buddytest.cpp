@@ -5,6 +5,7 @@
 #include <random>
 #include <set>
 #include <time.h>
+#include <array>
 
 using BA = fo::BuddyAllocator;
 

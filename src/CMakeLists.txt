@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 3.4)
 
 # Compile flags
-add_compile_options("-Wall" "-Wextra" "-Werror" "-Wno-implicit-fallthrough")
+if (MSVC)
+	add_compile_options("-Wall")
+else()
+	add_compile_options("-Wall" "-Wextra" "-Werror" "-Wno-implicit-fallthrough")
+endif()
+
 
 # sanitizer
 option(USE_MEMORY_SANITIZER "use memory sanitizer" off)

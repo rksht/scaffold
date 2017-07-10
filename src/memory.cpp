@@ -95,23 +95,34 @@ class MallocAllocator : public Allocator {
 
 #ifdef MALLOC_ALLOC_DONT_TRACK_SIZE
     void *allocate(uint64_t size, uint64_t align) override {
-        int ret;
-        void *p = nullptr;
+		void *p = nullptr;
+#ifdef WIN32
+		p = _aligned_malloc(size, align);
+#else 
+		int ret;
 
         // The minimum alignment required for posix_memalign
         if (align % alignof(void *) != 0) {
             align = alignof(void *);
         }
 
+
         if ((ret = posix_memalign(&p, align, size)) != 0) {
             log_err("MallocAllocator failed to allocate - error = %s, align = %lu",
                     ret == EINVAL ? "EINVAL" : "ENOMEM", align);
             abort();
         }
+#endif
         return p;
     }
 
-    void deallocate(void *p) override { free(p); }
+    void deallocate(void *p) override {
+#ifdef WIN32
+		_aligned_free(p);
+#else
+		free(p);
+#endif
+	}
 
     uint64_t allocated_size(void *p) override {
         (void)p;

@@ -1,5 +1,6 @@
 #include <scaffold/buddy_allocator.h>
 
+#include <array>
 #include <iostream>
 #include <new>
 #include <set>
