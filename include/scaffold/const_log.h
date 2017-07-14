@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <stdint.h>
 #include <type_traits>
 
@@ -53,5 +54,9 @@ inline constexpr uint32_t ceil_div(uint32_t a, uint32_t b) {
         return a / b + 1;
     }
     return a / b;
+}
+
+template <typename T1, typename T2, typename T3> inline constexpr auto clamp(T1 &&max, T2 &&min, T3 &&value) {
+    return std::min(max, std::max(min, value));
 }
 }
