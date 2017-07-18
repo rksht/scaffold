@@ -2,9 +2,11 @@ cmake_minimum_required(VERSION 3.4)
 project(scaffold)
 
 # Options to propagate
-
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if (GNU)
+	add_compile_options(-std=c++17)
+elseif(MSVC)
+	add_compile_options(-std:c++latest)
+endif()
 
 # Benchmark
 option(ENABLE_BENCHMARKS "Build the benchmarks" off)

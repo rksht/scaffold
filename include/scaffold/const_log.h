@@ -54,4 +54,12 @@ inline constexpr uint32_t ceil_div(uint32_t a, uint32_t b) {
     }
     return a / b;
 }
+
+template <typename T>
+constexpr inline T clamp(T v, T low, T high) {
+	static_assert(std::is_integral<T>::value || std::is_floating_point<T>::value, "");
+
+	return std::min(std::max(low, v), high);
+}
+
 }
