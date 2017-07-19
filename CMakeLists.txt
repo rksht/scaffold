@@ -8,12 +8,6 @@ elseif(MSVC)
 	add_compile_options(-std:c++latest)
 endif()
 
-# Benchmark
-option(ENABLE_BENCHMARKS "Build the benchmarks" off)
-if (ENABLE_BENCHMARKS)
-  add_subdirectory(bench)
-endif()
-
 option(BUDDY_ALLOC_LEVEL_LOGGING "Log buddy allocator" off)
 option(MALLOC_ALLOC_DONT_TRACK_SIZE "Don't track size in MallocAllocator" off)
 
@@ -30,5 +24,14 @@ endif()
 # Source
 add_subdirectory(src)
 
-# Tests
-add_subdirectory(tests)
+# Benchmark
+option(SCAFFOLD_ENABLE_BENCHMARKS "Build the benchmarks" off)
+if (SCAFFOLD_ENABLE_BENCHMARKS)
+  add_subdirectory(bench)
+endif()
+
+option(SCAFFOLD_ENABLE_TESTS "Build the tests" off)
+
+if (SCAFFOLD_ENABLE_TESTS)
+	add_subdirectory(tests)
+endif()
