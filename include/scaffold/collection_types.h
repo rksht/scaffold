@@ -20,6 +20,8 @@ template <typename T> struct Array {
     static_assert(std::is_trivially_copy_assignable<T>::value,
                   "Only supports trivially copy-assignable elements");
 
+    static_assert(std::is_trivially_destructible<T>::value, "");
+
     Array(Allocator &a, uint32_t initial_size = 0);
     ~Array();
     Array(const Array &other);
