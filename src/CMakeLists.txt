@@ -22,4 +22,9 @@ file(GLOB SOURCE_FILES
 
 add_library(scaffold ${SOURCE_FILES})
 
+if (SCAFFOLD_BUILD_SHARED_LIB)
+	message("Building scaffold as shared lib also (targetname - scaffold-shared)")
+	add_library(scaffold-shared SHARED ${SOURCE_FILES})
+endif()
+
 target_include_directories(scaffold PUBLIC ${PROJECT_SOURCE_DIR}/include)
