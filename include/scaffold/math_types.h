@@ -24,6 +24,10 @@ struct Vector3 {
         : x(x)
         , y(y)
         , z(z) {}
+
+    /// Array like accessor
+    constexpr float operator[](unsigned i) const { return reinterpret_cast<const float *>(this)[i]; }
+    constexpr float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
 };
 
 struct alignas(16) Vector4 {
@@ -45,6 +49,10 @@ struct alignas(16) Vector4 {
         , w(w) {}
 
     Vector4(__m128 pack) { _mm_store_ps(reinterpret_cast<float *>(this), pack); }
+
+    /// Array like accessor
+    constexpr float operator[](unsigned i) const { return reinterpret_cast<const float *>(this)[i]; }
+    constexpr float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
 };
 
 constexpr Vector3::Vector3(const Vector4 &v)
@@ -56,13 +64,20 @@ struct alignas(16) Quaternion {
     float x, y, z, w;
 };
 
-struct alignas(16) Matrix3x3 {
+struct Matrix3x3 {
     Vector3 x, y, z;
+};
+
+struct alignas(16) Matrix3x3_aligned16 {
+    Vector3 x, y, z;
+    Vector3 _pad;
 };
 
 struct alignas(16) Matrix4x4 {
     Vector4 x, y, z, t;
 };
+
+using Matrix4x4_aligned16 = Matrix4x4;
 
 struct AABB {
     Vector3 min, max;
