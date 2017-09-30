@@ -28,3 +28,4 @@ if (SCAFFOLD_BUILD_SHARED_LIB)
 endif()
 
 target_include_directories(scaffold PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(scaffold-shared PUBLIC ${PROJECT_SOURCE_DIR}/include)
