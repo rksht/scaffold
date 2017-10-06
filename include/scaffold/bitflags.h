@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+namespace fo {
+
 template <typename BitType, typename MaskType = uint32_t> struct BitFlags {
     // No warranty if you explcitly access this. Haven't made this private to
     // keep it a trivially-copyable type
@@ -73,3 +75,5 @@ template <typename BitType, typename MaskType = uint32_t> struct BitFlags {
 
     explicit operator MaskType() const { return _mask; }
 };
+
+} // namespace fo
