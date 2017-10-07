@@ -63,7 +63,7 @@ template <typename BitType, typename MaskType = uint32_t> struct BitFlags {
 
     BitFlags operator~() const {
         BitFlags result(*this);
-        result._mask ^= FlagTraits<BitType>::allBitFlags;
+        result._mask ^= ~MaskType(0);
         return result;
     }
 
