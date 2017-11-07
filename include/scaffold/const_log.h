@@ -68,4 +68,11 @@ template <typename T1, typename T2, typename T3> inline constexpr auto clamp(T1 
     return std::min(max, std::max(min, value));
 }
 
+
+template <typename V> bool equals_any(V) { return false; }
+
+template <typename V, typename Head, typename... Rest> bool equals_any(V value, Head head, Rest... rest) {
+    return (value == head) || equals_any(value, rest...);
+}
+
 } // namespace
