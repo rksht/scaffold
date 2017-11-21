@@ -55,6 +55,8 @@ struct alignas(16) Vector4 {
     constexpr float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
 };
 
+static_assert(sizeof(Vector4) == 4 * sizeof(float), "");
+
 constexpr Vector3::Vector3(const Vector4 &v)
     : x(v.x)
     , y(v.y)
