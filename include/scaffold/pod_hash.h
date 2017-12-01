@@ -71,22 +71,22 @@ template <typename K, typename V> struct PodHash {
 
 // -- Iterators on PodHash
 
-template <typename K, typename V> typename PodHash<K, V>::const_iterator cbegin(const PodHash<K, V> &h) {
+template <typename K, typename V> auto cbegin(const PodHash<K, V> &h) {
     return h._entries.begin();
 }
-template <typename K, typename V> typename PodHash<K, V>::const_iterator cend(const PodHash<K, V> &h) {
+template <typename K, typename V> auto cend(const PodHash<K, V> &h) {
     return h._entries.end();
 }
-template <typename K, typename V> typename PodHash<K, V>::const_iterator begin(const PodHash<K, V> &h) {
+template <typename K, typename V> auto begin(const PodHash<K, V> &h) {
     return h._entries.begin();
 }
-template <typename K, typename V> typename PodHash<K, V>::const_iterator end(const PodHash<K, V> &h) {
+template <typename K, typename V> auto end(const PodHash<K, V> &h) {
     return h._entries.end();
 }
-template <typename K, typename V> typename PodHash<K, V>::iterator begin(PodHash<K, V> &h) {
+template <typename K, typename V> auto begin(PodHash<K, V> &h) {
     return h._entries.begin();
 }
-template <typename K, typename V> typename PodHash<K, V>::iterator end(PodHash<K, V> &h) {
+template <typename K, typename V> auto end(PodHash<K, V> &h) {
     return h._entries.end();
 }
 

@@ -21,11 +21,10 @@ file(GLOB SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 
 add_library(scaffold ${SOURCE_FILES})
+target_include_directories(scaffold PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
 if (SCAFFOLD_BUILD_SHARED_LIB)
 	message("Building scaffold as shared lib also (targetname - scaffold-shared)")
 	add_library(scaffold-shared SHARED ${SOURCE_FILES})
+    target_include_directories(scaffold-shared PUBLIC ${PROJECT_SOURCE_DIR}/include)
 endif()
-
-target_include_directories(scaffold PUBLIC ${PROJECT_SOURCE_DIR}/include)
-target_include_directories(scaffold-shared PUBLIC ${PROJECT_SOURCE_DIR}/include)
