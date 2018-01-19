@@ -14,17 +14,15 @@
 
 namespace fo {
 
-namespace pod_hash {
-namespace _internal {
+namespace pod_hash_internal {
 
-template <typename K, typename V> struct _Entry {
+template <typename K, typename V> struct Entry {
     K key;
     mutable V value;
     uint32_t next;
 };
 
-} // namespace _internal
-} // namespace pod_hash
+} // namespace pod_hash_internal
 
 /// 'PodHash' is similar hash table like the one in collection_types.h, but can
 /// use any 'trivially-copyassignable data type as key.
@@ -34,7 +32,7 @@ template <typename K, typename V> struct PodHash {
     static_assert(std::is_trivially_copy_assignable<V>::value,
                   "Value type must be trivially copy assignable");
 
-    using Entry = pod_hash::_internal::_Entry<K, V>;
+    using Entry = pod_hash_internal::Entry<K, V>;
 
     /// Both are const_iterator to the underlying array because we don't allow
     /// changing keys.
@@ -42,11 +40,11 @@ template <typename K, typename V> struct PodHash {
     using const_iterator = typename fo::Array<Entry>::const_iterator;
 
     /// Type of hashing function
-    using HashFunc = std::function<uint64_t(K const &key)>;
+    using HashFn = std::function<uint64_t(K const &key)>;
 
     /// Type of equal operator function - operator== can't be used as it doesn't
     /// work on non-class or non-enumerator types.
-    using EqualFunc = std::function<bool(K const &k1, K const &k2)>;
+    using EqualFn = std::function<bool(K const &k1, K const &k2)>;
 
     /// Array mapping a hash to an entry index
     fo::Array<uint32_t> _hashes;
@@ -55,46 +53,34 @@ template <typename K, typename V> struct PodHash {
     fo::Array<Entry> _entries;
 
     /// The hash function to use
-    HashFunc _hash_func;
+    HashFn _hashfn;
 
     /// The equal function to use
-    EqualFunc _equal_func;
+    EqualFn _equalfn;
 
     /// Constructor
-    PodHash(fo::Allocator &hash_alloc, fo::Allocator &entry_alloc, HashFunc hash_func,
-            EqualFunc equal_func)
+    PodHash(fo::Allocator &hash_alloc, fo::Allocator &entry_alloc, HashFn hash_func, EqualFn equal_func)
         : _hashes(hash_alloc)
         , _entries(entry_alloc)
-        , _hash_func(hash_func)
-        , _equal_func(equal_func) {}
+        , _hashfn(hash_func)
+        , _equalfn(equal_func) {}
+
+    /// Returns reference to the value associated with given key. If no value is
+    /// currently associated, constructs a value using value-initialization and
+    /// returns reference to that.
+    V &operator[](const K &key);
 };
 
 // -- Iterators on PodHash
 
-template <typename K, typename V> auto cbegin(const PodHash<K, V> &h) {
-    return h._entries.begin();
-}
-template <typename K, typename V> auto cend(const PodHash<K, V> &h) {
-    return h._entries.end();
-}
-template <typename K, typename V> auto begin(const PodHash<K, V> &h) {
-    return h._entries.begin();
-}
-template <typename K, typename V> auto end(const PodHash<K, V> &h) {
-    return h._entries.end();
-}
-template <typename K, typename V> auto begin(PodHash<K, V> &h) {
-    return h._entries.begin();
-}
-template <typename K, typename V> auto end(PodHash<K, V> &h) {
-    return h._entries.end();
-}
+template <typename K, typename V> auto cbegin(const PodHash<K, V> &h) { return h._entries.begin(); }
+template <typename K, typename V> auto cend(const PodHash<K, V> &h) { return h._entries.end(); }
+template <typename K, typename V> auto begin(const PodHash<K, V> &h) { return h._entries.begin(); }
+template <typename K, typename V> auto end(const PodHash<K, V> &h) { return h._entries.end(); }
+template <typename K, typename V> auto begin(PodHash<K, V> &h) { return h._entries.begin(); }
+template <typename K, typename V> auto end(PodHash<K, V> &h) { return h._entries.end(); }
 
-} // namespace fo
-
-/// -- Functions to operate on PodHash
-namespace fo {
-namespace pod_hash {
+// -- Functions to operate on PodHash
 
 /// Reserve space for `size` keys. Does not reserve space for the entries
 /// beforehand
@@ -123,12 +109,11 @@ template <typename K, typename V> const K &get_key(const PodHash<K, V> &h, K con
 
 /// Removes the entry with the given key
 template <typename K, typename V> void remove(PodHash<K, V> &h, const K &key);
-}
-}
+
+} // namespace fo
 
 namespace fo {
-namespace pod_hash {
-namespace _internal {
+namespace pod_hash_internal {
 
 const uint32_t END_OF_LIST = 0xffffffffu;
 
@@ -137,6 +122,10 @@ struct FindResult {
     uint32_t entry_i;
     uint32_t entry_prev;
 };
+
+template <typename K, typename V> uint32_t hash_slot(const PodHash<K, V> &h, const K &k) {
+    return h._hashfn(k) % fo::array::size(h._hashes);
+}
 
 // Forward declaration
 template <typename K, typename V> void rehash(PodHash<K, V> &h, uint32_t new_size);
@@ -154,10 +143,10 @@ template <typename K, typename V> FindResult find(const PodHash<K, V> &h, const 
         return fr;
     }
 
-    fr.hash_i = h._hash_func(key) % fo::array::size(h._hashes);
+    fr.hash_i = hash_slot(h, key);
     fr.entry_i = h._hashes[fr.hash_i];
     while (fr.entry_i != END_OF_LIST) {
-        if (h._equal_func(h._entries[fr.entry_i].key, key)) {
+        if (h._equalfn(h._entries[fr.entry_i].key, key)) {
             return fr;
         }
         fr.entry_prev = fr.entry_i;
@@ -166,37 +155,59 @@ template <typename K, typename V> FindResult find(const PodHash<K, V> &h, const 
     return fr;
 }
 
-// Pushes a new entry initialized with the given key
-template <typename K, typename V> uint32_t push_entry(PodHash<K, V> &h, const K &key) {
-    typename PodHash<K, V>::Entry e;
-    e.key = key;
-    e.next = END_OF_LIST;
-    uint32_t ei = fo::array::size(h._entries);
-    fo::array::push_back(h._entries, e);
-    return ei;
-}
+template <typename K, typename V, bool value_init> struct PushEntry;
+
+template <typename K, typename V> struct PushEntry<K, V, true> {
+    static uint32_t push_entry(PodHash<K, V> &h, const K &key) {
+        typename PodHash<K, V>::Entry e{};
+        e.key = key;
+        e.next = END_OF_LIST;
+        uint32_t ei = fo::array::size(h._entries);
+        fo::array::push_back(h._entries, e);
+        return ei;
+    }
+};
+
+template <typename K, typename V> struct PushEntry<K, V, false> {
+    static uint32_t push_entry(PodHash<K, V> &h, const K &key) {
+        typename PodHash<K, V>::Entry e;
+        e.key = key;
+        e.next = END_OF_LIST;
+        uint32_t ei = fo::array::size(h._entries);
+        fo::array::push_back(h._entries, e);
+        return ei;
+    }
+};
 
 /// Searches for the given key and if not found adds a new entry for the key.
 /// Returns the entry index.
-template <typename K, typename V> uint32_t find_or_make(PodHash<K, V> &h, const K &key) {
-    const FindResult fr = find(h, key);
+template <typename K, typename V>
+uint32_t find_or_make(PodHash<K, V> &h, const K &key, bool value_initialize) {
+    FindResult fr = find(h, key);
     if (fr.entry_i != END_OF_LIST) {
         return fr.entry_i;
     }
 
-    uint32_t ei = push_entry(h, key);
-    if (fr.entry_prev == END_OF_LIST) {
-        h._hashes[fr.hash_i] = ei;
+    fr.hash_i = hash_slot(h, key);
+
+    if (value_initialize) {
+        fr.entry_i = PushEntry<K, V, true>::push_entry(h, key);
     } else {
-        h._entries[fr.entry_prev].next = ei;
+        fr.entry_i = PushEntry<K, V, false>::push_entry(h, key);
     }
-    return ei;
+
+    if (fr.entry_prev == END_OF_LIST) {
+        h._hashes[fr.hash_i] = fr.entry_i;
+    } else {
+        h._entries[fr.entry_prev].next = fr.entry_i;
+    }
+    return fr.entry_i;
 }
 
 /// Makes a new entry and appends it to the appropriate chain
 template <typename K, typename V> uint32_t make(PodHash<K, V> &h, const K &key) {
     const FindResult fr = find(h, key);
-    const uint32_t ei = push_entry(h, key);
+    const uint32_t ei = PushEntry<K, V, false>::push_entry(h, key);
 
     if (fr.entry_prev == END_OF_LIST) {
         h._hashes[fr.hash_i] = ei;
@@ -211,7 +222,7 @@ template <typename K, typename V> uint32_t make(PodHash<K, V> &h, const K &key) 
 /// already allocated values
 template <typename K, typename V> void rehash(PodHash<K, V> &h, uint32_t new_size) {
     // create a new hash table
-    PodHash<K, V> new_hash(*h._hashes._allocator, *h._entries._allocator, h._hash_func, h._equal_func);
+    PodHash<K, V> new_hash(*h._hashes._allocator, *h._entries._allocator, h._hashfn, h._equalfn);
 
     // Don't need the previous hashes.
     fo::array::free(h._hashes);
@@ -293,51 +304,57 @@ template <typename K, typename V> void find_and_erase(PodHash<K, V> &h, const K 
     }
 }
 
-} // namespace _internal
-} // namespace pod_hash
+} // namespace pod_hash_internal
 } // namespace fo
 
 namespace fo {
-namespace pod_hash {
 
 template <typename K, typename V> void reserve(PodHash<K, V> &h, uint32_t size) {
-    _internal::rehash(h, size);
+    pod_hash_internal::rehash(h, size);
 }
 
 template <typename K, typename V> void set(PodHash<K, V> &h, const K &key, const V &value) {
     if (fo::array::size(h._hashes) == 0) {
-        _internal::grow(h);
+        pod_hash_internal::grow(h);
     }
-    const uint32_t ei = _internal::find_or_make(h, key);
+    const uint32_t ei = pod_hash_internal::find_or_make(h, key, false);
     h._entries[ei].value = value;
-    if (_internal::full(h)) {
-        _internal::grow(h);
+    if (pod_hash_internal::full(h)) {
+        pod_hash_internal::grow(h);
     }
 }
 
 template <typename K, typename V> bool has(PodHash<K, V> &h, const K &key) {
-    const _internal::FindResult fr = _internal::find(h, key);
-    return fr.entry_i != _internal::END_OF_LIST;
+    const pod_hash_internal::FindResult fr = pod_hash_internal::find(h, key);
+    return fr.entry_i != pod_hash_internal::END_OF_LIST;
 }
 
 template <typename K, typename V> typename PodHash<K, V>::iterator get(const PodHash<K, V> &h, const K &key) {
-    _internal::FindResult fr = _internal::find(h, key);
-    if (fr.entry_i == _internal::END_OF_LIST) {
+    pod_hash_internal::FindResult fr = pod_hash_internal::find(h, key);
+    if (fr.entry_i == pod_hash_internal::END_OF_LIST) {
         return h._entries.end();
     }
     return h._entries.begin() + fr.entry_i;
 }
 
+template <typename K, typename V> V &PodHash<K, V>::operator[](const K &key) {
+    if (fo::array::size(_hashes) == 0) {
+        pod_hash_internal::grow(*this);
+    }
+    auto ei = pod_hash_internal::find_or_make(*this, key, true);
+    return (this->_entries.begin() + ei)->value;
+}
+
 template <typename K, typename V> V &set_default(PodHash<K, V> &h, const K &key, const V &deffault) {
-    _internal::FindResult fr = _internal::find(h, key);
-    if (fr.entry_i == _internal::END_OF_LIST) {
+    pod_hash_internal::FindResult fr = pod_hash_internal::find(h, key);
+    if (fr.entry_i == pod_hash_internal::END_OF_LIST) {
         if (fo::array::size(h._hashes) == 0) {
-            _internal::grow(h);
+            pod_hash_internal::grow(h);
         }
-        const uint32_t ei = _internal::make(h, key);
+        const uint32_t ei = pod_hash_internal::make(h, key);
         h._entries[ei].value = deffault;
-        if (_internal::full(h)) {
-            _internal::grow(h);
+        if (pod_hash_internal::full(h)) {
+            pod_hash_internal::grow(h);
         }
         return h._entries[ei].value;
     }
@@ -346,8 +363,8 @@ template <typename K, typename V> V &set_default(PodHash<K, V> &h, const K &key,
 
 /// Returns a const reference to the key. Use when using the hash as a set.
 template <typename K, typename V> const K &get_key(const PodHash<K, V> &h, K const &key, K const &deffault) {
-    _internal::FindResult fr = _internal::find(h, key);
-    if (fr.entry_i == _internal::END_OF_LIST) {
+    pod_hash_internal::FindResult fr = pod_hash_internal::find(h, key);
+    if (fr.entry_i == pod_hash_internal::END_OF_LIST) {
         return deffault;
     }
     return h._entries[fr.entry_i].key;
@@ -355,7 +372,7 @@ template <typename K, typename V> const K &get_key(const PodHash<K, V> &h, K con
 
 /// Removes the entry with the given key if it exists.
 template <typename K, typename V> void remove(PodHash<K, V> &h, const K &key) {
-    _internal::find_and_erase(h, key);
+    pod_hash_internal::find_and_erase(h, key);
 }
 
 /// Finds the maximum chain length in the hash table.
@@ -363,14 +380,14 @@ template <typename K, typename V> uint32_t max_chain_length(const PodHash<K, V> 
     uint32_t max_length = 0;
 
     for (uint32_t i = 0; i < fo::array::size(h._entries); ++i) {
-        if (h._hashes[i] == _internal::END_OF_LIST) {
+        if (h._hashes[i] == pod_hash_internal::END_OF_LIST) {
             continue;
         }
 
         uint32_t entry_i = h._hashes[i];
         uint32_t length = 1;
 
-        while (h._entries[entry_i].next != _internal::END_OF_LIST) {
+        while (h._entries[entry_i].next != pod_hash_internal::END_OF_LIST) {
             entry_i = h._entries[entry_i].next;
             ++length;
         }
@@ -380,6 +397,5 @@ template <typename K, typename V> uint32_t max_chain_length(const PodHash<K, V> 
     }
     return max_length;
 }
-} // namespace pod_hash
 
 } // namespace fo
