@@ -20,7 +20,7 @@ struct WordStore {
         char *str =
             (char *)memory_globals::default_allocator().allocate(length, 1);
         memcpy(str, buffer, length);
-        char *prev_str = pod_hash::set_default(string_id, str, str);
+        char *prev_str = set_default(string_id, str, str);
         if (prev_str != str) {
             memory_globals::default_allocator().deallocate(str);
         }

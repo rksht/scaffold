@@ -17,30 +17,28 @@ template <> inline uint64_t usual_hash(char *const &s) {
 }
 
 /// cstring equal
-template <> inline bool usual_equal(char *const &s1, char *const &s2) {
-    return strcmp(s1, s2) == 0;
-}
+template <> inline bool usual_equal(char *const &s1, char *const &s2) { return strcmp(s1, s2) == 0; }
 
 /// char hash
 template <> inline uint64_t usual_hash(char const &s) { return s; }
 
 /// char equal
-template <> inline bool usual_equal(char const &s1, char const &s2) {
-    return s1 == s2;
-}
+template <> inline bool usual_equal(char const &s1, char const &s2) { return s1 == s2; }
 
 /// int hash
 template <> inline uint64_t usual_hash(int const &n) { return (uint64_t)n; }
 
-template <> inline bool usual_equal(int const &n1, int const &n2) {
-    return n1 == n2;
-}
+template <> inline bool usual_equal(int const &n1, int const &n2) { return n1 == n2; }
 
 /// int hash
 template <> inline uint64_t usual_hash(uint64_t const &n) { return n; }
 
-template <> inline bool usual_equal(uint64_t const &n1, uint64_t const &n2) {
-    return n1 == n2;
-}
+template <> inline bool usual_equal(uint64_t const &n1, uint64_t const &n2) { return n1 == n2; }
+
+/// int hash
+template <> inline uint64_t usual_hash(uint32_t const &n) { return (uint64_t)n; }
+
+/// uint32_t hash
+template <> inline bool usual_equal(uint32_t const &n1, uint32_t const &n2) { return n1 == n2; }
 
 } // namespace fo
