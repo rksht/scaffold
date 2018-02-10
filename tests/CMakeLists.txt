@@ -85,8 +85,8 @@ endif()
 
 ##
 
-add_executable(quad_hash_test quad_hash_test.cpp)
-target_link_libraries(quad_hash_test scaffold)
+add_executable(open_hash_test open_hash_test.cpp)
+target_link_libraries(open_hash_test scaffold)
 
 ## 
 

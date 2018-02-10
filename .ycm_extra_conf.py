@@ -15,7 +15,7 @@ import re
 # for my NixOS setup
 
 IS_NIXOS = False
-GCC_VERSION = '6.2.1'
+GCC_VERSION = '7.3.0'
 
 # Usual include paths
 SYSTEM_INCLUDES = ['/usr/include', '/usr/include/c++/{}'.format(GCC_VERSION)]
