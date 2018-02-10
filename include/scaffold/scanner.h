@@ -1,8 +1,8 @@
 #pragma once
 
-#include "array.h"
-#include "memory.h"
-#include "string_stream.h"
+#include <scaffold/array.h>
+#include <scaffold/memory.h>
+#include <scaffold/string_stream.h>
 
 namespace scanner {
 

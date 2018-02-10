@@ -6,6 +6,9 @@ else()
 	add_compile_options("-Wall" "-Wextra" "-Wno-implicit-fallthrough")
 endif()
 
+add_executable(single_test single_test.cpp)
+target_link_libraries(single_test scaffold)
+
 include_directories(${PROJECT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR})
 
 ##
@@ -92,3 +95,5 @@ target_link_libraries(open_hash_test scaffold)
 
 add_executable(pool_allocator_test pool_allocator_test.cpp)
 target_link_libraries(pool_allocator_test scaffold)
+
+##

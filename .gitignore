@@ -2,4 +2,4 @@
 *.o
 *.so
 *.pyc
-
+tests/scaffold.h
