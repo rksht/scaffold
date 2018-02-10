@@ -174,7 +174,7 @@ template <typename K, typename V, typename Params, bool is_const> struct Iterato
             }
 
             // A deleted or nil slot
-            if (_slot == _h->_num_slots || ParamsType::OpenDeletedTy::get() == keys[_slot] ||
+            if (ParamsType::OpenDeletedTy::get() == keys[_slot] ||
                 ParamsType::OpenNilTy::get() == keys[_slot]) {
                 continue;
             }
