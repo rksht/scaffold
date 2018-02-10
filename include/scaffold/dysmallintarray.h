@@ -1,15 +1,15 @@
 #pragma once
 
-#include "array.h"
-#include "const_log.h"
-#include "debug.h"
-#include "memory.h"
-#include "string.h"
-#include "string_stream.h"
+#include <scaffold/array.h>
+#include <scaffold/const_log.h>
+#include <scaffold/debug.h>
+#include <scaffold/memory.h>
+#include <scaffold/string_stream.h>
 
 #include <algorithm>
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include <type_traits>
 
 namespace fo {
@@ -180,4 +180,4 @@ template <typename Word = unsigned long, typename GetTy = Word> struct DySmallIn
         }
     }
 };
-}
+} // namespace fo

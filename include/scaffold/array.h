@@ -1,7 +1,7 @@
 #pragma once
 
-#include "collection_types.h"
-#include "memory.h"
+#include <scaffold/collection_types.h>
+#include <scaffold/memory.h>
 
 #include <memory>
 #include <string.h>

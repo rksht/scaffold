@@ -1,34 +1,31 @@
 #pragma once
 
-#include "array.h"
-#include "const_log.h"
-#include "debug.h"
-#include "memory.h"
-#include "string.h"
-#include "string_stream.h"
+#include <scaffold/array.h>
+#include <scaffold/const_log.h>
+#include <scaffold/debug.h>
+#include <scaffold/memory.h>
+#include <scaffold/string_stream.h>
 
 #include <algorithm>
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include <type_traits>
 
 namespace fo {
 
 /// A data type that holds `num_int` packed unsigned integers which are
 /// representable with `bits_per_int` bits.
-template <unsigned bits_per_int, unsigned num_ints, typename T = unsigned long,
-          typename GetTy = T>
+template <unsigned bits_per_int, unsigned num_ints, typename T = unsigned long, typename GetTy = T>
 struct SmallIntArray {
   private:
     constexpr static unsigned _num_bits = sizeof(T) * 8;
     constexpr static unsigned _ints_per_word = _num_bits / bits_per_int;
     constexpr static unsigned _num_words = ceil_div(num_ints, _ints_per_word);
 
-    static_assert(bits_per_int <= _num_bits,
-                  "SmallIntArray - Bits per small integer too big");
+    static_assert(bits_per_int <= _num_bits, "SmallIntArray - Bits per small integer too big");
 
-    static_assert(std::is_integral<T>::value,
-                  "SmallIntArray - Not an integral base type");
+    static_assert(std::is_integral<T>::value, "SmallIntArray - Not an integral base type");
 
     static_assert(num_ints > 0, "SmallIntArray - I don't allow this");
 
@@ -48,9 +45,7 @@ struct SmallIntArray {
         return _words[word_idx];
     }
 
-    constexpr static T _mask(unsigned offset) {
-        return _front_mask() << (offset * bits_per_int);
-    }
+    constexpr static T _mask(unsigned offset) { return _front_mask() << (offset * bits_per_int); }
 
   public:
     class const_iterator {
@@ -62,22 +57,21 @@ struct SmallIntArray {
         const_iterator() = delete;
 
         const_iterator(const const_iterator &other)
-            : _sa(other._sa), _idx(other._idx) {}
+            : _sa(other._sa)
+            , _idx(other._idx) {}
 
-        const_iterator(const SmallIntArray *sa, int idx) : _sa(sa), _idx(idx) {}
+        const_iterator(const SmallIntArray *sa, int idx)
+            : _sa(sa)
+            , _idx(idx) {}
 
         const_iterator &operator++() {
             ++_idx;
             return *this;
         }
 
-        bool operator==(const const_iterator &other) {
-            return _idx == other._idx;
-        }
+        bool operator==(const const_iterator &other) { return _idx == other._idx; }
 
-        bool operator!=(const const_iterator &other) {
-            return _idx != other._idx;
-        }
+        bool operator!=(const const_iterator &other) { return _idx != other._idx; }
 
         T operator*() { return _sa->get(_idx); }
     };
@@ -85,9 +79,7 @@ struct SmallIntArray {
   public:
     /// Returns the amount of memory the underlying array would require,
     /// clipped to nearest power of 2.
-    constexpr static size_t space_required() {
-        return clip_to_power_of_2(_num_words * sizeof(T));
-    }
+    constexpr static size_t space_required() { return clip_to_power_of_2(_num_words * sizeof(T)); }
 
     /// Ctor - sets all to 0
     SmallIntArray(Allocator &allocator = memory_globals::default_allocator())
@@ -134,14 +126,11 @@ struct SmallIntArray {
         }
 
         // Otherwise set the begin word and end words first...
-        for (unsigned idx = begin_idx,
-                      e = begin_idx + (_ints_per_word - begin_word_offset);
-             idx < e; ++idx) {
+        for (unsigned idx = begin_idx, e = begin_idx + (_ints_per_word - begin_word_offset); idx < e; ++idx) {
             set(idx, the_int);
         }
 
-        for (unsigned idx = end_word_pos * _ints_per_word; idx < end_idx;
-             ++idx) {
+        for (unsigned idx = end_word_pos * _ints_per_word; idx < end_idx; ++idx) {
             set(idx, the_int);
         }
 
@@ -151,8 +140,7 @@ struct SmallIntArray {
             n = (n & ~(_mask(offset))) | (the_int << (offset * bits_per_int));
         }
 
-        for (unsigned word_pos = begin_word_pos + 1; word_pos < end_word_pos;
-             ++word_pos) {
+        for (unsigned word_pos = begin_word_pos + 1; word_pos < end_word_pos; ++word_pos) {
             _words[word_pos] = n;
         }
     }
@@ -182,4 +170,4 @@ struct SmallIntArray {
         }
     }
 };
-}
+} // namespace fo

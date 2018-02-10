@@ -1,8 +1,8 @@
 #pragma once
 
-#include "array.h"
-#include "collection_types.h"
-#include "memory.h"
+#include <scaffold/array.h>
+#include <scaffold/collection_types.h>
+#include <scaffold/memory.h>
 
 #include <algorithm> // std::swap
 #include <functional>

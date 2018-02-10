@@ -10,7 +10,6 @@
 #include <stdlib.h> // rand()
 
 using fo::PodHash;
-using namespace fo::pod_hash;
 using fo::DySmallIntArray;
 
 TEST_CASE("DySmallIntArray<> working correctly", "[DySmallIntArray<>_works]") {

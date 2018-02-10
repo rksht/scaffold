@@ -1,6 +1,6 @@
 #pragma once
 
-#include "memory.h"
+#include <scaffold/memory.h>
 #include <cassert>
 
 namespace fo {

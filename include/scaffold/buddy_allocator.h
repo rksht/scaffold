@@ -2,10 +2,10 @@
 
 #include <scaffold/memory.h>
 
-#include "const_log.h"
-#include "debug.h"
-#include "dysmallintarray.h"
-#include "memory.h"
+#include <scaffold/const_log.h>
+#include <scaffold/debug.h>
+#include <scaffold/dysmallintarray.h>
+#include <scaffold/memory.h>
 
 /// A "buddy allocator"
 

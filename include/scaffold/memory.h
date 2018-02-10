@@ -2,8 +2,8 @@
 
 #include <new>
 
-#include "memory_types.h"
-#include "types.h"
+#include <scaffold/memory_types.h>
+#include <scaffold/types.h>
 
 namespace fo {
 /// Base class for memory allocators.

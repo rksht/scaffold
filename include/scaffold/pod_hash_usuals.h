@@ -1,6 +1,7 @@
 #pragma once
-#include "murmur_hash.h"
-#include "pod_hash.h"
+
+#include <scaffold/murmur_hash.h>
+#include <scaffold/pod_hash.h>
 #include <assert.h>
 
 namespace fo {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include <scaffold/types.h>
 
 #include <emmintrin.h>
 

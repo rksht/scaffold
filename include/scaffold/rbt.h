@@ -6,8 +6,8 @@
 // with the key. Allowing only POD-ish types, as this makes implementing and
 // editing the structure even easier.
 
-#include "memory.h"
-#include "temp_allocator.h"
+#include <scaffold/memory.h>
+#include <scaffold/temp_allocator.h>
 #include <functional>
 #include <type_traits>
 

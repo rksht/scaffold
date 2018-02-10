@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include <scaffold/types.h>
 
 namespace fo {
 /// Implementation of the 64 bit MurmurHash2 function

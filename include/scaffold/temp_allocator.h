@@ -1,6 +1,6 @@
 #pragma once
 
-#include "memory.h"
+#include <scaffold/memory.h>
 
 namespace fo {
 /// A temporary memory allocator that primarily allocates memory from a
