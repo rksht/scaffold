@@ -202,8 +202,68 @@ TEST_CASE("value_default", "[value_default]") {
             // Reinsert
             // std::cout << "Reinserting...\n";
             for (uint64_t k = 0; k < count / 2; ++k) {
-                // print_hash();
                 std::cout << "Inserting: " << k << "\n";
+                uint64_t &v = open_hash::value_default(h, k);
+                v = count - k;
+            }
+
+            for (uint64_t k = 0; k < count; ++k) {
+                // std::cout << "k = " << k << " => " << open_hash::must_value(h, k) << "\n";
+                REQUIRE(open_hash::must_value(h, k) == count - k);
+            }
+        }
+        fo::memory_globals::shutdown();
+    }
+}
+
+TEST_CASE("OpenHash iterator", "[OpenHash_iterator]") {
+    fo::memory_globals::init();
+    {
+        auto &alloc = fo::memory_globals::default_allocator();
+
+        using hash_type = fo::OpenHash<uint64_t, uint64_t>;
+
+        namespace open_hash = fo::open_hash;
+        namespace array = fo::array;
+
+        {
+            hash_type h{alloc, 16, [](const auto &i) { return i & 0xffffffffu; },
+                        [](const auto &i, const auto &j) { return i == j; }};
+
+            constexpr u32 count = 10;
+
+            for (uint64_t k = 0; k < count; ++k) {
+                auto index = open_hash::insert_key(h, k);
+                open_hash::value(h, index) = count - k;
+            }
+
+            // Remove half
+            for (uint64_t k = 0; k < count / 2; ++k) {
+                open_hash::remove(h, k);
+            }
+
+            const auto print_hash = [&]() {
+                for (uint32_t i = 0; i < h._num_slots; ++i) {
+                    auto keys = (uint64_t *)(h._buffer + h._keys_offset);
+                    auto values = (uint64_t *)(h._buffer + h._values_offset);
+
+                    auto v = (keys[i] != 8888 && keys[i] != 9999) ? values[keys[i]] : 999999;
+
+                    std::cout << "Key: " << i << " = " << keys[i] << " Value = " << v << " \n";
+                }
+                std::cout << "--\n";
+            };
+
+            i32 i = 0;
+            for (auto it = begin(h); it != end(h); ++it) {
+                printf("i = %i, key = %lu\n", i, (*it).key);
+                REQUIRE((*it).value == count - (*it).key);
+            }
+
+            // Reinsert
+            // std::cout << "Reinserting...\n";
+            for (uint64_t k = 0; k < count / 2; ++k) {
+                // print_hash();
                 uint64_t &v = open_hash::value_default(h, k);
                 v = count - k;
             }
@@ -214,6 +274,6 @@ TEST_CASE("value_default", "[value_default]") {
                 REQUIRE(open_hash::must_value(h, k) == count - k);
             }
         }
-        fo::memory_globals::shutdown();
     }
+    fo::memory_globals::shutdown();
 }

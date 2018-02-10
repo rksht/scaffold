@@ -1,5 +1,4 @@
-/// Implements a quadratic probing based hash table for storing POD(-ish)
-/// objects
+/// Implements a quadratic probing based hash table for storing POD(-ish) objects
 #pragma once
 
 #include <scaffold/array.h>
@@ -78,9 +77,8 @@ namespace open_hash {
 /// Denotes that key is not found
 constexpr uint32_t NOT_FOUND = 0xffffffffu;
 
-/// Returns NOT_FOUND if given `key` is not associated with any value.
-/// Otherwise returns an integer i such that calling `value` will return a
-/// reference to the value.
+/// Returns NOT_FOUND if given `key` is not associated with any value. Otherwise returns an integer i such
+/// that calling `value` will return a reference to the value.
 template <typename K, typename V, typename Params>
 uint32_t find(const OpenHash<K, V, Params> &h, const K &key);
 
@@ -103,57 +101,86 @@ template <typename K, typename V, typename Params> V &value_default(OpenHash<K, 
 template <typename K, typename V, typename Params>
 const V &must_value(const OpenHash<K, V, Params> &h, const K &key);
 
-/// Returns the value associated with the given key (const reference). Key
-/// must exist.
+/// Returns the value associated with the given key (const reference). Key must exist.
 template <typename K, typename V, typename Params>
 const V &must_value(const OpenHash<K, V, Params> &h, const K &key);
 
-/// Associates the given value with the given key. May trigger a rehash if key
-/// doesn't exist already. Returns the position of the value.
+/// Associates the given value with the given key. May trigger a rehash if key doesn't exist already. Returns
+/// the position of the value.
 template <typename K, typename V, typename Params>
 void set(OpenHash<K, V, Params> &h, const K &key, const V &value);
 
-/// Inserts the given key but does not take any value to associate with the
-/// key. Returns the index into the values array. (You must create some value
-/// there yourself!)
+/// Inserts the given key but does not take any value to associate with the key. Returns the index into the
+/// values array. (You must create some value there yourself!)
 template <typename K, typename V, typename Params>
 uint32_t insert_key(OpenHash<K, V, Params> &h, const K &key);
 
 /// Removes the key if it exists
 template <typename K, typename V, typename Params> void remove(OpenHash<K, V, Params> &h, const K &key);
 
-/// Iterator support. A little too convoluted for my likes.
-template <typename Q, bool is_const> struct Iterator {
-    using KeyType = const typename Q::KeyType;
-    using ValueType =
-        typename std::conditional<is_const, typename Q::ValueType, const typename Q::ValueType>::type;
-    using ParamsType = typename Q::ParamsType;
+/// Flaky iterator support. A little too convoluted for my likes.
+template <typename K, typename V, typename Params, bool is_const> struct Iterator {
+    using KeyType = K;
+    using ValueType = typename std::conditional<is_const, V, const V>::type;
+    using ParamsType = Params;
+    using OpenHashType =
+        typename std::conditional<is_const, const OpenHash<K, V, Params>, OpenHash<K, V, Params>>::type;
 
-    Q *_h;
-    uint32_t _slot;
+    OpenHashType *_h;
+    uint32_t _slot; // Either points to `end` or a valid slot. Never points to a deleted or nil slot.
 
     Iterator() = delete;
 
-    Iterator(Q *h, uint32_t slot)
-        : _h(h)
-        , _slot(slot) {}
+    Iterator(OpenHashType &h, uint32_t slot)
+        : _h(&h)
+        , _slot(slot) {
+
+        _slot = std::min(_h->_num_slots, _slot);
+
+        auto keys = _keys_array();
+        auto values = _values_array();
+
+        // Must start with a valid slot if it exists
+        while (_slot != _h->_num_slots) {
+            if (ParamsType::OpenDeletedTy::get() == keys[_slot] ||
+                ParamsType::OpenNilTy::get() == keys[_slot]) {
+                ++_slot;
+            } else {
+                break;
+            }
+        }
+    }
+
     Iterator(const Iterator &other)
         : _h(other._h)
         , _slot(other._slot) {}
 
-    KeyType &_key_ref() const { return reinterpret_cast<KeyType *>(_h->_buffer + _h->_keys_offset); }
+    KeyType *_keys_array() const { return reinterpret_cast<KeyType *>(_h->_buffer + _h->_keys_offset); }
 
-    ValueType *_value_ref() const { reinterpret_cast<ValueType *>(_h->_buffer + _h->_values_offset); }
+    ValueType *_values_array() const {
+        return reinterpret_cast<ValueType *>(_h->_buffer + _h->_values_offset);
+    }
 
     Iterator &operator++() {
-        auto keys = _key_ref();
-        auto values = _value_ref();
+        auto keys = _keys_array();
+        auto values = _values_array();
 
-        while (_slot != _h->_num_slots) {
-            if (ParamsType::OpenDeletedTy::get() == keys[_slot] || ParamsType::OpenNilTy::get()) {
-                ++_slot;
+        while (true) {
+            ++_slot;
+
+            // Reached end
+            if (_slot == _h->_num_slots) {
+                break;
+            }
+
+            // A deleted or nil slot
+            if (_slot == _h->_num_slots || ParamsType::OpenDeletedTy::get() == keys[_slot] ||
+                ParamsType::OpenNilTy::get() == keys[_slot]) {
                 continue;
             }
+
+            // Valid slot means this is it
+            break;
         }
         return *this;
     }
@@ -162,12 +189,67 @@ template <typename Q, bool is_const> struct Iterator {
     struct Derefable {
         KeyType &key;
         ValueType &value;
+
+        Derefable(const Derefable &) = default;
+        Derefable(Derefable &&) = default;
+
+        Derefable operator=(const Derefable &) = delete;
+        Derefable operator=(Derefable &&) = delete;
     };
 
-    Derefable operator->() const { return Derefable{_key_ref(), _value_ref()}; }
+    Derefable operator*() const { return Derefable{_keys_array()[_slot], _values_array()[_slot]}; }
 };
 
 } // namespace open_hash
+
+// Iterator returns
+
+template <typename K, typename V, typename Params>
+open_hash::Iterator<K, V, Params, true> begin(const OpenHash<K, V, Params> &h) {
+    return open_hash::Iterator<K, V, Params, true>(h, 0);
+}
+
+template <typename K, typename V, typename Params>
+open_hash::Iterator<K, V, Params, true> end(const OpenHash<K, V, Params> &h) {
+    return open_hash::Iterator<K, V, Params, true>(h, h._num_slots);
+}
+
+template <typename K, typename V, typename Params>
+open_hash::Iterator<K, V, Params, false> begin(OpenHash<K, V, Params> &h) {
+    return open_hash::Iterator<K, V, Params, false>(h, 0);
+}
+
+template <typename K, typename V, typename Params>
+open_hash::Iterator<K, V, Params, false> end(OpenHash<K, V, Params> &h) {
+    return open_hash::Iterator<K, V, Params, false>(h, h._num_slots);
+}
+
+// Comparisons. Not doing all of them. Will add if I ever need others.
+
+template <typename K, typename V, typename Params, bool is_const>
+bool operator<(const open_hash::Iterator<K, V, Params, is_const> &it_0,
+               const open_hash::Iterator<K, V, Params, is_const> &it_1) {
+    return it_0._slot < it_1._slot;
+}
+
+template <typename K, typename V, typename Params, bool is_const>
+bool operator==(const open_hash::Iterator<K, V, Params, is_const> &it_0,
+                const open_hash::Iterator<K, V, Params, is_const> &it_1) {
+    return it_0._slot == it_1._slot;
+}
+
+template <typename K, typename V, typename Params, bool is_const>
+bool operator!=(const open_hash::Iterator<K, V, Params, is_const> &it_0,
+                const open_hash::Iterator<K, V, Params, is_const> &it_1) {
+    return it_0._slot != it_1._slot;
+}
+
+template <typename K, typename V, typename Params, bool is_const>
+bool operator>(const open_hash::Iterator<K, V, Params, is_const> &it_0,
+               const open_hash::Iterator<K, V, Params, is_const> &it_1) {
+    return it_1 < it_0;
+}
+
 } // namespace fo
 
 // --- Implementations
