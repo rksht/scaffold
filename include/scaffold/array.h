@@ -52,7 +52,7 @@ template <typename T> void trim(Array<T> &a);
 template <typename T> void push_back(Array<T> &a, const T &item);
 /// Pops the last item from the array. The array cannot be empty.
 template <typename T> void pop_back(Array<T> &a);
-}
+} // namespace array
 
 namespace array {
 template <typename T> inline uint32_t size(const Array<T> &a) { return a._size; }
@@ -62,8 +62,10 @@ template <typename T> inline bool empty(const Array<T> &a) { return a._size == 0
 /// Keeping these two `begin` and `end` functions in this namespace to be
 /// compatible with the original fo code.
 template <typename T> typename Array<T>::iterator begin(Array<T> &a) { return a.begin(); }
-
 template <typename T> inline typename Array<T>::iterator end(Array<T> &a) { return a.end(); }
+
+template <typename T> typename Array<T>::iterator begin(const Array<T> &a) { return a.begin(); }
+template <typename T> inline typename Array<T>::iterator end(const Array<T> &a) { return a.end(); }
 
 template <typename T> inline T &front(Array<T> &a) { return a._data[0]; }
 template <typename T> inline const T &front(const Array<T> &a) { return a._data[0]; }
@@ -129,7 +131,7 @@ template <typename T> inline void push_back(Array<T> &a, const T &item) {
 }
 
 template <typename T> inline void pop_back(Array<T> &a) { a._size--; }
-}
+} // namespace array
 
 template <typename T>
 inline Array<T>::Array(Allocator &allocator, uint32_t initial_size)
@@ -138,6 +140,19 @@ inline Array<T>::Array(Allocator &allocator, uint32_t initial_size)
     , _capacity(0)
     , _data(nullptr) {
     array::resize(*this, initial_size);
+}
+
+template <typename T>
+Array<T>::Array(Allocator &allocator, std::initializer_list<T> init_list)
+    : _allocator(&allocator)
+    , _size(0)
+    , _capacity(0)
+    , _data(nullptr) {
+    array::reserve(*this, init_list.size());
+
+    for (const auto &item : init_list) {
+        array::push_back(*this, item);
+    }
 }
 
 template <typename T> inline Array<T>::~Array() {
@@ -199,4 +214,4 @@ template <typename T> Array<T> &Array<T>::operator=(Array<T> &&other) {
 template <typename T> inline T &Array<T>::operator[](uint32_t i) { return _data[i]; }
 
 template <typename T> inline const T &Array<T>::operator[](uint32_t i) const { return _data[i]; }
-}
+} // namespace fo

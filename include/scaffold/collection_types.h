@@ -3,6 +3,7 @@
 #include <scaffold/memory_types.h>
 #include <scaffold/types.h>
 
+#include <initializer_list>
 #include <type_traits>
 
 /// All collection types assume that they are used to store POD objects. I.e.
@@ -23,6 +24,7 @@ template <typename T> struct Array {
     static_assert(std::is_trivially_destructible<T>::value, "");
 
     Array(Allocator &a, uint32_t initial_size = 0);
+    Array(Allocator &a, std::initializer_list<T> init_list);
     ~Array();
     Array(const Array &other);
     Array &operator=(const Array &other);
