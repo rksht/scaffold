@@ -64,8 +64,8 @@ template <typename T> inline bool empty(const Array<T> &a) { return a._size == 0
 template <typename T> typename Array<T>::iterator begin(Array<T> &a) { return a.begin(); }
 template <typename T> inline typename Array<T>::iterator end(Array<T> &a) { return a.end(); }
 
-template <typename T> typename Array<T>::iterator begin(const Array<T> &a) { return a.begin(); }
-template <typename T> inline typename Array<T>::iterator end(const Array<T> &a) { return a.end(); }
+template <typename T> typename Array<T>::const_iterator begin(const Array<T> &a) { return a.begin(); }
+template <typename T> inline typename Array<T>::const_iterator end(const Array<T> &a) { return a.end(); }
 
 template <typename T> inline T &front(Array<T> &a) { return a._data[0]; }
 template <typename T> inline const T &front(const Array<T> &a) { return a._data[0]; }
