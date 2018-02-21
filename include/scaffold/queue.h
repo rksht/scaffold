@@ -151,7 +151,7 @@ template <typename T> ChunkExtent<T> get_extent(Queue<T> &q, uint32_t start, uin
     if (first_chunk_end > array::size(q._data)) {
         e.first_chunk_size = array::size(q._data) - first_chunk_start;
         e.second_chunk = array::data(q._data);
-        e.second_chunk_size = array::size(q._data) - first_chunk_start;
+        e.second_chunk_size = size - e.first_chunk_size;
     } else {
         e.first_chunk_size = size;
         e.second_chunk = nullptr;
