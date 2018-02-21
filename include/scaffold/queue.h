@@ -143,7 +143,7 @@ template <typename T> const T *end_front(const Queue<T> &q) {
 template <typename T> ChunkExtent<T> get_extent(Queue<T> &q, uint32_t start, uint32_t size) {
     ChunkExtent<T> e;
 
-    uint32_t first_chunk_start = start % array::size(q._data);
+    uint32_t first_chunk_start = (q._offset + start) % array::size(q._data);
     uint32_t first_chunk_end = first_chunk_start + size;
 
     e.first_chunk = &q._data[first_chunk_start];
