@@ -1,3 +1,5 @@
+#pragma once
+
 #include <scaffold/array.h>
 #include <scaffold/collection_types.h>
 
@@ -164,7 +166,7 @@ template <typename T> ChunkExtent<T> get_extent(Queue<T> &q, uint32_t start, uin
 } // namespace queue
 
 template <typename T>
-inline Queue<T>::Queue(Allocator &allocator)
+Queue<T>::Queue(Allocator &allocator)
     : _data(allocator)
     , _size(0)
     , _offset(0) {}
