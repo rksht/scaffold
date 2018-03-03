@@ -10,6 +10,7 @@
 
 #include <assert.h>
 #include <iostream>
+#include <mutex>
 #include <new>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +24,7 @@ void Allocator::set_name(const char *name, uint64_t len) {
     assert(len < ALLOCATOR_NAME_SIZE && "Allocator name too large");
     memcpy(_name, name, len);
 }
-}
+} // namespace fo
 
 namespace {
 
@@ -72,6 +73,8 @@ inline void fill(Header *header, void *data, uint64_t size) {
 class MallocAllocator : public Allocator {
     uint64_t _total_allocated;
 
+    std::mutex _mutex;
+
     // Returns the size to allocate from malloc() for a given size and align.
     static inline uint64_t size_with_padding(uint64_t size, uint64_t align) {
         return size + align + sizeof(Header);
@@ -79,33 +82,39 @@ class MallocAllocator : public Allocator {
 
   public:
     MallocAllocator()
-        : _total_allocated(0) {
+        : _total_allocated(0)
+        , _mutex{} {
 #ifdef MALLOC_ALLOC_DONT_TRACK_SIZE
         _total_allocated = SIZE_NOT_TRACKED;
 #endif
     }
 
     ~MallocAllocator() {
-// Check that we don't have any memory leaks when allocator is
-// destroyed.
+        // Check that we don't have any memory leaks when allocator is destroyed.
 #ifndef MALLOC_ALLOC_DONT_TRACK_SIZE
         assert(_total_allocated == 0);
 #endif
     }
 
+    uint64_t total_allocated() override {
+        std::lock_guard<std::mutex> lk(_mutex);
+        return _total_allocated;
+    }
+
 #ifdef MALLOC_ALLOC_DONT_TRACK_SIZE
     void *allocate(uint64_t size, uint64_t align) override {
-		void *p = nullptr;
+        std::lock_guard<std::mutex> lk(_mutex);
+
+        void *p = nullptr;
 #ifdef WIN32
-		p = _aligned_malloc(size, align);
-#else 
-		int ret;
+        p = _aligned_malloc(size, align);
+#else
+        int ret;
 
         // The minimum alignment required for posix_memalign
         if (align % alignof(void *) != 0) {
             align = alignof(void *);
         }
-
 
         if ((ret = posix_memalign(&p, align, size)) != 0) {
             log_err("MallocAllocator failed to allocate - error = %s, align = %lu",
@@ -117,12 +126,13 @@ class MallocAllocator : public Allocator {
     }
 
     void deallocate(void *p) override {
+    // Don't need to lock
 #ifdef WIN32
-		_aligned_free(p);
+        _aligned_free(p);
 #else
-		free(p);
+        free(p);
 #endif
-	}
+    }
 
     uint64_t allocated_size(void *p) override {
         (void)p;
@@ -130,6 +140,8 @@ class MallocAllocator : public Allocator {
     }
 #else
     void *allocate(uint64_t size, uint64_t align) override {
+        std::lock_guard<std::mutex> lk(_mutex);
+
         const uint64_t ts = size_with_padding(size, align);
         Header *h = (Header *)malloc(ts);
         void *p = data_pointer(h, align);
@@ -140,6 +152,8 @@ class MallocAllocator : public Allocator {
     }
 
     void deallocate(void *p) override {
+        std::lock_guard<std::mutex> lk(_mutex);
+
         if (!p)
             return;
 
@@ -148,29 +162,31 @@ class MallocAllocator : public Allocator {
         free(h);
     }
 
-    uint64_t allocated_size(void *p) override { return header(p)->size; }
+    uint64_t allocated_size(void *p) override {
+        // No need to lock since if some other thread is deallocating the memory region, there is already a
+        // data race on the user side. Just saying.
+        return header(p)->size;
+    }
 #endif
-
-    uint64_t total_allocated() override { return _total_allocated; }
 };
 
-/// An allocator used to allocate temporary "scratch" memory. The allocator
-/// uses a fixed size ring buffer to services the requests.
+/// An allocator used to allocate temporary "scratch" memory. The allocator uses a fixed size ring buffer to
+/// services the requests.
 ///
-/// Memory is always always allocated linearly. An allocation pointer is
-/// advanced through the buffer as memory is allocated and wraps around at
-/// the end of the buffer. Similarly, a free pointer is advanced as memory
-/// is freed.
+/// Memory is always always allocated linearly. An allocation pointer is  advanced through the buffer as
+/// memory is allocated and wraps around at  the end of the buffer. Similarly, a free pointer is advanced as
+/// memory  is freed.
 ///
-/// It is important that the scratch allocator is only used for short-lived
-/// memory allocations. A long lived allocator will lock the "free" pointer
-/// and prevent the "allocate" pointer from proceeding past it, which means
-/// the ring buffer can't be used.
+/// It is important that the scratch allocator is only used for short-lived memory allocations. A long lived
+/// allocator will lock the "free" pointer and prevent the "allocate" pointer from proceeding past it, which
+/// means the ring buffer can't be used.
 ///
-/// If the ring buffer is exhausted, the scratch allocator will use its backing
-/// allocator to allocate memory instead.
+/// If the ring buffer is exhausted, the scratch allocator will use its backing allocator to allocate memory
+/// instead.
 class ScratchAllocator : public Allocator {
     Allocator &_backing;
+
+    std::mutex _mutex;
 
     // Start and end of the ring buffer.
     char *_begin, *_end;
@@ -179,13 +195,12 @@ class ScratchAllocator : public Allocator {
     char *_allocate, *_free;
 
   public:
-    /// Creates a ScratchAllocator. The allocator will use the backing
-    /// allocator to create the ring buffer and to service any requests
-    /// that don't fit in the ring buffer.
+    /// Creates a ScratchAllocator. The allocator will use the backing allocator to create the ring buffer and
+    /// to service any requests that don't fit in the ring buffer.
     ///
     /// size specifies the size of the ring buffer.
     ScratchAllocator(Allocator &backing, uint64_t size)
-        : _backing(backing) {
+        : _backing(backing), _mutex{} {
         _begin = (char *)_backing.allocate(size);
         _end = _begin + size;
         _allocate = _begin;
@@ -206,6 +221,8 @@ class ScratchAllocator : public Allocator {
     }
 
     void *allocate(uint64_t size, uint64_t align) override {
+        std::lock_guard<std::mutex> lk(_mutex);
+
         assert(align % 4 == 0);
         size = ((size + 3) / 4) * 4;
 
@@ -234,6 +251,8 @@ class ScratchAllocator : public Allocator {
     }
 
     void deallocate(void *p) override {
+        std::lock_guard<std::mutex> lk(_mutex);
+
         if (!p)
             return;
 
@@ -264,12 +283,14 @@ class ScratchAllocator : public Allocator {
         return h->size - ((char *)p - (char *)h);
     }
 
-    uint64_t total_allocated() override { return _end - _begin; }
+    uint64_t total_allocated() override {
+        std::lock_guard<std::mutex> lk(_mutex);
+        return _end - _begin;
+    }
 };
 
-/// This struct should contain all allocators required by the
-/// application/library/deathray etc. Put any extra allocators required inside
-/// this struct.
+/// This struct should contain all allocators required by the application/library/deathray etc. Put any extra
+/// global allocators required inside this struct.
 struct MemoryGlobals {
     alignas(MallocAllocator) char _default_allocator[sizeof(MallocAllocator)];
     alignas(ScratchAllocator) char _default_scratch_allocator[sizeof(ScratchAllocator)];
@@ -281,7 +302,7 @@ struct MemoryGlobals {
 };
 
 MemoryGlobals _memory_globals;
-} // anon namespace
+} // namespace
 
 namespace fo {
 
@@ -290,21 +311,9 @@ namespace memory_globals {
 /// Allocator names should be defined here statically...
 static const char default_allocator_name[] = "default_alloc";
 static const char default_scratch_allocator_name[] = "default_scratch_alloc";
-// static const char default_arena_allocator_name[] = "Default arena allocator";
 
 /// ... And add the initialization code here ...
 void init(uint64_t scratch_buffer_size) {
-#ifdef MALLOC_ALLOC_DONT_TRACK_SIZE
-    log_info("MallocAllocator is NOT tracking size");
-#else
-    log_info("MallocAllocator is tracking size");
-#endif
-
-#ifndef BUDDY_ALLOC_LEVEL_LOGGING
-    log_info("BuddyAllocator will not log level state");
-#else
-    log_info("BuddyAllocator WILL log level state");
-#endif
     _memory_globals.default_allocator = new (_memory_globals._default_allocator) MallocAllocator{};
     _memory_globals.default_scratch_allocator = new (_memory_globals._default_scratch_allocator)
         ScratchAllocator{*(MallocAllocator *)_memory_globals.default_allocator, scratch_buffer_size};
@@ -324,7 +333,7 @@ void shutdown() {
     // MallocAllocator must be last as its used as the backing allocator for
     // others
     _memory_globals.default_allocator->~MallocAllocator();
-    _memory_globals = MemoryGlobals();
+    _memory_globals = MemoryGlobals{};
 }
 } // namespace memory_globals
 } // namespace fo

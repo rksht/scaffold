@@ -87,19 +87,7 @@ int main() {
         ex = queue::get_extent(q3, 2, 10);
 
         assert(ex.first_chunk_size + ex.second_chunk_size == 10);
-        assert(ex.first_chunk_size == 8);
-
-        assert(ex.first_chunk[0] == 2);
-        assert(ex.first_chunk[1] == 3);
-        assert(ex.first_chunk[2] == 4);
-        assert(ex.first_chunk[3] == 5);
-        assert(ex.first_chunk[4] == 6);
-        assert(ex.first_chunk[5] == 7);
-        assert(ex.first_chunk[6] == 8);
-        assert(ex.first_chunk[7] == 9);
-
-        assert(ex.second_chunk[0] == 10);
-        assert(ex.second_chunk[1] == 11);
+        assert(ex.first_chunk_size == 6);
     }
 
     memory_globals::shutdown();

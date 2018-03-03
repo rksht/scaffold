@@ -14,8 +14,8 @@
 
 namespace fo {
 
-template <typename Word = unsigned long, typename GetTy = Word> struct DySmallIntArray {
-    static_assert(std::is_integral<Word>::value, "DySmallIntArray - Not an integral base type");
+template <typename Word = unsigned long, typename GetTy = Word> struct DyPackedUintArray {
+    static_assert(std::is_integral<Word>::value, "DyPackedUintArray - Not an integral base type");
 
   private:
     constexpr static unsigned _num_bits = sizeof(Word) * 8;
@@ -44,7 +44,7 @@ template <typename Word = unsigned long, typename GetTy = Word> struct DySmallIn
   public:
     class const_iterator {
       private:
-        const DySmallIntArray *_sa;
+        const DyPackedUintArray *_sa;
         int _idx;
 
       public:
@@ -54,7 +54,7 @@ template <typename Word = unsigned long, typename GetTy = Word> struct DySmallIn
             : _sa(other._sa)
             , _idx(other._idx) {}
 
-        const_iterator(const DySmallIntArray *sa, unsigned idx)
+        const_iterator(const DyPackedUintArray *sa, unsigned idx)
             : _sa(sa)
             , _idx(idx) {}
 
@@ -81,17 +81,17 @@ template <typename Word = unsigned long, typename GetTy = Word> struct DySmallIn
 
     /// Ctor. Creates an array that holds `num_int` packed unsigned integers
     /// which are representable with at least `_bits_per_int` bits.
-    DySmallIntArray(unsigned bits_per_int, unsigned num_ints,
-                    Allocator &allocator = memory_globals::default_allocator())
+    DyPackedUintArray(unsigned bits_per_int, unsigned num_ints,
+                      Allocator &allocator = memory_globals::default_allocator())
         : _bits_per_int{bits_per_int}
         , _ints_per_word{_num_bits / _bits_per_int}
         , _num_ints{num_ints}
         , _num_words{ceil_div(_num_ints, _ints_per_word)}
         , _words{allocator} {
 
-        assert(_bits_per_int <= _num_bits && "DySmallIntArray - Bits per small integer too big");
+        assert(_bits_per_int <= _num_bits && "DyPackedUintArray - Bits per small integer too big");
 
-        assert(_num_ints > 0 && "DySmallIntArray - I don't allow this");
+        assert(_num_ints > 0 && "DyPackedUintArray - I don't allow this");
 
         array::resize(_words, _num_words);
         assert(array::size(_words) == _num_words);
@@ -118,9 +118,9 @@ template <typename Word = unsigned long, typename GetTy = Word> struct DySmallIn
             return;
         }
 
-        // Wordhe word at which begin_idx is located in
+        // Find the word at which begin_idx is located in
         const unsigned begin_word_pos = begin_idx / _ints_per_word;
-        // Wordhe offset in that word where `begin_idx` is located in
+        // Find the offset in that word where `begin_idx` is located in
         const unsigned begin_word_offset = begin_idx % _ints_per_word;
         // ditto for `end_idx`
         const unsigned end_word_pos = end_idx / _ints_per_word;

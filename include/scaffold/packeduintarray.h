@@ -14,20 +14,20 @@
 
 namespace fo {
 
-/// A data type that holds `num_int` packed unsigned integers which are
-/// representable with `bits_per_int` bits.
+/// A data type that holds `num_int` packed unsigned integers which are representable with `bits_per_int`
+/// bits.
 template <unsigned bits_per_int, unsigned num_ints, typename T = unsigned long, typename GetTy = T>
-struct SmallIntArray {
+struct PackedUintArray {
   private:
     constexpr static unsigned _num_bits = sizeof(T) * 8;
     constexpr static unsigned _ints_per_word = _num_bits / bits_per_int;
     constexpr static unsigned _num_words = ceil_div(num_ints, _ints_per_word);
 
-    static_assert(bits_per_int <= _num_bits, "SmallIntArray - Bits per small integer too big");
+    static_assert(bits_per_int <= _num_bits, "PackedUintArray - Bits per small integer too big");
 
-    static_assert(std::is_integral<T>::value, "SmallIntArray - Not an integral base type");
+    static_assert(std::is_integral<T>::value, "PackedUintArray - Not an integral base type");
 
-    static_assert(num_ints > 0, "SmallIntArray - I don't allow this");
+    static_assert(num_ints > 0, "PackedUintArray - I don't allow this");
 
     /// Array to store the stuff
     Array<T> _words;
@@ -50,7 +50,7 @@ struct SmallIntArray {
   public:
     class const_iterator {
       private:
-        const SmallIntArray *_sa;
+        const PackedUintArray *_sa;
         int _idx;
 
       public:
@@ -60,7 +60,7 @@ struct SmallIntArray {
             : _sa(other._sa)
             , _idx(other._idx) {}
 
-        const_iterator(const SmallIntArray *sa, int idx)
+        const_iterator(const PackedUintArray *sa, int idx)
             : _sa(sa)
             , _idx(idx) {}
 
@@ -82,7 +82,7 @@ struct SmallIntArray {
     constexpr static size_t space_required() { return clip_to_power_of_2(_num_words * sizeof(T)); }
 
     /// Ctor - sets all to 0
-    SmallIntArray(Allocator &allocator = memory_globals::default_allocator())
+    PackedUintArray(Allocator &allocator = memory_globals::default_allocator())
         : _words{allocator} {
         array::resize(_words, _num_words);
         assert(array::size(_words) == _num_words);

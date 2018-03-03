@@ -224,10 +224,15 @@ void test_string_stream() {
         printf(ss, "%.2f", 3.14159265f);
         ss << "\n";
 
-        ASSERT(0 == strcmp(c_str(ss), "Name                Score\n"
-                                      "----------          ----------\n"
-                                      "Niklas              2.72\n"
-                                      "Jim                 3.14\n"));
+        const auto str = "Name                Score\n"
+                         "----------          ----------\n"
+                         "Niklas              2.72\n"
+                         "Jim                 3.14\n";
+
+        ASSERT(0 == strcmp(c_str(ss), str));
+
+        auto stolen = c_str_own(std::move(ss));
+        ASSERT(strcmp(stolen.c_str, str) == 0);
     }
     memory_globals::shutdown();
 }
@@ -257,7 +262,7 @@ void test_queue() {
         ASSERT(queue::size(q) == 0);
     }
 }
-}
+} // namespace
 
 int main(int, char **) {
     test_memory();

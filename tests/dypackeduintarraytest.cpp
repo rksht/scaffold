@@ -1,21 +1,21 @@
 #define CATCH_CONFIG_MAIN
-#include <scaffold/dysmallintarray.h>
+#include <scaffold/dypackeduintarray.h>
+#include <scaffold/packeduintarray.h>
 #include <scaffold/pod_hash.h>
 #include <scaffold/pod_hash_usuals.h>
-#include <scaffold/smallintarray.h>
 #include <scaffold/temp_allocator.h>
 
 #include "catch.hpp"
 
 #include <stdlib.h> // rand()
 
+using fo::DyPackedUintArray;
 using fo::PodHash;
-using fo::DySmallIntArray;
 
-TEST_CASE("DySmallIntArray<> working correctly", "[DySmallIntArray<>_works]") {
+TEST_CASE("DyPackedUintArray<> working correctly", "[DyPackedUintArray<>_works]") {
     fo::memory_globals::init();
     {
-        DySmallIntArray<> smallints{4, 512};
+        DyPackedUintArray<> smallints{4, 512};
         smallints.set(0, 9);
         smallints.set(90, 12);
         smallints.set(91, 9);
@@ -43,14 +43,13 @@ TEST_CASE("DySmallIntArray<> working correctly", "[DySmallIntArray<>_works]") {
         }
 
         {
-            DySmallIntArray<> bits{1, 1000};
+            DyPackedUintArray<> bits{1, 1000};
 
             srand(0xbeef);
 
-            PodHash<int, int> is_set(
-                fo::memory_globals::default_allocator(),
-                fo::memory_globals::default_allocator(),
-                fo::usual_hash<int>, fo::usual_equal<int>);
+            PodHash<int, int> is_set(fo::memory_globals::default_allocator(),
+                                     fo::memory_globals::default_allocator(), fo::usual_hash<int>,
+                                     fo::usual_equal<int>);
 
             SECTION("Use as a bitset") {
                 for (int i = 0; i < 1000; ++i) {
@@ -81,7 +80,7 @@ TEST_CASE("DySmallIntArray<> working correctly", "[DySmallIntArray<>_works]") {
 
         SECTION("iterator") {
             const unsigned num_ints = 9990;
-            DySmallIntArray<> ints{4, num_ints};
+            DyPackedUintArray<> ints{4, num_ints};
             int loop_count = 0;
             for (auto i = ints.cbegin(), e = ints.cend(); i != e; ++i) {
                 ++loop_count;
@@ -90,7 +89,7 @@ TEST_CASE("DySmallIntArray<> working correctly", "[DySmallIntArray<>_works]") {
         }
 
         SECTION("smallintarray range set") {
-            DySmallIntArray<> ints{4, 9990};
+            DyPackedUintArray<> ints{4, 9990};
             ints.set_range(100, 1000, 9);
             ints.set_range(1000, 2000, 8);
             for (int i = 100; i < 1000; ++i) {
@@ -115,11 +114,10 @@ TEST_CASE("DySmallIntArray<> working correctly", "[DySmallIntArray<>_works]") {
     fo::memory_globals::shutdown();
 }
 
-TEST_CASE("DySmallIntArray<> with TempAllocator",
-          "[DySmallIntArray<>_tempallocator]") {
+TEST_CASE("DyPackedUintArray<> with TempAllocator", "[DyPackedUintArray<>_tempallocator]") {
     fo::memory_globals::init();
     {
-        using Sia = DySmallIntArray<>;
+        using Sia = DyPackedUintArray<>;
 
         const auto space = Sia::space_required(4, 512);
         REQUIRE(space == 256);

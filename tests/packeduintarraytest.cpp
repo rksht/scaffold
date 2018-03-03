@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_MAIN
+#include <scaffold/packeduintarray.h>
 #include <scaffold/pod_hash.h>
 #include <scaffold/pod_hash_usuals.h>
-#include <scaffold/smallintarray.h>
 #include <scaffold/temp_allocator.h>
 
 #include "catch.hpp"
@@ -10,12 +10,12 @@
 
 using fo::PodHash;
 using namespace fo::pod_hash;
-using fo::SmallIntArray;
+using fo::PackedUintArray;
 
-TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
+TEST_CASE("PackedUintArray working correctly", "[PackedUintArray_works]") {
     fo::memory_globals::init();
     {
-        SmallIntArray<4, 512> smallints;
+        PackedUintArray<4, 512> smallints;
         smallints.set(0, 9);
         smallints.set(90, 12);
         smallints.set(91, 9);
@@ -43,14 +43,13 @@ TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
         }
 
         {
-            SmallIntArray<1, 1000> bits;
+            PackedUintArray<1, 1000> bits;
 
             srand(0xbeef);
 
-            PodHash<int, int> is_set(
-                fo::memory_globals::default_allocator(),
-                fo::memory_globals::default_allocator(),
-                fo::usual_hash<int>, fo::usual_equal<int>);
+            PodHash<int, int> is_set(fo::memory_globals::default_allocator(),
+                                     fo::memory_globals::default_allocator(), fo::usual_hash<int>,
+                                     fo::usual_equal<int>);
 
             SECTION("Use as a bitset") {
                 for (int i = 0; i < 1000; ++i) {
@@ -81,7 +80,7 @@ TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
 
         SECTION("iterator") {
             const int num_ints = 9990;
-            SmallIntArray<4, num_ints> ints;
+            PackedUintArray<4, num_ints> ints;
             int loop_count = 0;
             for (auto i = ints.cbegin(), e = ints.cend(); i != e; ++i) {
                 ++loop_count;
@@ -90,7 +89,7 @@ TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
         }
 
         SECTION("smallintarray range set") {
-            SmallIntArray<4, 9990> ints;
+            PackedUintArray<4, 9990> ints;
             ints.set_range(100, 1000, 9);
             ints.set_range(1000, 2000, 8);
             for (int i = 100; i < 1000; ++i) {
@@ -115,10 +114,10 @@ TEST_CASE("SmallIntArray working correctly", "[SmallIntArray_works]") {
     fo::memory_globals::shutdown();
 }
 
-TEST_CASE("SmallIntArray with TempAllocator", "[SmallIntArray_temp]") {
+TEST_CASE("PackedUintArray with TempAllocator", "[PackedUintArray_temp]") {
     fo::memory_globals::init();
     {
-        using Sia = SmallIntArray<4, 512, uint32_t>;
+        using Sia = PackedUintArray<4, 512, uint32_t>;
 
         REQUIRE(Sia::space_required() == 256);
 

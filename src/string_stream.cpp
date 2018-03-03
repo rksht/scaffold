@@ -40,5 +40,22 @@ Buffer &repeat(Buffer &b, uint32_t count, char c) {
         array::push_back(b, c);
     return b;
 }
+
+CstrReturn c_str_own(Buffer &&b) {
+    // Ensure there is a \0 at the end of the buffer.
+    array::push_back(b, '\0');
+    array::pop_back(b);
+
+    CstrReturn ret;
+    ret.c_str = b._data;
+    ret.allocator = b._allocator;
+    ret.length = array::size(b);
+
+    b._data = nullptr;
+    b._size = 0;
+
+    return ret;
 }
-}
+
+} // namespace string_stream
+} // namespace fo

@@ -29,13 +29,13 @@ add_executable(buddytestbig buddytestbig.cpp)
 target_link_libraries(buddytestbig scaffold)
 
 ##
-add_executable(smallintarraytest smallintarraytest.cpp)
-target_link_libraries(smallintarraytest scaffold)
+add_executable(packeduintarraytest packeduintarraytest.cpp)
+target_link_libraries(packeduintarraytest scaffold)
 
 ##
 
-add_executable(dysmallintarraytest dysmallintarraytest.cpp)
-target_link_libraries(dysmallintarraytest scaffold)
+add_executable(dypackeduintarraytest dypackeduintarraytest.cpp)
+target_link_libraries(dypackeduintarraytest scaffold)
 
 ##
 add_executable(arena_test arena_test.cpp)

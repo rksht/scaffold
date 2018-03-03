@@ -2,13 +2,14 @@
 
 #include <scaffold/array.h>
 #include <scaffold/collection_types.h>
+#include <scaffold/memory.h>
 
 #include <stdio.h>
 #include <string.h>
 
 namespace fo {
-/// Functions for operating on an Array<char> as a stream of characters,
-/// useful for string formatting, etc.
+
+/// Functions for operating on an Array<char> as a stream of characters, useful for string formatting, etc.
 namespace string_stream {
 typedef Array<char> Buffer;
 
@@ -26,22 +27,29 @@ Buffer &printf(Buffer &b, const char *format, ...);
 /// Pushes the raw data to the stream.
 Buffer &push(Buffer &b, const char *data, uint32_t n);
 
-/// Pads the stream with spaces until it is aligned at the specified column.
-/// Can be used to column align data. (Assumes each char is 1 space wide,
-/// i.e. does not work with UTF-8 data.)
+/// Pads the stream with spaces until it is aligned at the specified column. Can be used to column align data.
+/// (Assumes each char is 1 space wide, i.e. does not work with UTF-8 data.)
 Buffer &tab(Buffer &b, uint32_t column);
 
 /// Adds the specified number of c to the stream.
 Buffer &repeat(Buffer &b, uint32_t count, char c);
 
-/// Returns the stream as a C-string. There will always be a \0 character
-/// at the end of the returned string. You don't have to explicitly add it
-/// to the buffer.
+/// Returns the stream as a C-string. There will always be a \0 character at the end of the returned string.
+/// You don't have to explicitly add it to the buffer.
 const char *c_str(Buffer &b);
 
-/// Transfer the Buffer to an owning char*
-char *c_str(Buffer &&b);
-}
+/// Sometimes you may want to steal the allocated string into a plain-old `char *`. Call `c_str_own` to do
+/// that. This of course means you are now in charge of freeing the memory...
+struct CstrReturn {
+    char *c_str;
+    uint32_t length;
+    fo::Allocator *allocator;
+};
+
+/// ... The moved-from buffer `b` can be reused as it it were a just now constructed Buffer.
+CstrReturn c_str_own(Buffer &&b);
+
+} // namespace string_stream
 
 namespace string_stream_internal {
 using namespace string_stream;
@@ -51,7 +59,7 @@ template <typename T> inline Buffer &printf_small(Buffer &b, const char *fmt, co
     snprintf(s, 32, fmt, t);
     return (b << s);
 }
-}
+} // namespace string_stream_internal
 
 namespace string_stream {
 inline Buffer &operator<<(Buffer &b, char c) {
@@ -79,22 +87,12 @@ inline Buffer &push(Buffer &b, const char *data, uint32_t n) {
 }
 
 inline const char *c_str(Buffer &b) {
-    // Ensure there is a \0 at the end of the buffer.
+    // Ensure there is a \0 at the end of the buffer. This works because `Array::pop_back` never actually
+    // frees its memory until it is deleted or moved-from.
     array::push_back(b, '\0');
     array::pop_back(b);
     return array::begin(b);
 }
 
-inline char *c_str(Buffer &&b) {
-    // Ensure there is a \0 at the end of the buffer.
-    Buffer b1(std::move(b));
-    array::push_back(b1, '\0');
-    array::pop_back(b1);
-    char *s = b1._data;
-    b1._data = nullptr;
-    b1._size = 0;
-    b1._capacity = 0;
-    return s;
-}
-}
-}
+} // namespace string_stream
+} // namespace fo
