@@ -6,6 +6,8 @@ else()
 	add_compile_options("-Wall" "-Wextra" "-Wno-implicit-fallthrough")
 endif()
 
+add_compile_options(-DSOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+
 add_executable(single_test single_test.cpp)
 target_link_libraries(single_test scaffold)
 
@@ -97,3 +99,6 @@ add_executable(pool_allocator_test pool_allocator_test.cpp)
 target_link_libraries(pool_allocator_test scaffold)
 
 ##
+
+add_executable(rbt_test_new rbt_test_new.cpp)
+target_link_libraries(rbt_test_new scaffold)

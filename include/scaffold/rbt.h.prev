@@ -103,7 +103,7 @@ template <typename K, typename V> struct RBT {
 
   private:
     // Transplants the given node `n2` to the given node `n1`'s position
-    void _graft(RBNode<K, V> *n1, RBNode<K, V> *n2);
+    void _transplant(RBNode<K, V> *n1, RBNode<K, V> *n2);
     // Rotations
     template <int left, int right> void _rotate(RBNode<K, V> *n);
     // Bottom-up fixing for insertion
@@ -144,7 +144,7 @@ template <typename K, typename V> const RBNode<K, V> *RBT<K, V>::get_node(const 
     }
     return nullptr;
 }
-template <typename K, typename V> void RBT<K, V>::_graft(RBNode<K, V> *n1, RBNode<K, V> *n2) {
+template <typename K, typename V> void RBT<K, V>::_transplant(RBNode<K, V> *n1, RBNode<K, V> *n2) {
     if (is_root(this, n1)) {
         _root = n2;
     } else if (n1->_parent->_kids[0] == n1) {
@@ -239,10 +239,10 @@ template <typename K, typename V> RBNode<K, V> *RBT<K, V>::remove(RBNode<K, V> *
     RBNode<K, V> *x;
     if (n->_kids[LEFT] == nil_node()) {
         x = n->_kids[RIGHT];
-        _graft(n, n->_kids[RIGHT]);
+        _transplant(n, n->_kids[RIGHT]);
     } else if (n->_kids[RIGHT] == nil_node()) {
         x = n->_kids[LEFT];
-        _graft(n, n->_kids[RIGHT]);
+        _transplant(n, n->_kids[RIGHT]);
     } else {
         // minimum of n->_kids[RIGHT]
         auto min = n->_kids[RIGHT];
@@ -255,11 +255,11 @@ template <typename K, typename V> RBNode<K, V> *RBT<K, V>::remove(RBNode<K, V> *
         if (y->_parent == n) {
             x->_parent = y;
         } else {
-            _graft(y, y->_kids[RIGHT]);
+            _transplant(y, y->_kids[RIGHT]);
             y->_kids[RIGHT] = n->_kids[RIGHT];
             y->_kids[RIGHT]->_parent = y;
         }
-        _graft(n, y);
+        _transplant(n, y);
         y->_kids[LEFT] = n->_kids[LEFT];
         y->_kids[LEFT]->_parent = y;
         y->_color = n->_color;
