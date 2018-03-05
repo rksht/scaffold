@@ -28,7 +28,6 @@ namespace internal {
 
 // We keep the kid pointers here
 template <typename Key, typename T> struct ChildPointers {
-    // You don't usually need to use this, except if you are walking the rbt
     RBNode<Key, T> *_childs[2] = {nullptr, nullptr};
     RBNode<Key, T> *_parent = nullptr;
     Color _color = BLACK;
@@ -36,6 +35,7 @@ template <typename Key, typename T> struct ChildPointers {
 
 } // namespace internal
 
+/// Represents a node stored in the tree
 template <typename Key, typename T> struct RBNode : public internal::ChildPointers<Key, T> {
     Key k;
     T v;
@@ -56,6 +56,7 @@ template <typename Key, typename T> struct RBNode : public internal::ChildPointe
     RBNode(RBNode<Key, T> &&) = delete;
 };
 
+/// Represents a red-black tree based map.
 template <typename Key, typename T> struct RBTree {
     using key_type = Key;
     using mapped_type = T;
@@ -79,14 +80,41 @@ template <typename Key, typename T> struct RBTree {
     RBTree &operator=(RBTree &&o); // Same as above
 };
 
+template <template <class, class> typename TreeOrNode, typename Key, typename T, bool is_const>
+using KT = typename std::conditional<is_const, const TreeOrNode<Key, T>, TreeOrNode<Key, T>>::type;
+
+template <typename Key, typename T, bool is_const> struct Iterator {
+    using TreeType = KT<RBTree, Key, T, is_const>;
+    using NodeType = KT<RBNode, Key, T, is_const>;
+
+    TreeType *_tree;
+    NodeType *_node;
+
+    Iterator() = delete;
+    Iterator(TreeType *tree, NodeType *node)
+        : _tree(tree)
+        , _node(node) {}
+
+    Iterator(const Iterator &) = default;
+    Iterator(Iterator &&other) = default;
+
+    // Both ++ and -- have a time complexity of O(log n) where n is number of currently in tree.
+
+    Iterator &operator++();
+    Iterator operator++(int);
+
+    Iterator &operator--();
+    Iterator operator--(int);
+
+    NodeType *operator->() const { return _node; }
+    NodeType &operator*() const { return *_node; }
+};
+
 } // namespace rbt
 
 // Default Implementation
 
 namespace rbt {
-
-template <template <class, class> typename TreeOrNode, typename Key, typename T, bool is_const>
-using KT = typename std::conditional<is_const, const TreeOrNode<Key, T>, TreeOrNode<Key, T>>::type;
 
 template <typename Key, typename T> bool is_nil_node(const RBTree<Key, T> &rbt, const RBNode<Key, T> *node) {
     return static_cast<const internal::ChildPointers<Key, T> *>(node) == rbt._nil;
@@ -268,24 +296,50 @@ RBNode<Key, T> *remove_fix(RBTree<Key, T> &t, RBNode<Key, T> *x) {
     return x;
 }
 
+// Returns the next in-order node for the given `node`. Given node must not be pointing to `nil` or be
+// nullptr.
 template <typename Key, typename T, bool is_const>
-KT<RBNode, Key, T, is_const> *min_of_subtree(KT<RBTree, Key, T, is_const> &t,
-                                             KT<RBNode, Key, T, is_const> *node) {
+KT<RBNode, Key, T, is_const> *next_inorder_node(KT<RBTree, Key, T, is_const> &t,
+                                                KT<RBNode, Key, T, is_const> *node) {
+    // Leaf node? Keep going up parent pointers as long as node is a right child
+    if (is_nil_node(t, node->_childs[LEFT]) && is_nil_node(t, node->_childs[RIGHT])) {
+        while (node->parent->_childs[RIGHT] == node) {
+            node = node->_parent;
+        }
+        return node->_parent;
+    }
+
+    // Not leaf node. Get the minimum node of right subtree.
+    node = node->_childs[RIGHT];
+    if (is_nil_node(t, node)) {
+        return node;
+    }
     while (!is_nil_node(t, node->_childs[LEFT])) {
         node = node->_childs[LEFT];
     }
     return node;
 }
 
-// Returns the next in-order node for the given `node`. Given node must not be pointing to `nil` or be
-// nullptr.
 template <typename Key, typename T, bool is_const>
-KT<RBNode, Key, T, is_const> *next_inorder_node(KT<RBTree, Key, T, is_const> &t,
+KT<RBNode, Key, T, is_const> *prev_inorder_node(KT<RBTree, Key, T, is_const> &t,
                                                 KT<RBNode, Key, T, is_const> *node) {
-    if (!is_nil_node(t, node->_childs[RIGHT])) {
-        return tree_min(node->_childs[RIGHT]);
+    // Leaf node? Keep going up pointers as long as node is a left child
+    if (is_nil_node(t, node->_childs[LEFT]) && is_nil_node(t, node->_childs[RIGHT])) {
+        while (node->parent->_childs[LEFT] == node) {
+            node = node->_parent;
+        }
+        return node->_parent;
     }
-    return reinterpret_cast<KT<RBNode, Key, T, is_const>>(t._nil);
+
+    // Not leaf node. Get the maximum of left subtree
+    node = node->_childs[LEFT];
+    if (is_nil_node(t, node)) {
+        return node;
+    }
+    while (!is_nil_node(t, node->_childs[RIGHT])) {
+        node = node->_childs[RIGHT];
+    }
+    return node;
 }
 
 } // namespace internal
@@ -356,6 +410,49 @@ template <typename Key, typename T> RBTree<Key, T>::~RBTree() {
         rbt::internal::delete_all_nodes(*this);
         _allocator = nullptr;
     }
+}
+
+template <typename Key, typename T, bool is_const>
+Iterator<Key, T, is_const> begin(KT<RBTree, Key, T, is_const> &t) {
+    return Iterator<Key, T, is_const>(t._root);
+}
+
+template <typename Key, typename T, bool is_const>
+Iterator<Key, T, is_const> end(KT<RBTree, Key, T, is_const> &t) {
+    using NodeType = typename Iterator<Key, T, is_const>::NodeType;
+    return Iterator<Key, T, is_const>(reinterpret_cast<NodeType *>(t._nil));
+}
+
+template <typename Key, typename T, bool is_const>
+Iterator<Key, T, is_const>::Iterator(Iterator<Key, T, is_const>::TreeType *tree,
+                                     Iterator<Key, T, is_const>::NodeType *node)
+    : _tree(tree)
+    : _node(node) {}
+
+template <typename Key, typename T, bool is_const>
+Iterator<Key, T, is_const> &Iterator<Key, T, is_const>::operator++() {
+    _node = internal::next_inorder_node(_tree, _node);
+    return *this;
+}
+
+template <typename Key, typename T, bool is_const>
+Iterator<Key, T, is_const> Iterator<Key, T, is_const>::operator++(int) {
+    Iterator<Key, T, is_const> saved(*this);
+    this->operator++();
+    return saved;
+}
+
+template <typename Key, typename T, bool is_const>
+Iterator<Key, T, is_const> &Iterator<Key, T, is_const>::operator--() {
+    _node = internal::prev_inorder_node(_tree, _node);
+    return *this;
+}
+
+template <typename Key, typename T, bool is_const>
+Iterator<Key, T, is_const> Iterator<Key, T, is_const>::operator--(int) {
+    Iterator<Key, T, is_const> saved(*this);
+    this->operator--();
+    return saved;
 }
 
 template <typename Key, typename T, bool is_const_pointer> struct Result {

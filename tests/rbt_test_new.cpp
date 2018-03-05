@@ -108,6 +108,17 @@ void test_must_have_each_key() {
     must_have_each_key(context);
 }
 
+void test_iterators_sorted() {
+    const char *file = SOURCE_DIR "/rbt_keys.txt";
+    auto context = read_file_into_rbt(file);
+
+    auto it = begin(context.rbt);
+
+    for (auto &node : context.rbt) {
+
+    }
+}
+
 template <typename Key, typename T> class RbtDebugPrint {
   public:
     const rbt::RBTree<Key, T> &_t;
