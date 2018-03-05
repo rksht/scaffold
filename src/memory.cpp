@@ -63,13 +63,11 @@ inline void fill(Header *header, void *data, uint64_t size) {
         *p++ = HEADER_PAD_VALUE;
 }
 
-/// An allocator that uses the default system malloc(). Allocations are
-/// padded so that we can store the size of each allocation and align them
-/// to the desired alignment.
+/// An allocator that uses the default system malloc(). Allocations are padded so that we can store the size
+/// of each allocation and align them to the desired alignment.
 ///
-/// (Note: An OS-specific allocator that can do alignment and tracks size
-/// does need this padding and can thus be more efficient than the
-/// MallocAllocator.)
+/// Note: An OS-specific allocator that can do alignment and tracks size does need this padding and can thus
+/// be more efficient than the MallocAllocator
 class MallocAllocator : public Allocator {
     uint64_t _total_allocated;
 
@@ -90,8 +88,11 @@ class MallocAllocator : public Allocator {
     }
 
     ~MallocAllocator() {
-        // Check that we don't have any memory leaks when allocator is destroyed.
+    // Check that we don't have any memory leaks when allocator is destroyed.
 #ifndef MALLOC_ALLOC_DONT_TRACK_SIZE
+        if (_total_allocated != 0) {
+            fprintf(stderr, "MallocAllocator %s _total_allocated = %lu\n", name(), _total_allocated);
+        }
         assert(_total_allocated == 0);
 #endif
     }
@@ -200,7 +201,8 @@ class ScratchAllocator : public Allocator {
     ///
     /// size specifies the size of the ring buffer.
     ScratchAllocator(Allocator &backing, uint64_t size)
-        : _backing(backing), _mutex{} {
+        : _backing(backing)
+        , _mutex{} {
         _begin = (char *)_backing.allocate(size);
         _end = _begin + size;
         _allocate = _begin;

@@ -2,10 +2,14 @@
 
 // Want to support all types, not just POD types.
 
-#include <functional>
+#include <scaffold/array.h>
 #include <scaffold/memory.h>
 #include <scaffold/temp_allocator.h>
+
+#include <assert.h>
+#include <functional>
 #include <type_traits>
+#include <vector>
 
 namespace fo {
 
@@ -18,11 +22,14 @@ enum Color : unsigned { BLACK = 0, RED = 1 };
 
 enum Arrow : unsigned { LEFT = 0, RIGHT = 1 };
 
+template <typename Key, typename T> struct RBNode; // Fwd decl
+
 namespace internal {
 
 // We keep the kid pointers here
 template <typename Key, typename T> struct ChildPointers {
-    RBNode<Key, T> *_childs[2] = {}; // You don't usually need to use this, except if you are walking the rbt
+    // You don't usually need to use this, except if you are walking the rbt
+    RBNode<Key, T> *_childs[2] = {nullptr, nullptr};
     RBNode<Key, T> *_parent = nullptr;
     Color _color = BLACK;
 };
@@ -61,13 +68,13 @@ template <typename Key, typename T> struct RBTree {
     RBTree(Allocator &allocator);
     ~RBTree();
 
-    /// If used like a copy constructor i.e you don't provide an allocator, the new tree will use the
-    /// allocator used by `o`
+    // If used like a copy constructor i.e you don't provide an allocator, the new tree will use the allocator
+    // used by `o`
     RBTree(const RBTree &o, Allocator *allocator = nullptr);
 
     RBTree &operator=(const RBTree &o);
 
-    /// The rbt just moved-from should not be used for any further operations except destruction.
+    // The rbt just moved-from should not be used for any further operations except destruction.
     RBTree(RBTree &&o);
     RBTree &operator=(RBTree &&o); // Same as above
 };
@@ -78,19 +85,23 @@ template <typename Key, typename T> struct RBTree {
 
 namespace rbt {
 
-template <template <class, class> typename TreeOrNode, typename Key, typename T, bool const_pointer_to_node>
-using OnKeyAndT =
-    typename std::conditional<const_pointer_to_node, const TreeOrNode<Key, T>, TreeOrNode<Key, T>>::type;
+template <template <class, class> typename TreeOrNode, typename Key, typename T, bool is_const>
+using KT = typename std::conditional<is_const, const TreeOrNode<Key, T>, TreeOrNode<Key, T>>::type;
+
+template <typename Key, typename T> bool is_nil_node(const RBTree<Key, T> &rbt, const RBNode<Key, T> *node) {
+    return static_cast<const internal::ChildPointers<Key, T> *>(node) == rbt._nil;
+}
 
 namespace internal {
 
 template <typename Key, typename T> void delete_all_nodes(RBTree<Key, T> &tree) {
-    if (_allocator == nullptr) {
+    if (tree._allocator == nullptr) {
         return;
     }
 
-    if (static_cast<ChildPointers<Key, T> *>(tree._root) == _nil) {
-        MAKE_DELETE(_allocator, ChildPointers<Key, T>, _nil);
+    if (is_nil_node(tree, tree._root)) {
+        make_delete(*tree._allocator, tree._nil);
+        // ^ Important to call the delete on _nil, not _root since type
         tree._root = nullptr;
         tree._nil = nullptr;
         return;
@@ -98,33 +109,33 @@ template <typename Key, typename T> void delete_all_nodes(RBTree<Key, T> &tree) 
 
     TempAllocator1024 ta(memory_globals::default_allocator());
     Array<RBNode<Key, T> *> stack(ta);
-    array::reserve(stack, 512 / sizeof(RBNode<K, V> *));
+    array::reserve(stack, 512 / sizeof(RBNode<Key, T> *));
 
     array::push_back(stack, tree._root);
 
-    while (!array::size(stack) != 0) {
+    while (array::size(stack) != 0) {
         RBNode<Key, T> *p = array::back(stack);
         array::pop_back(stack);
-        for (uint32_t i = 0; i < 2; ++i) {
-            if (!rbt::is_nil_node(tree, p->_childs[i])) {
+        for (u32 i = 0; i < 2; ++i) {
+            if (!is_nil_node(tree, p->_childs[i])) {
                 array::push_back(stack, p->_childs[i]);
             }
         }
-        MAKE_DELETE(tree._allocator, RBNode<Key, T>, p);
+        make_delete(*tree._allocator, p);
     }
 
-    MAKE_DELETE(tree._allocator, ChildPointers<Key, T>, tree._nil);
+    make_delete(*tree._allocator, tree._nil);
     tree._root = nullptr;
     tree._nil = nullptr;
 }
 
 template <typename Key, typename T> void copy_tree(RBTree<Key, T> &tree, const RBTree<Key, T> &other) {
     // Make the nil node
-    tree._nil = MAKE_NEW(tree._allocator, RBNode<Key, T>);
+    tree._nil = make_new<RBNode<Key, T>>(*tree._allocator);
 
     // Make the root node
-    if (!rbt::is_nil_node(other, other._root)) {
-        tree._root = MAKE_NEW(tree._allocator, RBNode<Key, T>, other._root.k, other._root.v);
+    if (!is_nil_node(other, other._root)) {
+        tree._root = make_new<RBNode<Key, T>>(*tree._allocator, other._root.k, other._root.v);
     } else {
         tree._root = tree._nil;
         return;
@@ -137,7 +148,7 @@ template <typename Key, typename T> void copy_tree(RBTree<Key, T> &tree, const R
     wips_stack.push_back(tree._root);
 
     while (others_stack.size() != 0) {
-        auto wips_top = wips_back.back();
+        auto wips_top = wips_stack.back();
         auto others_top = others_stack.back();
 
         wips_stack.pop_back();
@@ -145,13 +156,12 @@ template <typename Key, typename T> void copy_tree(RBTree<Key, T> &tree, const R
 
         wips_top->_color = others_top->_color;
 
-        for (uint32_t i = 0; i < 2; ++i) {
+        for (u32 i = 0; i < 2; ++i) {
             if (rbt::is_nil_node(others_top->_childs[i])) {
                 wips_top->_childs[i] = static_cast<RBNode<Key, T> *>(tree._nil);
             } else {
                 wips_top->_childs[i] =
-                    MAKE_NEW(tree._allocator, RBNode<Key, T>, others_top->k, others_top->v);
-
+                    make_new<RBNode<Key, T>>(*tree._allocator, others_top->k, others_top->v);
                 others_stack.push_back(others_top->_childs[i]);
                 wips_stack.push_back(wips_top->_childs[i]);
             }
@@ -159,11 +169,10 @@ template <typename Key, typename T> void copy_tree(RBTree<Key, T> &tree, const R
     }
 }
 
-template <typename Key, typename T, bool return_const_pointer>
-OnKeyAndT<RBNode, Key, T, return_const_pointer> *find(OnKeyAndT<RBTree, Key, T, return_const_pointer> *rbt,
-                                                      const Key &k) {
-    auto cur_node = rbt->_root;
-    while (!is_nil_node(*rbt, cur_node)) {
+template <typename Key, typename T, bool is_const>
+KT<RBNode, Key, T, is_const> *find(KT<RBTree, Key, T, is_const> &rbt, const Key &k) {
+    auto cur_node = rbt._root;
+    while (!is_nil_node(rbt, cur_node)) {
         if (cur_node->k == k) {
             return cur_node;
         }
@@ -181,7 +190,7 @@ template <typename Key, typename T> RBNode<Key, T> *nil_node(RBTree<Key, T> &t) 
     return static_cast<RBNode<Key, T> *>(t._nil);
 }
 
-template <typename Key, typename T, int left, int right> void _rotate(RBTree<Key, T> &t, RBNode<Key, T> *x) {
+template <int left, int right, typename Key, typename T> void rotate(RBTree<Key, T> &t, RBNode<Key, T> *x) {
     auto y = x->_childs[right];
     x->_childs[right] = y->_childs[left];
     if (!is_nil_node(t, y->_childs[left])) {
@@ -189,7 +198,7 @@ template <typename Key, typename T, int left, int right> void _rotate(RBTree<Key
     }
     y->_parent = x->_parent;
     if (is_nil_node(t, x->_parent)) {
-        _root = y;
+        t._root = y;
     } else if (x == x->_parent->_childs[left]) {
         x->_parent->_childs[left] = y;
     } else {
@@ -200,9 +209,9 @@ template <typename Key, typename T, int left, int right> void _rotate(RBTree<Key
 }
 
 template <typename Key, typename T>
-void _transplant(RBTree<Key, T> &t, RBNode<Key, T> *n1, RBNode<Key, T> *n2) {
+void transplant(RBTree<Key, T> &t, RBNode<Key, T> *n1, RBNode<Key, T> *n2) {
     if (n1 == t._root) {
-        _root = n2;
+        t._root = n2;
     } else if (n1->_parent->_childs[0] == n1) {
         n1->_parent->_childs[0] = n2;
     } else {
@@ -211,8 +220,8 @@ void _transplant(RBTree<Key, T> &t, RBNode<Key, T> *n1, RBNode<Key, T> *n2) {
     n2->_parent = n1->_parent;
 }
 
-template <typename Key, typename T, int left, int right>
-RBNode<Key, T> *_insert_fix(RBTree<Key, T> &t, RBNode<Key, T> *z) {
+template <int left, int right, typename Key, typename T>
+RBNode<Key, T> *insert_fix(RBTree<Key, T> &t, RBNode<Key, T> *z) {
     auto y = z->_parent->_parent->_childs[right];
     if (y->_color == RED) {
         z->_parent->_color = BLACK;
@@ -222,22 +231,22 @@ RBNode<Key, T> *_insert_fix(RBTree<Key, T> &t, RBNode<Key, T> *z) {
     } else {
         if (z == z->_parent->_childs[right]) {
             z = z->_parent;
-            _rotate<left, right>(t, z);
+            rotate<left, right>(t, z);
         }
         z->_parent->_color = BLACK;
         z->_parent->_parent->_color = RED;
-        _rotate<right, left>(t, z->_parent->_parent);
+        rotate<right, left>(t, z->_parent->_parent);
     }
     return z;
 }
 
-template <typename Key, typename T, int left, int right>
-void _remove_fix(RBTree<Key, T> &t, RBNode<Key, T> *n) {
+template <int left, int right, typename Key, typename T>
+RBNode<Key, T> *remove_fix(RBTree<Key, T> &t, RBNode<Key, T> *x) {
     auto w = x->_parent->_childs[right];
     if (w->_color == RED) {
         w->_color = BLACK;
         x->_parent->_color = RED;
-        _rotate<left, right>(t, x->_parent);
+        rotate<left, right>(t, x->_parent);
         w = x->_parent->_childs[right];
     }
     if (w->_childs[left]->_color == BLACK && w->_childs[right]->_color == BLACK) {
@@ -247,27 +256,52 @@ void _remove_fix(RBTree<Key, T> &t, RBNode<Key, T> *n) {
         if (w->_childs[right]->_color == BLACK) {
             w->_childs[left]->_color = BLACK;
             w->_color = RED;
-            _rotate<right, left>(t, w);
+            rotate<right, left>(t, w);
             w = x->_parent->_childs[right];
         }
         w->_color = x->_parent->_color;
         x->_parent->_color = BLACK;
         w->_childs[right]->_color = BLACK;
-        _rotate<left, right>(t, x->_parent);
+        rotate<left, right>(t, x->_parent);
         x = t._root;
     }
     return x;
 }
 
-} // namespace internal
+template <typename Key, typename T, bool is_const>
+KT<RBNode, Key, T, is_const> *min_of_subtree(KT<RBTree, Key, T, is_const> &t,
+                                             KT<RBNode, Key, T, is_const> *node) {
+    while (!is_nil_node(t, node->_childs[LEFT])) {
+        node = node->_childs[LEFT];
+    }
+    return node;
+}
 
+// Returns the next in-order node for the given `node`. Given node must not be pointing to `nil` or be
+// nullptr.
+template <typename Key, typename T, bool is_const>
+KT<RBNode, Key, T, is_const> *next_inorder_node(KT<RBTree, Key, T, is_const> &t,
+                                                KT<RBNode, Key, T, is_const> *node) {
+    if (!is_nil_node(t, node->_childs[RIGHT])) {
+        return tree_min(node->_childs[RIGHT]);
+    }
+    return reinterpret_cast<KT<RBNode, Key, T, is_const>>(t._nil);
+}
+
+} // namespace internal
 } // namespace rbt
 
 namespace rbt {
 
 template <typename Key, typename T> RBTree<Key, T>::RBTree(Allocator &allocator) {
     _allocator = &allocator;
-    _nil = MAKE_NEW(*_allocator, internal::ChildPointers<Key, T>);
+    _nil = make_new<internal::ChildPointers<Key, T>>(*_allocator);
+    _nil->_childs[LEFT] = reinterpret_cast<RBNode<Key, T> *>(_nil);
+    _nil->_childs[RIGHT] = reinterpret_cast<RBNode<Key, T> *>(_nil);
+    _nil->_parent = reinterpret_cast<RBNode<Key, T> *>(_nil);
+    // _nil->_parent = nullptr;
+    // _nil->_childs[LEFT] = nullptr;
+    // _nil->_childs[RIGHT] = nullptr;
     _root = reinterpret_cast<RBNode<Key, T> *>(_nil);
 }
 
@@ -290,8 +324,10 @@ template <typename Key, typename T> RBTree<Key, T>::RBTree(RBTree &&other) {
 
 template <typename Key, typename T> RBTree<Key, T> &RBTree<Key, T>::operator=(const RBTree &other) {
     if (this == other) {
-        return;
+        return *this;
     }
+
+    assert(_allocator != nullptr && "Cannot copy into moved-from/deleted tree");
 
     rbt::internal::delete_all_nodes(*this);
     rbt::internal::copy_tree(*this, other);
@@ -301,7 +337,7 @@ template <typename Key, typename T> RBTree<Key, T> &RBTree<Key, T>::operator=(co
 
 template <typename Key, typename T> RBTree<Key, T> &RBTree<Key, T>::operator=(RBTree &&other) {
     if (this == other) {
-        return;
+        return *this;
     }
 
     rbt::internal::delete_all_nodes(*this);
@@ -316,25 +352,21 @@ template <typename Key, typename T> RBTree<Key, T> &RBTree<Key, T>::operator=(RB
 }
 
 template <typename Key, typename T> RBTree<Key, T>::~RBTree() {
-    if (tree._allocator) {
+    if (_allocator) {
         rbt::internal::delete_all_nodes(*this);
-        tree._allocator = nullptr;
+        _allocator = nullptr;
     }
-}
-
-template <typename Key, typename T> bool is_nil_node(const RBTree<Key, T> &rbt, const RBNode<Key, T> *node) {
-    return static_cast<const internal::ChildPointers<Key, T> *>(node) == rbt._nil;
 }
 
 template <typename Key, typename T, bool is_const_pointer> struct Result {
     bool key_was_present = false;
-    OnKeyAndT<RBNode, Key, T, is_const_pointer> *node = nullptr;
+    KT<RBNode, Key, T, is_const_pointer> *node = nullptr;
 };
 
 template <typename Key, typename T> Result<Key, T, false> get(RBTree<Key, T> &rbt, const Key &k) {
     auto node = internal::find<Key, T, false>(rbt, k);
     if (is_nil_node(rbt, node)) {
-        return Result<Key, T>();
+        return Result<Key, T, false>();
     }
     return Result<Key, T, false>{true, node};
 }
@@ -352,17 +384,18 @@ template <typename Key, typename T> Result<Key, T, true> get(const RBTree<Key, T
 }
 
 template <typename Key, typename T> Result<Key, T, false> set(RBTree<Key, T> &rbt, Key k, T v) {
-    if (is_nil_pointer(rbt, rbt._root)) {
-        rbt._root = MAKE_NEW(rbt._allocator, RBNode<Key, T>, std::forward(k), std::forward(v));
-        rbt._root->_childs[0] = static_cast<RBNode<Key, T> *>(rbt->_nil);
-        rbt._root->_childs[1] = static_cast<RBNode<Key, T> *>(rbt->_nil);
+    if (is_nil_node(rbt, rbt._root)) {
+        rbt._root = make_new<RBNode<Key, T>>(*rbt._allocator, std::move(k), std::move(v));
+        rbt._root->_childs[0] = reinterpret_cast<RBNode<Key, T> *>(rbt._nil);
+        rbt._root->_childs[1] = reinterpret_cast<RBNode<Key, T> *>(rbt._nil);
+        rbt._root->_parent = reinterpret_cast<RBNode<Key, T> *>(rbt._nil);
         return Result<Key, T, false>{false, rbt._root};
     }
 
     Result<Key, T, false> result;
 
-    auto cur = _root;
-    auto par = _root;
+    auto cur = rbt._root;
+    auto par = rbt._root;
     Arrow dir = LEFT;
     while (!is_nil_node(rbt, cur)) {
         assert(cur != nullptr);
@@ -382,7 +415,7 @@ template <typename Key, typename T> Result<Key, T, false> set(RBTree<Key, T> &rb
         }
     }
 
-    auto n = MAKE_NEW(rbt._allocator, RBNode<Key, T>, std::forward(k), std::forward(v));
+    auto n = make_new<RBNode<Key, T>>(*rbt._allocator, std::move(k), std::move(v));
 
     result.key_was_present = false;
     result.node = n;
@@ -396,32 +429,34 @@ template <typename Key, typename T> Result<Key, T, false> set(RBTree<Key, T> &rb
     // bottom-up fix
     while (n->_parent->_color == RED) {
         if (n->_parent == n->_parent->_parent->_childs[LEFT]) {
-            n = _insert_fix<LEFT, RIGHT>(n);
+            n = internal::insert_fix<LEFT, RIGHT>(rbt, n);
         } else {
-            n = _insert_fix<RIGHT, LEFT>(n);
+            n = internal::insert_fix<RIGHT, LEFT>(rbt, n);
         }
     }
-    _root->_color = BLACK;
+    rbt._root->_color = BLACK;
     return result;
 }
 
 // Removes the node with the given key.
 template <typename Key, typename T> Result<Key, T, false> remove(RBTree<Key, T> &t, Key k) {
-    auto n = internal::find(&rbt, std::move(k));
+    auto n = internal::find<Key, T, false>(t, k);
 
-    if (n == static_cast<RBNode<Key, T> *>(t._nil)) {
+    if (is_nil_node(t, n)) {
         return Result<Key, T, false>{};
     }
 
+    assert(n->k == k);
+
     auto y = n;
-    RBColor orig_color = n->_color;
-    RBNode<K, V> *x;
+    auto orig_color = n->_color;
+    RBNode<Key, T> *x;
     if (is_nil_node(t, n->_childs[LEFT])) {
         x = n->_childs[RIGHT];
-        _transplant(t, n, n->_childs[RIGHT]);
+        transplant(t, n, n->_childs[RIGHT]);
     } else if (is_nil_node(t, n->_childs[RIGHT])) {
         x = n->_childs[LEFT];
-        _transplant(t, n, n->_childs[RIGHT]);
+        transplant(t, n, n->_childs[LEFT]);
     } else {
         // minimum of n->_childs[RIGHT]
         auto min = n->_childs[RIGHT];
@@ -434,30 +469,30 @@ template <typename Key, typename T> Result<Key, T, false> remove(RBTree<Key, T> 
         if (y->_parent == n) {
             x->_parent = y;
         } else {
-            _transplant(t, y, y->_childs[RIGHT]);
+            transplant(t, y, y->_childs[RIGHT]);
             y->_childs[RIGHT] = n->_childs[RIGHT];
             y->_childs[RIGHT]->_parent = y;
         }
-        _transplant(t, n, y);
+        transplant(t, n, y);
         y->_childs[LEFT] = n->_childs[LEFT];
         y->_childs[LEFT]->_parent = y;
         y->_color = n->_color;
     }
-    if (orig_color == RED) {
-        return n;
-    }
-    // remove fix
-    while (x != t._root && x->_color == BLACK) {
-        if (x == x->_parent->_childs[LEFT]) {
-            x = _remove_fix<LEFT, RIGHT>(x);
-        } else {
-            x = _remove_fix<RIGHT, LEFT>(x);
+
+    if (orig_color != RED) {
+        // remove fix
+        while (x != t._root && x->_color == BLACK) {
+            if (x == x->_parent->_childs[LEFT]) {
+                x = internal::remove_fix<LEFT, RIGHT>(t, x);
+            } else {
+                x = internal::remove_fix<RIGHT, LEFT>(t, x);
+            }
         }
+        x->_color = BLACK;
     }
-    x->_color = BLACK;
 
     // Delete the node
-    MAKE_DELETE(t._allocator, RBNode<Key, T>, n);
+    make_delete(*t._allocator, n);
 
     Result<Key, T, false> result{};
     result.key_was_present = true;

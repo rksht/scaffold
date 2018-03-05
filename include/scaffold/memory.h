@@ -88,6 +88,17 @@ class Allocator {
         }                                                                                                    \
     } while (0)
 
+template <typename T, typename... Args> T *make_new(Allocator &a, Args &&... args) {
+    return new (a.allocate(sizeof(T), alignof(T))) T(std::forward<Args>(args)...);
+}
+
+template <typename T> void make_delete(Allocator &a, T *object) {
+    if (object) {
+        object->~T();
+        a.deallocate(object);
+    }
+}
+
 /// Fwd declaring the ArenaAllocator here
 class ArenaAllocator;
 
