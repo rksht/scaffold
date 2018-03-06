@@ -36,15 +36,20 @@ if __name__ == '__main__':
     ap.add_argument('-d', '--dups', type=int, default=0, help='Number of duplicates')
     ap.add_argument('-o', '--output', type=str, default='rbt_keys.txt')
     ap.add_argument('-s', '--strings', action='store_true', help='Put random string values')
+    ap.add_argument('--sorted', action='store_true', help='Print keys in sorted order')
 
     args = ap.parse_args()
 
     count = args.count
     dups = args.dups
 
-    if args.strings:
-        numbers = generate_random(count, dups)
+    numbers = generate_random(count, dups)
+    strings = None
+
+    if args.strings:        
         strings = generate_random_strings(count)
-        write_to_file(numbers, args.output, strings)
-    else:
-        write_to_file(generate_random(count, dups), args.output)
+
+    if args.sorted:
+        numbers.sort()
+
+    write_to_file(numbers, args.output, strings)
