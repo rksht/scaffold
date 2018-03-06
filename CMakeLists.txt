@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.4)
 project(scaffold)
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 # Options to propagate
 if (GNU)
 	add_compile_options(-std=c++17)

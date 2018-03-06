@@ -32,11 +32,15 @@ template <> struct OpenDeleted<u64> {
 
 using namespace fo;
 
+static int address_variable = 0;
+
 static void stdumap_hash_search(benchmark::State &bm_state) {
 
-    const auto hash_u64 = [](const u64 &a) -> u64 { return a; };
+    std::function<uint64_t(const uint64_t &)> hash_u64 = [](const u64 &a) -> u64 { return a; };
 
-    const auto equal_u64 = [](const u64 &a, const u64 &b) { return a == b; };
+    std::function<bool(const u64 &, const u64 &)> equal_u64 = [](const u64 &a, const u64 &b) -> bool {
+        return a == b;
+    };
 
     std::unordered_map<u64, u64, decltype(hash_u64), decltype(equal_u64)> h(1024, hash_u64, equal_u64);
 
@@ -52,13 +56,15 @@ static void stdumap_hash_search(benchmark::State &bm_state) {
     u64 key_to_find =
         ((u64(&stdumap_hash_search) >> 8) & u64(memory_globals::default_allocator)) % max_entries;
 #endif
-    u64 key_to_find = ((u64)rand() + 1000) % max_entries;
+    u64 key_to_find = u64(&address_variable) % max_entries;
+
+    ++address_variable;
 
     while (bm_state.KeepRunning()) {
         auto it = h.find(key_to_find);
         benchmark::DoNotOptimize(it);
 
-        key_to_find = (key_to_find + 1) % max_entries;
+        // key_to_find = (key_to_find + 1) % max_entries;
 #if 0
         if (it == h.end()) {
             bm_state.SkipWithError("Should not happen");
@@ -80,19 +86,20 @@ static void open_hash_search(benchmark::State &bm_state) {
         const uint64_t max_entries = bm_state.range(0);
 
         for (u64 i = 0; i < max_entries; ++i) {
-            open_hash::set(h, i, 0xdeadbeeflu);
+            open_hash::set(h, i, (u64)0xdeadbeeflu);
         }
 
 #if 0
         u64 key_to_find = ((u64(&open_hash_search) >> 8) & u64(memory_globals::default_allocator)) % max_entries;
 #endif
 
-        u64 key_to_find = ((u64)rand() + 1000) % max_entries;
+        // u64 key_to_find = u64(&address_variable);
+        u64 key_to_find = u64(&address_variable) % max_entries;
 
         while (bm_state.KeepRunning()) {
             auto idx = open_hash::find(h, key_to_find);
             benchmark::DoNotOptimize(idx);
-            key_to_find = (key_to_find + 1) % max_entries;
+            // key_to_find = (key_to_find + 1) % max_entries;
 #if 0
                 if (idx == open_hash::NOT_FOUND) {
                     bm_state.SkipWithError("Should not happen");
@@ -113,21 +120,22 @@ static void pod_hash_search(benchmark::State &bm_state) {
         const uint64_t max_entries = bm_state.range(0);
 
         for (u64 i = 0; i < max_entries; ++i) {
-            set(h, i, 0xdeadbeeflu);
+            set(h, i, (u64)0xdeadbeeflu);
         }
 
 #if 0
         u64 key_to_find = ((u64(&open_hash_search) >> 8) & u64(memory_globals::default_allocator)) % max_entries;
 #endif
 
-        u64 key_to_find = ((u64)rand() + 1000) % max_entries;
+        // u64 key_to_find = ((u64)rand() + 1000) % max_entries;
+        u64 key_to_find = u64(&address_variable) % max_entries;
 
         // auto end_iter = end(h);
 
         while (bm_state.KeepRunning()) {
             auto idx = get(h, key_to_find);
             benchmark::DoNotOptimize(idx);
-            key_to_find = (key_to_find + 1) % max_entries;
+            // key_to_find = (key_to_find + 1) % max_entries;
 #if 0
                 if (idx == end_iter) {
                     bm_state.SkipWithError("Should not happen");

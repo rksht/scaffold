@@ -496,6 +496,10 @@ Iterator<Key, T, is_const> Iterator<Key, T, is_const>::operator--(int) {
     return saved;
 }
 
+template <typename Key, typename T> constexpr size_t node_size(const RBTree<Key, T> &) {
+    return sizeof(RBNode<Key, T>);
+}
+
 /// Represents the result of `get` and `set` operations.
 template <typename Key, typename T, bool is_const> struct Result {
     bool key_was_present = false;

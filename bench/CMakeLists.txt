@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.4)
 
 add_subdirectory(benchmark)
 
-add_compile_options("-std=c++14" "-Wall" "-Wextra")
+add_compile_options("-std=c++14" "-Wall")
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
