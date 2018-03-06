@@ -1,6 +1,6 @@
-#pragma once
+// Contains a red-black tree based dictionary.
 
-// Want to support all types, not just POD types.
+#pragma once
 
 #include <scaffold/array.h>
 #include <scaffold/memory.h>
@@ -9,7 +9,6 @@
 #include <assert.h>
 #include <functional>
 #include <type_traits>
-#include <vector>
 
 namespace fo {
 
@@ -62,6 +61,7 @@ template <typename Key, typename T> struct RBTree {
     using mapped_type = T;
     using value_type = RBNode<Key, T>;
 
+    // This being nullptr denotes moved-from tree
     Allocator *_allocator;
 
     // Taking the advice from CLRS. Using an explicit node to denote the nil pointer and not using `NULL`.
@@ -87,14 +87,15 @@ template <typename Key, typename T> struct RBTree {
     RBTree &operator=(RBTree &&o);
 };
 
-// Many of the algorithms just need to traverse the tree and return a pointer to some node. Whether it's a
-// pointer to const node or non-const is not relevant. I could write a function once that takes a const
-// pointer argument and then `const_cast` to remove the const. Or I could template the whole 'Node' type. But
-// a middle ground is to template on whether the const-ness of the RBNode object itself, and implement the
-// traversalk functions templated on Key, T, and is_const.
+// Most of the traversal algorithms just need to go from node to node and return a pointer to some node.
+// Whether it's a pointer to const node or non-const is not relevant. I could write a function once that takes
+// a const pointer argument and then `const_cast` to remove the const. Or I could template the whole 'Node'
+// type. But a middle ground is to template on whether the const-ness of the RBNode object itself, and
+// implement the traversalk functions templated on Key, T, and is_const.
 template <template <class, class> typename TreeOrNode, typename Key, typename T, bool is_const>
 using KT = typename std::conditional<is_const, const TreeOrNode<Key, T>, TreeOrNode<Key, T>>::type;
 
+/// The iterator is bidirectional, but not random-access.
 template <typename Key, typename T, bool is_const> struct Iterator {
     using TreeType = KT<RBTree, Key, T, is_const>;
     using NodeType = KT<RBNode, Key, T, is_const>;
@@ -108,7 +109,9 @@ template <typename Key, typename T, bool is_const> struct Iterator {
         , _node(node) {}
 
     Iterator(const Iterator &) = default;
-    Iterator(Iterator &&other) = default;
+    Iterator(Iterator &&) = default;
+    Iterator &operator=(const Iterator &) = default;
+    Iterator &operator=(Iterator &&) = default;
 
     // Both ++ and -- have a time complexity of O(log n) where n is number of currently in tree.
 
@@ -121,8 +124,13 @@ template <typename Key, typename T, bool is_const> struct Iterator {
     NodeType *operator->() const { return _node; }
     NodeType &operator*() const { return *_node; }
 
-    bool operator==(const Iterator &o) { return o._node == _node; }
-    bool operator!=(const Iterator &o) { return o._node != _node; }
+    template <bool other_const> bool operator==(const Iterator<Key, T, other_const> &o) const {
+        return o._node == _node;
+    }
+
+    template <bool other_const> bool operator!=(const Iterator<Key, T, other_const> &o) const {
+        return o._node != _node;
+    }
 };
 
 } // namespace rbt
@@ -138,16 +146,17 @@ inline bool is_nil_node(const RBTree<Key, T> &rbt, const RBNode<Key, T> *node) {
 
 namespace internal {
 
-template <typename Key, typename T> void delete_all_nodes(RBTree<Key, T> &tree) {
+template <typename Key, typename T> void delete_all_nodes(RBTree<Key, T> &tree, bool delete_nil_node) {
     if (tree._allocator == nullptr) {
         return;
     }
 
     if (is_nil_node(tree, tree._root)) {
-        make_delete(*tree._allocator, tree._nil);
-        // ^ Important to call the delete on _nil, not _root since type
-        tree._root = nullptr;
-        tree._nil = nullptr;
+        if (delete_nil_node) {
+            make_delete(*tree._allocator, tree._nil);
+            tree._root = nullptr;
+            tree._nil = nullptr;
+        }
         return;
     }
 
@@ -168,46 +177,48 @@ template <typename Key, typename T> void delete_all_nodes(RBTree<Key, T> &tree) 
         make_delete(*tree._allocator, p);
     }
 
-    make_delete(*tree._allocator, tree._nil);
-    tree._root = nullptr;
-    tree._nil = nullptr;
+    if (delete_nil_node) {
+        make_delete(*tree._allocator, tree._nil);
+        tree._root = nullptr;
+        tree._nil = nullptr;
+    }
 }
 
 template <typename Key, typename T> void copy_tree(RBTree<Key, T> &tree, const RBTree<Key, T> &other) {
-    // Make the nil node
-    tree._nil = make_new<RBNode<Key, T>>(*tree._allocator);
-
-    // Make the root node
-    if (!is_nil_node(other, other._root)) {
-        tree._root = make_new<RBNode<Key, T>>(*tree._allocator, other._root.k, other._root.v);
-    } else {
-        tree._root = tree._nil;
+    if (is_nil_node(other, other._root)) {
         return;
     }
 
-    std::vector<const RBNode<Key, T> *> others_stack;
-    std::vector<RBNode<Key, T> *> wips_stack;
+    tree._root = make_new<RBNode<Key, T>>(*tree._allocator, other._root->k, other._root->v);
 
-    others_stack.push_back(other._root);
-    wips_stack.push_back(tree._root);
+    // We maintaon the recursion stack ourselves.
 
-    while (others_stack.size() != 0) {
-        auto wips_top = wips_stack.back();
-        auto others_top = others_stack.back();
+    fo::TempAllocator1024 ta(fo::memory_globals::default_allocator());
 
-        wips_stack.pop_back();
-        others_stack.pop_back();
+    fo::Array<RBNode<Key, T> *> others_stack(ta);
+    fo::Array<RBNode<Key, T> *> wips_stack(ta);
+
+    fo::array::push_back(others_stack, other._root);
+    fo::array::push_back(wips_stack, tree._root);
+
+    while (fo::array::size(others_stack) != 0) {
+        auto wips_top = fo::array::back(wips_stack);
+        auto others_top = fo::array::back(others_stack);
+
+        fo::array::pop_back(wips_stack);
+        fo::array::pop_back(others_stack);
 
         wips_top->_color = others_top->_color;
 
         for (u32 i = 0; i < 2; ++i) {
-            if (rbt::is_nil_node(others_top->_childs[i])) {
+            if (rbt::is_nil_node(other, others_top->_childs[i])) {
                 wips_top->_childs[i] = static_cast<RBNode<Key, T> *>(tree._nil);
             } else {
-                wips_top->_childs[i] =
-                    make_new<RBNode<Key, T>>(*tree._allocator, others_top->k, others_top->v);
-                others_stack.push_back(others_top->_childs[i]);
-                wips_stack.push_back(wips_top->_childs[i]);
+                // Create the child node
+                wips_top->_childs[i] = make_new<RBNode<Key, T>>(*tree._allocator, others_top->_childs[i]->k,
+                                                                others_top->_childs[i]->v);
+                fo::array::push_back(others_stack, others_top->_childs[i]);
+                fo::array::push_back(wips_stack, wips_top->_childs[i]);
             }
         }
     }
@@ -386,40 +397,42 @@ template <typename Key, typename T> RBTree<Key, T>::RBTree(Allocator &allocator)
 
 template <typename Key, typename T> RBTree<Key, T>::RBTree(const RBTree &other, Allocator *allocator) {
     _allocator = allocator ? allocator : other._allocator;
+    _nil = make_new<internal::ChildPointers<Key, T>>(*_allocator);
+    _nil->_childs[LEFT] = reinterpret_cast<RBNode<Key, T> *>(_nil);
+    _nil->_childs[RIGHT] = reinterpret_cast<RBNode<Key, T> *>(_nil);
+    _nil->_parent = reinterpret_cast<RBNode<Key, T> *>(_nil);
+    _root = reinterpret_cast<RBNode<Key, T> *>(_nil);
+
     rbt::internal::copy_tree(*this, other);
 }
 
 template <typename Key, typename T> RBTree<Key, T>::RBTree(RBTree &&other) {
-    if (this == &other) {
-        return;
-    }
-
     _allocator = other._allocator;
     _root = other._root;
     _nil = other._nil;
-
     other._allocator = nullptr;
 }
 
 template <typename Key, typename T> RBTree<Key, T> &RBTree<Key, T>::operator=(const RBTree &other) {
-    if (this == other) {
+    if (this == &other) {
         return *this;
     }
 
     assert(_allocator != nullptr && "Cannot copy into moved-from/deleted tree");
 
-    rbt::internal::delete_all_nodes(*this);
+    rbt::internal::delete_all_nodes(*this, false);
+    _root = reinterpret_cast<RBNode<Key, T> *>(_nil);
     rbt::internal::copy_tree(*this, other);
 
     return *this;
 }
 
 template <typename Key, typename T> RBTree<Key, T> &RBTree<Key, T>::operator=(RBTree &&other) {
-    if (this == other) {
+    if (this == &other) {
         return *this;
     }
 
-    rbt::internal::delete_all_nodes(*this);
+    rbt::internal::delete_all_nodes(*this, true);
 
     _allocator = other._allocator;
     _root = other._root;
@@ -432,7 +445,7 @@ template <typename Key, typename T> RBTree<Key, T> &RBTree<Key, T>::operator=(RB
 
 template <typename Key, typename T> RBTree<Key, T>::~RBTree() {
     if (_allocator) {
-        rbt::internal::delete_all_nodes(*this);
+        rbt::internal::delete_all_nodes(*this, true);
         _allocator = nullptr;
     }
 }
@@ -483,25 +496,31 @@ Iterator<Key, T, is_const> Iterator<Key, T, is_const>::operator--(int) {
     return saved;
 }
 
-template <typename Key, typename T, bool is_const_pointer> struct Result {
+/// Represents the result of `get` and `set` operations.
+template <typename Key, typename T, bool is_const> struct Result {
     bool key_was_present = false;
-    KT<RBNode, Key, T, is_const_pointer> *node = nullptr;
+    Iterator<Key, T, is_const> i;
 };
+
+/// Deletes all nodes in the RBTree
+template <typename Key, typename T> void clear(RBTree<Key, T> &rbt) {
+    internal::delete_all_nodes(rbt, false);
+}
 
 template <typename Key, typename T> Result<Key, T, false> get(RBTree<Key, T> &rbt, const Key &k) {
     auto node = internal::find<Key, T, false>(rbt, k);
     if (is_nil_node(rbt, node)) {
-        return Result<Key, T, false>();
+        return Result<Key, T, false>{false, end(rbt)};
     }
-    return Result<Key, T, false>{true, node};
+    return Result<Key, T, false>{true, Iterator<Key, T, false>(rbt, node)};
 }
 
 template <typename Key, typename T> Result<Key, T, true> get_const(const RBTree<Key, T> &rbt, const Key &k) {
-    auto node = internal::find<Key, T, true>(rbt, std::move(k));
+    auto node = internal::find<Key, T, true>(rbt, k);
     if (is_nil_node(rbt, node)) {
-        return Result<Key, T, true>();
+        return Result<Key, T, true>{false, end(rbt)};
     }
-    return Result<Key, T, true>{true, node};
+    return Result<Key, T, true>{true, Iterator<Key, T, true>(rbt, node)};
 }
 
 template <typename Key, typename T> Result<Key, T, true> get(const RBTree<Key, T> &rbt, Key k) {
@@ -514,10 +533,10 @@ template <typename Key, typename T> Result<Key, T, false> set(RBTree<Key, T> &rb
         rbt._root->_childs[0] = reinterpret_cast<RBNode<Key, T> *>(rbt._nil);
         rbt._root->_childs[1] = reinterpret_cast<RBNode<Key, T> *>(rbt._nil);
         rbt._root->_parent = reinterpret_cast<RBNode<Key, T> *>(rbt._nil);
-        return Result<Key, T, false>{false, rbt._root};
+        return Result<Key, T, false>{false, Iterator<Key, T, false>(rbt, rbt._root)};
     }
 
-    Result<Key, T, false> result;
+    Result<Key, T, false> result{false, end(rbt)};
 
     auto cur = rbt._root;
     auto par = rbt._root;
@@ -535,16 +554,13 @@ template <typename Key, typename T> Result<Key, T, false> set(RBTree<Key, T> &rb
             cur->k = std::move(k);
             cur->v = std::move(v);
             result.key_was_present = true;
-            result.node = cur;
+            result.i = Iterator<Key, T, false>(rbt, cur);
             return result;
         }
     }
 
     auto n = make_new<RBNode<Key, T>>(*rbt._allocator, std::move(k), std::move(v));
-
-    result.key_was_present = false;
-    result.node = n;
-
+    result.i = Iterator<Key, T, false>(rbt, n);
     n->_color = RED;
     n->_parent = par;
     n->_childs[LEFT] = static_cast<RBNode<Key, T> *>(rbt._nil);
@@ -568,7 +584,7 @@ template <typename Key, typename T> Result<Key, T, false> remove(RBTree<Key, T> 
     auto n = internal::find<Key, T, false>(t, k);
 
     if (is_nil_node(t, n)) {
-        return Result<Key, T, false>{};
+        return Result<Key, T, false>{false, end(t)};
     }
 
     assert(n->k == k);
@@ -619,9 +635,7 @@ template <typename Key, typename T> Result<Key, T, false> remove(RBTree<Key, T> 
     // Delete the node
     make_delete(*t._allocator, n);
 
-    Result<Key, T, false> result{};
-    result.key_was_present = true;
-    return result;
+    return Result<Key, T, false>{true, end(t)};
 }
 
 } // namespace rbt

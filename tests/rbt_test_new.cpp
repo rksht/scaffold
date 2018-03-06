@@ -4,11 +4,42 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 using namespace fo;
 using namespace string_stream;
 
-template <typename Key, typename T> void rbt_to_dot(const rbt::RBTree<Key, T> &t) {}
+template <typename Key, typename T> class RbtDebugPrint {
+  public:
+    const rbt::RBTree<Key, T> &_t;
+    Buffer _ss;
+    int global_id = 0;
+
+    RbtDebugPrint(const rbt::RBTree<Key, T> &t)
+        : _t(t)
+        , _ss(memory_globals::default_allocator()) {}
+
+    void rbt_debug_print(const rbt::RBNode<Key, T> *n, int node_id) {
+        if (!is_nil_node(_t, n->_childs[rbt::LEFT])) {
+            printf(_ss, "%i -> %i;\n", node_id, ++global_id);
+            rbt_debug_print(n->_childs[rbt::LEFT], global_id);
+        }
+
+        printf(_ss, "%i [style = filled, fillcolor = %s, label = \"%u_%s\"];\n", node_id,
+               n->_color == rbt::BLACK ? "grey" : "red", n->k, n->v.c_str());
+
+        if (!is_nil_node(_t, n->_childs[rbt::RIGHT])) {
+            printf(_ss, "%i -> %i;\n", node_id, ++global_id);
+            rbt_debug_print(n->_childs[rbt::RIGHT], global_id);
+        }
+    }
+
+    void rbt_debug_print() {
+        _ss << "digraph rbt {\n";
+        rbt_debug_print(_t._root, global_id);
+        _ss << "}\n";
+    }
+};
 
 struct FileContent {
     std::vector<u32> numbers;
@@ -32,14 +63,21 @@ FileContent read_number_list(const char *file) {
     while (!feof(f)) {
         char buf[1024] = {};
         fgets(buf, sizeof(buf), f);
+        size_t len = strlen(buf);
+        if (len == 0){
+            continue;
+        }
+        if (buf[len - 1] == '\n') {
+            buf[len - 1] = '\0';
+        }
+        if (strlen(buf) == 0) {
+            continue;
+        }
+
         char *end = nullptr;
         unsigned long number = strtoul(buf, &end, 10);
         if (*end != ' ') {
             fprintf(stderr, "Bad number: %lu, end = '%c', read = '%s'\n", number, end[0], buf);
-        }
-        size_t len = strlen(buf);
-        if (buf[len - 1] == '\n') {
-            buf[len - 1] = '\0';
         }
 
         assert(std::numeric_limits<u32>::max() >= number);
@@ -79,7 +117,7 @@ void must_have_each_key(RBTandMap &context) {
             fprintf(stderr, "must_have_each_key failed for key: %u\n", kv.first);
             continue;
         }
-        if (find_res.node->v != kv.second) {
+        if (find_res.i->v != kv.second) {
             fprintf(stderr, "Key value mismatch for key: %u\n", kv.first);
         }
     }
@@ -106,6 +144,8 @@ void test_must_have_each_key() {
         }
     }
     must_have_each_key(context);
+
+    printf("%s - success\n", __PRETTY_FUNCTION__);
 }
 
 void test_iterators_sorted() {
@@ -120,7 +160,7 @@ void test_iterators_sorted() {
             assert((i32)node.k > prev);
             prev = (i32)node.k;
         }
-        puts("\n");
+        // puts("\n");
     }
 
     {
@@ -134,41 +174,79 @@ void test_iterators_sorted() {
             assert(it->k < prev);
             prev = it->k;
         }
-        puts("\n");
+        // puts("\n");
     }
+
+    printf("%s - success\n", __PRETTY_FUNCTION__);
 }
 
-template <typename Key, typename T> class RbtDebugPrint {
-  public:
-    const rbt::RBTree<Key, T> &_t;
-    Buffer _ss;
-    int global_id = 0;
+void test_copy_and_move() {
+    const char *file = SOURCE_DIR "/rbt_keys.txt";
+    auto context = read_file_into_rbt(file);
 
-    RbtDebugPrint(const rbt::RBTree<Key, T> &t)
-        : _t(t)
-        , _ss(memory_globals::default_allocator()) {}
+    rbt::RBTree<u32, std::string> copied_rbt(memory_globals::default_allocator());
 
-    void rbt_debug_print(const rbt::RBNode<Key, T> *n, int node_id) {
-        if (!is_nil_node(_t, n->_childs[rbt::LEFT])) {
-            printf(_ss, "%i -> %i;\n", node_id, ++global_id);
-            rbt_debug_print(n->_childs[rbt::LEFT], global_id);
-        }
+    // Get the max number
+    auto it = end(context.rbt);
+    --it;
 
-        printf(_ss, "%i [style = filled, fillcolor = %s, label = \"%u_%s\"];\n", node_id,
-               n->_color == rbt::BLACK ? "grey" : "red", n->k, n->v.c_str());
+    assert(it != end(context.rbt));
 
-        if (!is_nil_node(_t, n->_childs[rbt::RIGHT])) {
-            printf(_ss, "%i -> %i;\n", node_id, ++global_id);
-            rbt_debug_print(n->_childs[rbt::RIGHT], global_id);
-        }
+    const u32 max_number = it->k;
+
+    rbt::set(copied_rbt, max_number + 100, std::string("Kyuss"));
+    rbt::set(copied_rbt, max_number + 200, std::string("Nine Inch Nails"));
+    rbt::set(copied_rbt, max_number + 300, std::string("Converge"));
+
+    assert(rbt::get_const(copied_rbt, max_number + 100).i->v == std::string("Kyuss"));
+    assert(rbt::get_const(copied_rbt, max_number + 200).i->v == std::string("Nine Inch Nails"));
+    assert(rbt::get_const(copied_rbt, max_number + 300).i->v == std::string("Converge"));
+
+    // Copy assign rbt that was read from file
+    copied_rbt = context.rbt;
+
+    assert(rbt::get_const(copied_rbt, max_number + 100).i == end(copied_rbt));
+    assert(rbt::get_const(copied_rbt, max_number + 200).i == end(copied_rbt));
+    assert(rbt::get_const(copied_rbt, max_number + 300).i == end(copied_rbt));
+
+    // Test they have same keys
+    for (auto &node : context.rbt) {
+        auto res = rbt::get_const(copied_rbt, node.k);
+        assert(res.key_was_present);
+        assert(res.i->k == node.k);
+        assert(res.i->v == node.v);
     }
 
-    void rbt_debug_print() {
-        _ss << "digraph rbt {\n";
-        rbt_debug_print(_t._root, global_id);
-        _ss << "}\n";
+    // Delete original tree that was read from file
+    context.rbt.~RBTree();
+    context.read_keys.clear();
+    context.map.clear();
+
+    // Read from file again
+    auto new_context = read_file_into_rbt(file);
+
+    // Test they have same keys, again
+    for (auto &node : new_context.rbt) {
+        auto res = rbt::get_const(copied_rbt, node.k);
+        assert(res.key_was_present);
+        assert(res.i->k == node.k);
+        assert(res.i->v == node.v);
     }
-};
+
+    // Now move assign into copied_rbt
+    copied_rbt = std::move(new_context.rbt);
+
+    auto new_context2 = read_file_into_rbt(file);
+
+    for (auto &node : new_context2.rbt) {
+        auto res = rbt::get_const(copied_rbt, node.k);
+        assert(res.key_was_present);
+        assert(res.i->k == node.k);
+        assert(res.i->v == node.v);
+    }
+
+    printf("%s - success\n", __PRETTY_FUNCTION__);
+}
 
 void print_graph() {
     const char *file = SOURCE_DIR "/rbt_keys.txt";
@@ -190,6 +268,7 @@ int main() {
         test_must_have_each_key();
         print_graph();
         test_iterators_sorted();
+        test_copy_and_move();
     }
     memory_globals::shutdown();
 }
