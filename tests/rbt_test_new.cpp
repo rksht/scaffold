@@ -111,11 +111,30 @@ void test_must_have_each_key() {
 void test_iterators_sorted() {
     const char *file = SOURCE_DIR "/rbt_keys.txt";
     auto context = read_file_into_rbt(file);
+    {
 
-    auto it = begin(context.rbt);
+        i32 prev = -9999;
 
-    for (auto &node : context.rbt) {
+        for (auto &node : context.rbt) {
+            // fprintf(stderr, "%u, ", node.k);
+            assert((i32)node.k > prev);
+            prev = (i32)node.k;
+        }
+        puts("\n");
+    }
 
+    {
+
+        u32 prev = std::numeric_limits<u32>::max();
+        auto it = end(context.rbt);
+        --it;
+
+        for (auto b = begin(context.rbt); it != b; --it) {
+            // fprintf(stderr, "%u, ", it->k);
+            assert(it->k < prev);
+            prev = it->k;
+        }
+        puts("\n");
     }
 }
 
@@ -170,6 +189,7 @@ int main() {
     {
         test_must_have_each_key();
         print_graph();
+        test_iterators_sorted();
     }
     memory_globals::shutdown();
 }
