@@ -20,6 +20,7 @@ Buffer &operator<<(Buffer &b, float f);
 Buffer &operator<<(Buffer &b, int32_t i);
 Buffer &operator<<(Buffer &b, uint32_t i);
 Buffer &operator<<(Buffer &b, uint64_t i);
+Buffer &operator<<(Buffer &b, double r);
 
 /// Uses printf to print formatted data to the stream.
 Buffer &printf(Buffer &b, const char *format, ...);
@@ -78,6 +79,8 @@ inline Buffer &operator<<(Buffer &b, uint32_t i) { return string_stream_internal
 inline Buffer &operator<<(Buffer &b, uint64_t i) {
     return string_stream_internal::printf_small(b, "%01llx", i);
 }
+
+inline Buffer &operator<<(Buffer &b, double r) { return string_stream_internal::printf_small(b, "%.5f", r); }
 
 inline Buffer &push(Buffer &b, const char *data, uint32_t n) {
     unsigned int end = array::size(b);

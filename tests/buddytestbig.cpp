@@ -1,4 +1,5 @@
 #include <scaffold/buddy_allocator.h>
+#include <scaffold/timed_block.h>
 
 #include <array>
 #include <iostream>
@@ -10,12 +11,12 @@
 
 using BA = fo::BuddyAllocator;
 
-constexpr uint32_t BUFFER_SIZE = 16 << 20;  // 10 MB
-constexpr uint32_t SMALLEST_SIZE = 4 << 10; // 4 KB
-constexpr uint32_t NUM_INDICES = BUFFER_SIZE / SMALLEST_SIZE;
-/*constexpr uint32_t NUM_LEVELS = log2_ceil(NUM_INDICES) + 1;*/
+constexpr uint64_t BUFFER_SIZE = u64(4) << 30; // 4 GB
+constexpr uint64_t SMALLEST_SIZE = 4 << 10;    // 4 KB
+constexpr uint64_t NUM_INDICES = BUFFER_SIZE / SMALLEST_SIZE;
+/*constexpr uint64_t NUM_LEVELS = log2_ceil(NUM_INDICES) + 1;*/
 
-template <uint32_t bytes> using Block = std::array<uint32_t, bytes / sizeof(uint32_t)>;
+template <uint64_t bytes> using Block = std::array<uint64_t, bytes / sizeof(uint64_t)>;
 
 using SmallestBlock = Block<SMALLEST_SIZE>;
 
@@ -30,73 +31,39 @@ int main(int argc, char **argv) {
 
     fo::memory_globals::init();
     {
+        log_info("Initializing buddy allocator");
         BA ba(BUFFER_SIZE, SMALLEST_SIZE, fo::memory_globals::default_allocator());
-        printf("SIZE OF SMALLEST ARRAY = %zu, SMALLEST_SIZE = %u\n", sizeof(SmallestBlock), SMALLEST_SIZE);
+        printf("Done initializing. SIZE OF SMALLEST ARRAY = %zu, SMALLEST_SIZE = %lu\n",
+               sizeof(SmallestBlock),
+               SMALLEST_SIZE);
         puts("Press enter to continue...");
         getchar();
 
         std::default_random_engine dre(seed);
         std::uniform_int_distribution<int> d(1, 10);
 
-        std::set<void *> allocateds;
+        std::vector<void *> allocateds;
+        allocateds.reserve(BUFFER_SIZE / SMALLEST_SIZE + 1);
 
-        for (int i = 0; i < 5000; ++i) {
-            std::cerr << "ITER = " << i << "\n";
-
-            if (i % 500 == 0) {
-                // std::cout << ba.get_json_tree() << "\n--\n";
-                // std::cin >> n;
+        while (true) {
+            auto block = ba.allocate(sizeof(SmallestBlock), alignof(SmallestBlock));
+            if (!block) {
+                break;
             }
-
-            if (d(dre) < 3) {
-                SmallestBlock &p1 =
-                    *((SmallestBlock *)ba.allocate(sizeof(SmallestBlock), _align_of<SmallestBlock>()));
-                new (&p1) SmallestBlock();
-
-                allocateds.insert((void *)&p1);
-
-                // ba.print_level_map();
-            }
-
-            int r = d(dre);
-            if (3 <= r && r < 8) {
-                for (void *p : allocateds) {
-                    if (d(dre) > 4) {
-                        ba.deallocate(p);
-                        allocateds.erase(p);
-                        // ba.print_level_map();
-                        break;
-                    }
-                }
-            }
-
-            r = d(dre);
-
-            if (r >= 8) {
-                Block_8KB &p2 = *((Block_8KB *)ba.allocate(sizeof(Block_8KB), _align_of<Block_8KB>()));
-                new (&p2) Block_8KB();
-                allocateds.insert((void *)&p2);
-                // ba.print_level_map();
-            }
-
-            r = d(dre);
-
-            if (3 <= r && r < 6) {
-                for (void *p : allocateds) {
-                    if (d(dre) > 4) {
-                        ba.deallocate(p);
-                        allocateds.erase(p);
-                        // ba.print_level_map();
-                        break;
-                    }
-                }
-            }
+            allocateds.push_back(block);
         }
+
+        printf("Could allocate %zu small blocks\n", allocateds.size());
+
+        puts("Will deallocate now... press enter");
+        getchar();
+
         for (void *p : allocateds) {
-            std::cerr << "Have to deallocate extra buddy"
-                      << "\n";
+            std::cerr << "Have to deallocate extra buddy\n";
             ba.deallocate(p);
         }
+
+        timedblock::print_record_table(stdout);
     }
     fo::memory_globals::shutdown();
     fprintf(stderr, "Seed = %lu\n", seed);
