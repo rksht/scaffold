@@ -46,8 +46,11 @@ class BuddyAllocator : public Allocator {
     /// Creates a buddy allocator. It will manage  buddies of size `min_buddy_size` in a buffer of `size`
     /// bytes. `size` must be a power of 2. `main_allocator` is the allocator used to allocate that.
     /// `extra_allocator` is use to allocate the internal data structures.
-    BuddyAllocator(uint64_t size, uint64_t min_buddy_size, Allocator &main_allocator,
-                   Allocator &extra_allocator = memory_globals::default_allocator());
+    BuddyAllocator(uint64_t size,
+                   uint64_t min_buddy_size,
+                   Allocator &main_allocator,
+                   Allocator &extra_allocator = memory_globals::default_allocator(),
+                   const char *name = "Unnamed");
 
     /// Destroys the buddy allocator and frees the buffer
     ~BuddyAllocator();
@@ -96,7 +99,7 @@ class BuddyAllocator : public Allocator {
     void _check_leaf_index(buddy_allocator_internal::BuddyHead *p) const;
 
     /// Prints which level each buddy is allocated in (Only used for debugging)
-    void dbg_print_levels(uint64_t start, uint64_t end) const;
+    void _dbg_print_levels(uint64_t start, uint64_t end) const;
 
 }; // class BuddyAllocator
 

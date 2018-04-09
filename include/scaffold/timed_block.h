@@ -82,14 +82,6 @@ struct RecordScope {
 
         auto exit_timestamp = get_timestamp();
 
-#if 0
-
-        log_assert(exit_timestamp >= _rec->entry_timestamp,
-                   "Entry ts = %lu > Exit Ts = %lu",
-                   _rec->entry_timestamp,
-                   exit_timestamp);
-#endif
-
         auto time_spent =
             exit_timestamp > _rec->entry_timestamp ? (exit_timestamp - _rec->entry_timestamp) : 0;
 
@@ -99,7 +91,7 @@ struct RecordScope {
 
         int i = TIMED_BLOCK_COUNT_TO_KEEP;
 
-        while (i > 0 && arr[i] <= arr[i - 1]) {
+        while (i > 0 && arr[i] >= arr[i - 1]) {
             std::swap(arr[i], arr[i - 1]);
             --i;
         }
@@ -110,7 +102,9 @@ struct RecordScope {
 struct RecordTable {
     Record _records[TIMED_BLOCK_CAPACITY];
 
-    RecordTable() { memset(_records, 0, sizeof(_records)); }
+    RecordTable() { reset(); }
+
+    void reset() { memset(_records, 0, sizeof(_records)); }
 
     RecordScope add_on_entry(const char *filename,
                              const char *func_pointer,
@@ -143,9 +137,7 @@ struct RecordTable {
                 rec.times_entered = 1;
                 rec.entry_timestamp = timestamp;
                 rec.total_time_spent = 0;
-                std::fill(rec.max_time_spent,
-                          rec.max_time_spent + TIMED_BLOCK_COUNT_TO_KEEP,
-                          std::numeric_limits<uint64_t>::max());
+                std::fill(rec.max_time_spent, rec.max_time_spent + TIMED_BLOCK_COUNT_TO_KEEP, 0);
             } else {
                 // Set new timestamp of entry
                 rec.entry_timestamp = timestamp;
@@ -160,6 +152,8 @@ struct RecordTable {
 };
 
 RecordTable &get_table();
+
+inline void reset() { get_table().reset(); }
 
 void print_record_table(FILE *f);
 
