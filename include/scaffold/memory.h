@@ -28,43 +28,35 @@ class Allocator {
     /// alignment.
     virtual void *allocate(uint64_t size, uint64_t align = DEFAULT_ALIGN) = 0;
 
-    /// Frees an allocation previously made with allocate(). If `p` is nullptr,
-    /// then simply returns doing nothing.
+    /// Frees an allocation previously made with allocate(). If `p` is nullptr, then simply returns doing
+    /// nothing.
     virtual void deallocate(void *p) = 0;
 
     static const uint64_t SIZE_NOT_TRACKED = ~uint64_t(0);
 
-    /// Returns the amount of usable memory allocated at p. p must be a pointer
-    /// returned by allocate() that has not yet been deallocated. The value
-    /// returned
-    /// will be at least the size specified to allocate(), but it can be bigger.
-    /// (The allocator may round up the allocation to fit into a set of
-    /// predefined
-    /// slot sizes.)
+    /// Returns the amount of usable memory allocated at p. p must be a pointer returned by allocate() that
+    /// has not yet been deallocated. The value returned will be at least the size specified to allocate(),
+    /// but it can be bigger. (The allocator may round up the allocation to fit into a set of predefined slot
+    /// sizes.)
     ///
-    /// Not all allocators support tracking the size of individual allocations.
-    /// An allocator that doesn't suppor it will return SIZE_NOT_TRACKED.
+    /// Not all allocators support tracking the size of individual allocations. An allocator that doesn't
+    /// suppor it will return SIZE_NOT_TRACKED.
+
     virtual uint64_t allocated_size(void *p) = 0;
 
-    /// Returns the total amount of memory allocated by this allocator. Note
-    /// that the
-    /// size returned can be bigger than the size of all individual allocations
-    /// made,
-    /// because the allocator may keep additional structures.
-    ///
-    /// If the allocator doesn't track memory, this function returns
-    /// SIZE_NOT_TRACKED.
+    /// Returns the total amount of memory allocated by this allocator. Note that the size returned can be
+    /// bigger than the size of all individual allocations made, because the allocator may keep additional
+    /// structures. If the allocator doesn't track memory, this function returns SIZE_NOT_TRACKED.
     virtual uint64_t total_allocated() = 0;
 
-    /// Returns the name of this allocator. If no name was explicitly set by a
-    /// call to `set_name` method, returns the `this` pointer stringified.
+    /// Returns the name of this allocator. If no name was explicitly set by a call to `set_name` method,
+    /// returns the `this` pointer stringified.
     const char *name() { return _name; }
 
-    /// Sets the name of the allocator. The name must fit within
-    /// `ALLOCATOR_NAME_SIZE` characters and must not be empty. `len` is the
-    /// length of the string _including_ the '\0' character. Most allocators
-    /// names should be known at compile time, so you can just use
-    /// sizeof(literal) to obtain the size including the '\0'.
+    /// Sets the name of the allocator. The name must fit within `ALLOCATOR_NAME_SIZE` characters and must not
+    /// be empty. `len` is the length of the string _including_ the '\0' character. Most allocators names
+    /// should be known at compile time, so you can just use sizeof(literal) to obtain the size including the
+    /// '\0'.
     void set_name(const char *name, uint64_t len);
 
     /// Allocators cannot be copied.
@@ -99,9 +91,6 @@ template <typename T> void make_delete(Allocator &a, T *object) {
     }
 }
 
-/// Fwd declaring the ArenaAllocator here
-class ArenaAllocator;
-
 /// Functions for accessing global memory data. See `memory.cpp` file for adding
 /// extra statically initialized allocators.
 namespace memory_globals {
@@ -123,12 +112,6 @@ Allocator &default_allocator();
 /// If there is not enough memory in the buffer to match requests for scratch
 /// memory, memory from the default_allocator will be returned instaed.
 Allocator &default_scratch_allocator();
-
-/// Returns an arena allocator that has a very simple manually managed scheme.
-/// You must not call deallocate() on these allocator and instead just delete
-/// the backing allocator used - which is  default_allocator() usually.
-/// The preferrable option is to just call memory_globals::shudown().
-/// ArenaAllocator &default_arena_allocator(); // Commented out for now
 
 /// Shuts down the global memory allocators created by init().
 void shutdown();

@@ -44,8 +44,8 @@ class BuddyAllocator : public Allocator {
 
   public:
     /// Creates a buddy allocator. It will manage  buddies of size `min_buddy_size` in a buffer of `size`
-    /// bytes. `size` must be a power of 2. `main_allocator` is the allocator used to allocate that.
-    /// `extra_allocator` is use to allocate the internal data structures.
+    /// bytes. `size` should be a power of 2, but doesn't *have* to be. `main_allocator` is the allocator used
+    /// to allocate that. `extra_allocator` is use to allocate the internal data structures.
     BuddyAllocator(uint64_t size,
                    uint64_t min_buddy_size,
                    Allocator &main_allocator,

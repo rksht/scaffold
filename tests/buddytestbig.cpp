@@ -1,4 +1,5 @@
 #include <scaffold/buddy_allocator.h>
+#include <scaffold/one_time_allocator.h>
 #include <scaffold/timed_block.h>
 
 #include <array>
@@ -102,7 +103,7 @@ void deallocate_random(AllocResult res) {
     log_assert(res.blocks.size() > 1, "");
 
     std::default_random_engine dre(g_seed);
-    std::uniform_int_distribution<size_t> d(0, res.blocks.size());
+    std::uniform_int_distribution<size_t> d(0, res.blocks.size() - 1);
 
     const size_t times_to_swap = std::max(size_t(10000), res.blocks.size());
 
@@ -110,14 +111,20 @@ void deallocate_random(AllocResult res) {
         std::swap(res.blocks[d(dre)], res.blocks[d(dre)]);
     }
 
+    for (void *p : res.blocks) {
+        res.ba->deallocate(p);
+    }
+
+    delete res.ba;
+
     printf("Results for %s\n", __PRETTY_FUNCTION__);
     printf("Blocks allocated: %zu\n", res.blocks.size());
     timedblock::print_record_table(stdout);
     fflush(stdout);
 }
 
-AllocResult alloc_variable_chunks() {
-    auto ba = new BA(BUFFER_SIZE, SMALLEST_SIZE, fo::memory_globals::default_allocator());
+AllocResult alloc_variable_chunks(fo::OneTimeAllocator *one_time_alloc) {
+    auto ba = new BA(BUFFER_SIZE, SMALLEST_SIZE, *one_time_alloc);
 
     std::vector<void *> blocks;
     blocks.reserve(BUFFER_SIZE / SMALLEST_SIZE + 1);
@@ -149,6 +156,8 @@ AllocResult alloc_variable_chunks() {
         blocks.push_back(block);
     }
 
+    log_info("Allocated: %zu blocks", blocks.size());
+
     return AllocResult{ba, std::move(blocks)};
 }
 
@@ -162,11 +171,26 @@ int main(int argc, char **argv) {
         //
         alloc_one_full_buddy();
 
-        //
-        deallocate_swapped(alloc_variable_chunks());
+        timedblock::reset();
 
+#if 1
         //
-        deallocate_random(alloc_variable_chunks());
+        {
+            fo::OneTimeAllocator one_time_alloc;
+            deallocate_swapped(alloc_variable_chunks(&one_time_alloc));
+        }
+#endif
+
+        timedblock::reset();
+
+#if 1
+        //
+        {
+            fo::OneTimeAllocator one_time_alloc;
+            deallocate_random(alloc_variable_chunks(&one_time_alloc));
+        }
+
+#endif
     }
     fo::memory_globals::shutdown();
     fprintf(stderr, "Seed = %lu\n", g_seed);
