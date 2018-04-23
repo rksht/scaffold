@@ -58,7 +58,7 @@ void OneTimeAllocator::deallocate(void *p) {
     log_assert(res == 0, "%s - munmap failed", __PRETTY_FUNCTION__);
 
 #else
-    memory_globals::default_allocator().deallocate(_total_allocated);
+    memory_globals::default_allocator().deallocate(_mem);
 
 #endif
     _mem = nullptr;

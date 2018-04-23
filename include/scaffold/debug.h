@@ -27,3 +27,14 @@
             stderr, "[ASSERT] (%s:%d: errno: %s)" M "\n", __FILE__, __LINE__, clean_errno(), ##__VA_ARGS__); \
         abort();                                                                                             \
     }
+
+#define TOKENPASTE(x, y) x##y
+#define TOKENPASTE2(x, y) TOKENPASTE(x, y)
+
+#ifndef REALLY_INLINE
+#ifdef _MSC_VER
+#define REALLY_INLINE __forceinline
+#else
+#define REALLY_INLINE __attribute__((always_inline))
+#endif
+#endif

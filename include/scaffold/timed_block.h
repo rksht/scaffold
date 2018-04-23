@@ -2,9 +2,11 @@
 
 #include <scaffold/debug.h>
 
+#include <chrono>
 #include <limits>
 #include <stdio.h>
 #include <type_traits>
+
 
 #ifndef TIMED_BLOCK_CAPACITY
 #define TIMED_BLOCK_CAPACITY 128
@@ -16,21 +18,17 @@
 
 static_assert((TIMED_BLOCK_CAPACITY & (TIMED_BLOCK_CAPACITY - 1)) == 0, "Must be power of 2");
 
-#define TOKENPASTE(x, y) x##y
-#define TOKENPASTE2(x, y) TOKENPASTE(x, y)
-
-#define DEFER(C) auto TOKENPASTE2(deferred_statement_, __LINE__) = make_deferred(C)
-
 #define TIMED_BLOCK                                                                                          \
     auto TOKENPASTE2(timed_block_variable, __LINE__) = timedblock::get_table().add_on_entry(                 \
-        __FILE__, __func__, __PRETTY_FUNCTION__, __LINE__, timedblock::get_timestamp())
+        __FILE__, __func__, __PRETTY_FUNCTION__, __LINE__, timedblock::get_timestamp_ns())
 
 namespace timedblock {
 
-__attribute__((always_inline)) inline uint64_t get_timestamp() {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-    return (uint64_t)ts.tv_nsec;
+// Returns a monotonically increasing nanosecond count
+REALLY_INLINE inline uint64_t get_timestamp_ns() {
+    // On windows high_resolution_clock uses QPC, so we are good.
+    auto timepoint = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration<uint64_t, std::nano>(timepoint.time_since_epoch()).count();
 }
 
 struct Record {
@@ -59,7 +57,7 @@ struct Record {
 inline bool is_nil_record(const Record &rec) { return rec.func_pointer == 0; }
 
 struct RecordScope {
-    Record *_rec;
+    Record * _rec;
     uint16_t _rec_prev;
 
     RecordScope(Record &rec)
@@ -80,7 +78,7 @@ struct RecordScope {
             return;
         }
 
-        auto exit_timestamp = get_timestamp();
+        auto exit_timestamp = get_timestamp_ns();
 
         auto time_spent =
             exit_timestamp > _rec->entry_timestamp ? (exit_timestamp - _rec->entry_timestamp) : 0;
@@ -109,8 +107,8 @@ struct RecordTable {
     RecordScope add_on_entry(const char *filename,
                              const char *func_pointer,
                              const char *function_name,
-                             u32 line,
-                             uint64_t timestamp) {
+                             u32         line,
+                             uint64_t    timestamp) {
         u64 hash = ((u64)filename + (u64)func_pointer) & ((u64)func_pointer + (line & 7));
         u64 index = hash & (TIMED_BLOCK_CAPACITY - 1);
 
