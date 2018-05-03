@@ -2,12 +2,13 @@ cmake_minimum_required(VERSION 3.4)
 project(scaffold)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Options to propagate
 if (GNU)
 	add_compile_options(-std=c++17)
 elseif(MSVC)
-	add_compile_options(-std:c++latest)
+	add_compile_options(-std:c++17)
 endif()
 
 option(BUDDY_ALLOC_LEVEL_LOGGING "Log buddy allocator" off)

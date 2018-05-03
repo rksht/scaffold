@@ -91,7 +91,7 @@ class MallocAllocator : public Allocator {
     // Check that we don't have any memory leaks when allocator is destroyed.
 #ifndef MALLOC_ALLOC_DONT_TRACK_SIZE
         if (_total_allocated != 0) {
-            fprintf(stderr, "MallocAllocator %s _total_allocated = %lu\n", name(), _total_allocated);
+            log_assert(false, "MallocAllocator %s _total_allocated = %lu\n", name(), _total_allocated);
         }
         assert(_total_allocated == 0);
 #endif

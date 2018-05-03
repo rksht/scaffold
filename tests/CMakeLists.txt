@@ -123,3 +123,8 @@ add_executable(rbt_test_new rbt_test_new.cpp)
 target_link_libraries(rbt_test_new scaffold)
 
 set_target_properties(rbt_test_new PROPERTIES FOLDER scaffold_tests)
+
+add_executable(non_pod_array_test non_pod_array_test.cpp)
+target_link_libraries(non_pod_array_test scaffold)
+
+set_target_properties(non_pod_array_test PROPERTIES FOLDER scaffold_tests)

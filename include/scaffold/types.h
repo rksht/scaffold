@@ -22,3 +22,7 @@ using i8 = int8_t;
 
 using f32 = float;
 using f64 = double;
+
+#if defined(_MSC_VER)
+#define __PRETTY_FUNCTION__ __FUNCDNAME__
+#endif
