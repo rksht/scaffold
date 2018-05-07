@@ -50,6 +50,8 @@ struct alignas(16) Vector4 {
 
     Vector4(__m128 pack) { _mm_store_ps(reinterpret_cast<float *>(this), pack); }
 
+    __m128 get_xmm() const { return _mm_load_ps(reinterpret_cast<const float *>(this)); }
+
     /// Array like accessor
     constexpr float operator[](unsigned i) const { return reinterpret_cast<const float *>(this)[i]; }
     constexpr float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
@@ -89,4 +91,4 @@ struct OOBB {
     Matrix4x4 tm;
     AABB aabb;
 };
-}
+} // namespace fo
