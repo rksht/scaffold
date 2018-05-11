@@ -2,6 +2,8 @@
 #include <scaffold/debug.h>
 #include <string.h>
 
+#include <assert.h>
+
 namespace fo {
 uint64_t ArenaAllocator::_aligned_size_with_padding(uint64_t size) {
     uint64_t total = size + sizeof(_Header);
@@ -42,8 +44,7 @@ void *ArenaAllocator::allocate(uint64_t size, uint64_t align) {
 
     // Would go past last byte?
     if (aligned_start + size > (char *)_mem + _backing->allocated_size(_mem)) {
-        log_err("ArenaAllocator(%s) exhausted, using fallback allocator",
-                name());
+        log_err("ArenaAllocator(%s) exhausted, using fallback allocator", name());
     }
 
     pad_size = (uint64_t)(aligned_start - after_header);
@@ -51,16 +52,14 @@ void *ArenaAllocator::allocate(uint64_t size, uint64_t align) {
     // wasted
     _wasted += sizeof(_Header) + pad_size;
 
-    for (uint64_t *p = (uint64_t *)after_header; p != (uint64_t *)aligned_start;
-         ++p) {
+    for (uint64_t *p = (uint64_t *)after_header; p != (uint64_t *)aligned_start; ++p) {
         p[0] = HEADER_PAD_VALUE;
     }
 
     _next_header->size = size;
     _total_allocated += _next_header->size + pad_size;
     _top_header = _next_header;
-    _next_header = (_Header *)((char *)_top_header + sizeof(_Header) +
-                               pad_size + _top_header->size);
+    _next_header = (_Header *)((char *)_top_header + sizeof(_Header) + pad_size + _top_header->size);
 
     return (void *)aligned_start;
 }
@@ -87,4 +86,4 @@ ArenaAllocator::~ArenaAllocator() {
     _mem = 0;
     _top_header = (_Header *)0;
 }
-}
+} // namespace fo

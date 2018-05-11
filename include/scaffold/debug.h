@@ -38,3 +38,29 @@
 #define REALLY_INLINE __attribute__((always_inline))
 #endif
 #endif
+
+#if defined _WIN32 || defined __CYGWIN__
+    #ifdef BUILDING_DLL
+        #ifdef __GNUC__
+            #define DLL_PUBLIC __attribute__ ((dllexport))
+        #else
+            #define DLL_PUBLIC __declspec(dllexport)
+        #endif
+    #else
+        #ifdef __GNUC__
+            #define DLL_PUBLIC __attribute__ ((dllimport))
+        #else
+            #define DLL_PUBLIC __declspec(dllimport)
+        #endif
+    #endif
+    #define DLL_LOCAL
+#else
+    #if defined(__GNUC__) || defined(__CLANG__)
+        #define DLL_PUBLIC __attribute__ ((visibility ("default")))
+        #define DLL_LOCAL  __attribute__ ((visibility ("hidden")))
+    #else
+        #define DLL_PUBLIC
+        #define DLL_LOCAL
+        #warning "No DLL or shared-object export attribute available"
+    #endif
+#endif

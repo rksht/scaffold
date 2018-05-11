@@ -13,7 +13,6 @@ endif()
 
 option(BUDDY_ALLOC_LEVEL_LOGGING "Log buddy allocator" off)
 option(MALLOC_ALLOC_DONT_TRACK_SIZE "Don't track size in MallocAllocator" off)
-option(SCAFFOLD_BUILD_SHARED_LIB "Build a shared library also" off)
 
 if(BUDDY_ALLOC_LEVEL_LOGGING)
   message("Turning level logging on")

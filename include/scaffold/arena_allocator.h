@@ -1,14 +1,13 @@
 #pragma once
 
 #include <scaffold/memory.h>
-#include <cassert>
 
 namespace fo {
 
 /// An ArenaAllocator allocates a buffer and bumps a pointer on each allocation.
 /// It does not support deallocating allocations individually. Instead it will
 /// deallocate all the memory it owns when it's destroyed.
-class ArenaAllocator : public Allocator {
+class DLL_PUBLIC ArenaAllocator : public Allocator {
   private:
     struct _Header {
         uint64_t size;

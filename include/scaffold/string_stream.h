@@ -23,21 +23,21 @@ Buffer &operator<<(Buffer &b, uint64_t i);
 Buffer &operator<<(Buffer &b, double r);
 
 /// Uses printf to print formatted data to the stream.
-Buffer &printf(Buffer &b, const char *format, ...);
+DLL_PUBLIC Buffer &printf(Buffer &b, const char *format, ...);
 
 /// Pushes the raw data to the stream.
-Buffer &push(Buffer &b, const char *data, uint32_t n);
+DLL_PUBLIC Buffer &push(Buffer &b, const char *data, uint32_t n);
 
 /// Pads the stream with spaces until it is aligned at the specified column. Can be used to column align data.
 /// (Assumes each char is 1 space wide, i.e. does not work with UTF-8 data.)
-Buffer &tab(Buffer &b, uint32_t column);
+DLL_PUBLIC Buffer &tab(Buffer &b, uint32_t column);
 
 /// Adds the specified number of c to the stream.
-Buffer &repeat(Buffer &b, uint32_t count, char c);
+DLL_PUBLIC Buffer &repeat(Buffer &b, uint32_t count, char c);
 
 /// Returns the stream as a C-string. There will always be a \0 character at the end of the returned string.
 /// You don't have to explicitly add it to the buffer.
-const char *c_str(Buffer &b);
+DLL_PUBLIC const char *c_str(Buffer &b);
 
 /// Sometimes you may want to steal the allocated string into a plain-old `char *`. Call `c_str_own` to do
 /// that. This of course means you are now in charge of freeing the memory...
@@ -48,7 +48,7 @@ struct CstrReturn {
 };
 
 /// ... The moved-from buffer `b` can be reused as it it were a just now constructed Buffer.
-CstrReturn c_str_own(Buffer &&b);
+DLL_PUBLIC CstrReturn c_str_own(Buffer &&b);
 
 } // namespace string_stream
 

@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <type_traits>
 
-
 #ifndef TIMED_BLOCK_CAPACITY
 #define TIMED_BLOCK_CAPACITY 128
 #endif
@@ -31,7 +30,7 @@ REALLY_INLINE inline uint64_t get_timestamp_ns() {
     return std::chrono::duration<uint64_t, std::nano>(timepoint.time_since_epoch()).count();
 }
 
-struct Record {
+struct DLL_PUBLIC Record {
     // Key portion.
 
     // Pointer to the __func__ variable. This will be unique for each function therefore.
@@ -57,7 +56,7 @@ struct Record {
 inline bool is_nil_record(const Record &rec) { return rec.func_pointer == 0; }
 
 struct RecordScope {
-    Record * _rec;
+    Record *_rec;
     uint16_t _rec_prev;
 
     RecordScope(Record &rec)
@@ -97,7 +96,7 @@ struct RecordScope {
     }
 };
 
-struct RecordTable {
+struct DLL_PUBLIC RecordTable {
     Record _records[TIMED_BLOCK_CAPACITY];
 
     RecordTable() { reset(); }
@@ -107,8 +106,8 @@ struct RecordTable {
     RecordScope add_on_entry(const char *filename,
                              const char *func_pointer,
                              const char *function_name,
-                             u32         line,
-                             uint64_t    timestamp) {
+                             u32 line,
+                             uint64_t timestamp) {
         u64 hash = ((u64)filename + (u64)func_pointer) & ((u64)func_pointer + (line & 7));
         u64 index = hash & (TIMED_BLOCK_CAPACITY - 1);
 
@@ -149,10 +148,10 @@ struct RecordTable {
     }
 };
 
-RecordTable &get_table();
+DLL_PUBLIC RecordTable &get_table();
 
 inline void reset() { get_table().reset(); }
 
-void print_record_table(FILE *f);
+DLL_PUBLIC void print_record_table(FILE *f);
 
 } // namespace timedblock

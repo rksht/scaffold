@@ -2,16 +2,16 @@
 
 #include <new>
 
+#include <scaffold/debug.h>
 #include <scaffold/memory_types.h>
 #include <scaffold/types.h>
 
 namespace fo {
 /// Base class for memory allocators.
 ///
-/// Note: Regardless of which allocator is used, prefer to allocate memory in
-/// larger chunks instead of in many small allocations. This helps with data
-/// locality, fragmentation, memory usage tracking, etc.
-class Allocator {
+/// Note: Regardless of which allocator is used, prefer to allocate memory in larger chunks instead of in many
+/// small allocations. This helps with data locality, fragmentation, memory usage tracking, etc.
+class DLL_PUBLIC Allocator {
   public:
     /// Default alignment for memory allocations.
     static constexpr uint64_t DEFAULT_ALIGN = alignof(void *);
@@ -68,10 +68,10 @@ class Allocator {
     char _name[ALLOCATOR_NAME_SIZE];
 };
 
-/// Creates a new object of type T using the allocator a to allocate the memory.
+/// Creates a new object of type T using the allocator a to allocate the memory. (don't use this)
 #define MAKE_NEW(a, T, ...) (new ((a).allocate(sizeof(T), alignof(T))) T(__VA_ARGS__))
 
-/// Frees an object allocated with MAKE_NEW.
+/// Frees an object allocated with MAKE_NEW. (don't use this either)
 #define MAKE_DELETE(a, T, p)                                                                                 \
     do {                                                                                                     \
         if (p) {                                                                                             \
@@ -80,10 +80,13 @@ class Allocator {
         }                                                                                                    \
     } while (0)
 
+
+/// What the above macros do, but takes the arguments as template parameters. Better. Use this.
 template <typename T, typename... Args> T *make_new(Allocator &a, Args &&... args) {
     return new (a.allocate(sizeof(T), alignof(T))) T(std::forward<Args>(args)...);
 }
 
+/// Use this.
 template <typename T> void make_delete(Allocator &a, T *object) {
     if (object) {
         object->~T();
@@ -91,30 +94,25 @@ template <typename T> void make_delete(Allocator &a, T *object) {
     }
 }
 
-/// Functions for accessing global memory data. See `memory.cpp` file for adding
-/// extra statically initialized allocators.
+/// Functions for accessing global memory data. See `memory.cpp` file for adding extra statically initialized
+/// allocators.
 namespace memory_globals {
-/// Initializes the global memory allocators. scratch_buffer_size is the size of
-/// the memory buffer used by the scratch allocators.
-void init(uint64_t scratch_buffer_size = 4 << 20);
+/// Initializes the global memory allocators. scratch_buffer_size is the size of the memory buffer used by the
+/// scratch allocators.
+DLL_PUBLIC void init(uint64_t scratch_buffer_size = 4 << 20);
 
-/// Returns a default memory allocator that can be used for most allocations.
-///
-/// You need to call init() for this allocator to be available.
-Allocator &default_allocator();
+/// Returns a default memory allocator that can be used for most allocations. You need to call init() for this
+/// allocator to be available.
+DLL_PUBLIC Allocator &default_allocator();
 
-/// Returns a "scratch" allocator that can be used for temporary short-lived
-/// memory
-/// allocations. The scratch allocator uses a ring buffer of size
-/// scratch_buffer_size
-/// to service the allocations.
-///
-/// If there is not enough memory in the buffer to match requests for scratch
-/// memory, memory from the default_allocator will be returned instaed.
-Allocator &default_scratch_allocator();
+/// Returns a "scratch" allocator that can be used for temporary short-lived memory allocations. The scratch
+/// allocator uses a ring buffer of size  scratch_buffer_size  to service the allocations. If there is not
+/// enough memory in the buffer to match requests for scratch memory, memory from the default_allocator will
+/// be returned instaed.
+DLL_PUBLIC Allocator &default_scratch_allocator();
 
 /// Shuts down the global memory allocators created by init().
-void shutdown();
+DLL_PUBLIC void shutdown();
 } // namespace memory_globals
 
 namespace memory {
@@ -129,8 +127,7 @@ inline const void *pointer_sub(const void *p, uint64_t bytes);
 // Inline function implementations
 // ---------------------------------------------------------------
 
-// Aligns p to the specified alignment by moving it forward if necessary
-// and returns the result.
+// Aligns p to the specified alignment by moving it forward if necessary and returns the result.
 inline void *memory::align_forward(void *p, uint64_t align) {
     uintptr_t pi = uintptr_t(p);
     const uint64_t mod = pi % align;
