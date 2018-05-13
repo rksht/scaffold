@@ -115,7 +115,9 @@ static void pod_hash_search(benchmark::State &bm_state) {
     {
         auto &alloc = memory_globals::default_allocator();
 
-        PodHash<u64, u64> h(alloc, alloc, usual_hash<u64>, usual_equal<u64>);
+        using hash_type = PodHash<u64, u64, decltype(&usual_hash<u64>), decltype(&usual_equal<u64>)>;
+
+        hash_type h(alloc, alloc, usual_hash<u64>, usual_equal<u64>);
 
         const uint64_t max_entries = bm_state.range(0);
 
@@ -146,10 +148,10 @@ static void pod_hash_search(benchmark::State &bm_state) {
     memory_globals::shutdown();
 }
 
-constexpr uint32_t max_entries = 64;
+constexpr uint32_t max_entries = 4096;
 
-BENCHMARK(pod_hash_search)->RangeMultiplier(2)->Range(2, max_entries);
-BENCHMARK(stdumap_hash_search)->RangeMultiplier(2)->Range(2, max_entries);
-BENCHMARK(open_hash_search)->RangeMultiplier(2)->Range(2, max_entries);
+BENCHMARK(pod_hash_search)->RangeMultiplier(2)->Range(16, max_entries);
+BENCHMARK(stdumap_hash_search)->RangeMultiplier(2)->Range(16, max_entries);
+BENCHMARK(open_hash_search)->RangeMultiplier(2)->Range(16, max_entries);
 
 BENCHMARK_MAIN();
