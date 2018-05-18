@@ -1,4 +1,5 @@
 #include <scaffold/memory.h>
+#include <scaffold/rbt.h>
 #include <scaffold/types.h>
 
 namespace fo {
@@ -23,8 +24,8 @@ template <typename T> struct Vector {
     Vector &operator=(const Vector &);
     Vector &operator=(Vector &&);
 
-    inline T &operator[](i32 n) { return _data[n]; }
-    inline const T &operator[](i32 n) const { return _data[n]; }
+    T &operator[](i32 n) { return _data[n]; }
+    const T &operator[](i32 n) const { return _data[n]; }
 
     T *begin() { return _data; }
     T *end() { return _data + _size; }
@@ -36,6 +37,46 @@ template <typename T> struct Vector {
 
     const T *cbegin() const { return _data; }
     const T *cend() const { return _data; }
+};
+
+template <typename Key, typename Value> struct OrderedMap {
+    using Rbt = fo::rbt::RBTree<Key, Value>;
+
+    Rbt _rbt;
+
+    using iterator = fo::rbt::Iterator<Key, Value, false>;
+    using const_iterator = fo::rbt::Iterator<Key, Value, true>;
+
+    OrderedMap(fo::Allocator &allocator);
+    ~OrderedMap();
+
+    // Take an rbt and use as an OrderedMap
+    OrderedMap(const Rbt &rbt)
+        : _rbt(rbt) {}
+
+    // Same as above.
+    OrderedMap(Rbt &&rbt)
+        : _rbt(std::move(rbt)) {}
+
+    OrderedMap(const OrderedMap &) = default;
+    OrderedMap &operator=(OrderedMap &&) = default;
+    OrderedMap &operator=(const OrderedMap &) = default;
+    OrderedMap(OrderedMap &&) = default;
+
+    inline Value &operator[](const Key &k);
+    inline const Value &operator[](const Key &k) const;
+
+    iterator begin() { return begin(_rbt); }
+    iterator end() { return end(_rbt); }
+
+    const_iterator begin() const { return rbt::begin(_rbt); }
+    const_iterator end() const { return rbt::end(_rbt); }
+
+    const_iterator cbegin() { return rbt::begin(static_cast<const Rbt &>(_rbt)); }
+    const_iterator cend() { return rbt::end(static_cast<const Rbt &>(_rbt)); }
+
+    const_iterator cbegin() const { return rbt::begin(_rbt); }
+    const_iterator cend() const { return rbt::end(_rbt); }
 };
 
 } // namespace fo

@@ -1,5 +1,5 @@
 #include <limits>
-#include <scaffold/rbt.h>
+#include <scaffold/ordered_map.h>
 #include <scaffold/string_stream.h>
 #include <set>
 #include <string>
@@ -25,8 +25,12 @@ template <typename Key, typename T> class RbtDebugPrint {
             rbt_debug_print(n->_childs[rbt::LEFT], global_id);
         }
 
-        printf(_ss, "%i [style = filled, fillcolor = %s, label = \"%u_%s\"];\n", node_id,
-               n->_color == rbt::BLACK ? "grey" : "red", n->k, n->v.c_str());
+        printf(_ss,
+               "%i [style = filled, fillcolor = %s, label = \"%u_%s\"];\n",
+               node_id,
+               n->_color == rbt::BLACK ? "grey" : "red",
+               n->k,
+               n->v.c_str());
 
         if (!is_nil_node(_t, n->_childs[rbt::RIGHT])) {
             printf(_ss, "%i -> %i;\n", node_id, ++global_id);
@@ -64,7 +68,7 @@ FileContent read_number_list(const char *file) {
         char buf[1024] = {};
         fgets(buf, sizeof(buf), f);
         size_t len = strlen(buf);
-        if (len == 0){
+        if (len == 0) {
             continue;
         }
         if (buf[len - 1] == '\n') {
@@ -262,6 +266,32 @@ void print_graph() {
     fclose(f);
 }
 
+void ordered_map_test() {
+    // OrderedMap tests
+    using Map = OrderedMap<std::string, unsigned>;
+
+    Map word_count(memory_globals::default_allocator());
+
+    // clang-format off
+    std::vector<std::string> word_list{
+        "I", "Got", "That", "Summertime", "Summertime", "Sadness",
+        "Sa", "Sa", "Summertime",
+        "Summertime", "Sadness",
+        "Got", "That", "Summertime",
+        "Summertime", "Sadness"
+    };
+    // clang-format on
+
+    for (auto &s : word_list) {
+        auto &count = set_default(word_count, s, 0u)->v;
+        count = count + 1;
+    }
+
+    for (auto s = cbegin(word_count), e = cend(word_count); s != e; ++s) {
+        printf("count[%s] = %u\n", s->k.c_str(), s->v);
+    }
+}
+
 int main() {
     memory_globals::init();
     {
@@ -269,6 +299,8 @@ int main() {
         print_graph();
         test_iterators_sorted();
         test_copy_and_move();
+
+        ordered_map_test();
     }
     memory_globals::shutdown();
 }

@@ -191,7 +191,7 @@ template <typename Key, typename T> void copy_tree(RBTree<Key, T> &tree, const R
 
     tree._root = make_new<RBNode<Key, T>>(*tree._allocator, other._root->k, other._root->v);
 
-    // We maintaon the recursion stack ourselves.
+    // We maintain the recursion stack ourselves.
 
     fo::TempAllocator1024 ta(fo::memory_globals::default_allocator());
 
@@ -215,8 +215,8 @@ template <typename Key, typename T> void copy_tree(RBTree<Key, T> &tree, const R
                 wips_top->_childs[i] = static_cast<RBNode<Key, T> *>(tree._nil);
             } else {
                 // Create the child node
-                wips_top->_childs[i] = make_new<RBNode<Key, T>>(*tree._allocator, others_top->_childs[i]->k,
-                                                                others_top->_childs[i]->v);
+                wips_top->_childs[i] = make_new<RBNode<Key, T>>(
+                    *tree._allocator, others_top->_childs[i]->k, others_top->_childs[i]->v);
                 fo::array::push_back(others_stack, others_top->_childs[i]);
                 fo::array::push_back(wips_stack, wips_top->_childs[i]);
             }
@@ -557,6 +557,59 @@ template <typename Key, typename T> Result<Key, T, false> set(RBTree<Key, T> &rb
         } else {
             cur->k = std::move(k);
             cur->v = std::move(v);
+            result.key_was_present = true;
+            result.i = Iterator<Key, T, false>(rbt, cur);
+            return result;
+        }
+    }
+
+    auto n = make_new<RBNode<Key, T>>(*rbt._allocator, std::move(k), std::move(v));
+    result.i = Iterator<Key, T, false>(rbt, n);
+    n->_color = RED;
+    n->_parent = par;
+    n->_childs[LEFT] = static_cast<RBNode<Key, T> *>(rbt._nil);
+    n->_childs[RIGHT] = static_cast<RBNode<Key, T> *>(rbt._nil);
+    par->_childs[dir] = n;
+
+    // bottom-up fix
+    while (n->_parent->_color == RED) {
+        if (n->_parent == n->_parent->_parent->_childs[LEFT]) {
+            n = internal::insert_fix<LEFT, RIGHT>(rbt, n);
+        } else {
+            n = internal::insert_fix<RIGHT, LEFT>(rbt, n);
+        }
+    }
+    rbt._root->_color = BLACK;
+    return result;
+}
+
+// xyspoon: Too much duplication of code. Clean this up. Make set and set_default use the same function before
+// fixup.
+template <typename Key, typename T> Result<Key, T, false> set_default(RBTree<Key, T> &rbt, Key k, T v) {
+    if (is_nil_node(rbt, rbt._root)) {
+        rbt._root = make_new<RBNode<Key, T>>(*rbt._allocator, std::move(k), std::move(v));
+        rbt._root->_childs[0] = reinterpret_cast<RBNode<Key, T> *>(rbt._nil);
+        rbt._root->_childs[1] = reinterpret_cast<RBNode<Key, T> *>(rbt._nil);
+        rbt._root->_parent = reinterpret_cast<RBNode<Key, T> *>(rbt._nil);
+        return Result<Key, T, false>{false, Iterator<Key, T, false>(rbt, rbt._root)};
+    }
+
+    Result<Key, T, false> result{false, end(rbt)};
+
+    auto cur = rbt._root;
+    auto par = rbt._root;
+    Arrow dir = LEFT;
+    while (!is_nil_node(rbt, cur)) {
+        assert(cur != nullptr);
+        par = cur;
+        if (k < cur->k) {
+            cur = cur->_childs[LEFT];
+            dir = LEFT;
+        } else if (k > cur->k) {
+            cur = cur->_childs[RIGHT];
+            dir = RIGHT;
+        } else {
+            // The only place in the code where it's different from `set`. Yuck. Factor this.
             result.key_was_present = true;
             result.i = Iterator<Key, T, false>(rbt, cur);
             return result;

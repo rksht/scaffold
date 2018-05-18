@@ -10,12 +10,8 @@ import os
 import subprocess as sp
 import re
 
-# Do you sometimes just fucking hate programming? NO!! I just love adapting
-# scripts to work with different distros, oses, cats, dogs, zombies. Here's
-# for my NixOS setup
-
 IS_NIXOS = False
-GCC_VERSION = '7.3.0'
+GCC_VERSION = '8.1.0'
 
 # Usual include paths
 SYSTEM_INCLUDES = ['/usr/include', '/usr/include/c++/{}'.format(GCC_VERSION)]
