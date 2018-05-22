@@ -39,6 +39,8 @@ OrderedMap<Key, Value>::OrderedMap(fo::Allocator &allocator)
 
 template <typename Key, typename Value> OrderedMap<Key, Value>::~OrderedMap() {}
 
+// # Begin and end iterators
+
 template <typename Key, typename Value> auto begin(OrderedMap<Key, Value> &m) { return m.begin(); }
 template <typename Key, typename Value> auto end(OrderedMap<Key, Value> &m) { return m.end(); }
 template <typename Key, typename Value> auto begin(const OrderedMap<Key, Value> &m) { return m.begin(); }

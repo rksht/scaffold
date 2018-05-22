@@ -89,7 +89,11 @@ template <typename T> void resize(Array<T> &a, uint32_t new_size) {
         grow(a, new_size);
 // Zero the memory if we are in debug mode
 #ifndef NDEBUG
-        memset(&a._data[a._size], 0, (new_size - a._size) * sizeof(T));
+        if (std::is_trivial<T>::value) {
+            memset(&a._data[a._size], 0, (new_size - a._size) * sizeof(T));
+        } else {
+            std::fill(&a._data[a._size], a._data + new_size, T{});
+        }
 #endif
     }
     a._size = new_size;

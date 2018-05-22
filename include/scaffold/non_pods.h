@@ -1,3 +1,5 @@
+#pragma once
+
 #include <scaffold/memory.h>
 #include <scaffold/rbt.h>
 #include <scaffold/types.h>
@@ -66,8 +68,8 @@ template <typename Key, typename Value> struct OrderedMap {
     inline Value &operator[](const Key &k);
     inline const Value &operator[](const Key &k) const;
 
-    iterator begin() { return begin(_rbt); }
-    iterator end() { return end(_rbt); }
+    iterator begin() { return rbt::begin(_rbt); }
+    iterator end() { return rbt::end(_rbt); }
 
     const_iterator begin() const { return rbt::begin(_rbt); }
     const_iterator end() const { return rbt::end(_rbt); }
