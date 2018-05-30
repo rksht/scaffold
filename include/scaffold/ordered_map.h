@@ -1,3 +1,5 @@
+#pragma once
+
 #include <scaffold/non_pods.h>
 
 namespace fo {
