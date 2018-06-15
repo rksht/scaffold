@@ -52,6 +52,19 @@ template <typename T> void trim(Array<T> &a);
 template <typename T> void push_back(Array<T> &a, const T &item);
 /// Pops the last item from the array. The array cannot be empty.
 template <typename T> void pop_back(Array<T> &a);
+
+// -- Treat an array like a set of items. operator== must be defined for the element type T. All operations
+// are O(n), so it's good only for small sets.
+
+/// Add item to set. Return the index of the item in the array. Does not invalidate older indices.
+template <typename T> u32 add_to_set(Array<T> &a, const T &item);
+
+/// Returns index to item if the given item is present in set. Returns ~u32(0) otherwise.
+template <typename T> u32 exists_in_set(const Array<T> &a, const T &item);
+
+/// Removes item from set if it exists. *Invalidates older indices*.
+template <typename T> u32 remove_from_set(Array<T> &a, const T &item);
+
 } // namespace array
 
 namespace array {
@@ -135,6 +148,38 @@ template <typename T> inline void push_back(Array<T> &a, const T &item) {
 }
 
 template <typename T> inline void pop_back(Array<T> &a) { a._size--; }
+
+
+template <typename T> u32 add_to_set(Array<T> &a, const T &item) {
+    for (u32 i = 0; i < size(a); ++i) {
+        if (a[i] == item) {
+            return i;
+        }
+    }
+    push_back(a, item);
+    return size(a) - 1;
+}
+
+template <typename T> u32 exists_in_set(const Array<T> &a, const T &item) {
+    for (u32 i = 0; i < size(a); ++i) {
+        if (a[i] == item) {
+            return i;
+        }
+    }
+    return std::numeric_limits<u32>::max();
+}
+
+template <typename T> u32 remove_from_set(Array<T> &a, const T &item) {
+    for (u32 i = 0; i < size(a); ++i) {
+        if (a[i] == item) {
+            std::swap(a[i], a[size(a) - 1]);
+            pop_back(a);
+            return i;
+        }
+    }
+    return std::numeric_limits<u32>::max();
+}
+
 } // namespace array
 
 template <typename T>

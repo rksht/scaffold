@@ -26,7 +26,7 @@ struct BuddyHead;
 
 } // namespace buddy_allocator_internal
 
-class DLL_PUBLIC BuddyAllocator : public Allocator {
+class SCAFFOLD_API BuddyAllocator : public Allocator {
   private:
     uint64_t _buffer_size;                             // Size of the whole buffer
     uint64_t _leaf_buddy_size;                         // Size of a smallest-buddy

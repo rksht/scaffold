@@ -38,7 +38,7 @@ using Buffer = fo::string_stream::Buffer;
 
 /// Contains the current state of the scanner. As you see, most of the fields
 /// are public.
-struct DLL_PUBLIC Scanner {
+struct SCAFFOLD_API Scanner {
     mutable Buffer _text; // The text (this is mutable due to using c_str)
     int mode;             // The mode
     int line;             // Contains the line number if the *next* token. Starts with 1.
@@ -56,19 +56,19 @@ struct DLL_PUBLIC Scanner {
 
 /// Returns a number, which, if negative, denotes the next token's class. If positive, it is equal to the next
 /// character. This happens when none of the classes match.
-DLL_PUBLIC int next(Scanner &s);
+SCAFFOLD_API int next(Scanner &s);
 
 /// Returns a description of the given token id
-DLL_PUBLIC const char *desc(int token);
+SCAFFOLD_API const char *desc(int token);
 
 /// Fills the buffer with the current token text
-DLL_PUBLIC void token_text(const Scanner &s, Buffer &b);
+SCAFFOLD_API void token_text(const Scanner &s, Buffer &b);
 
 /// Overload of token_text that returns a null terminated c-string
-DLL_PUBLIC char *token_text(const Scanner &s, fo::Allocator &a);
+SCAFFOLD_API char *token_text(const Scanner &s, fo::Allocator &a);
 
 /// Pushes into `b` all the characters from `raw` while decoding the escape codes in `raw` (e.g - The sequence
 /// of characters '\' and 'n' in `raw` will be pushed as a single newline character into `b`.
-DLL_PUBLIC void string_token(Buffer &b, Buffer &raw);
+SCAFFOLD_API void string_token(Buffer &b, Buffer &raw);
 
 } // namespace scanner

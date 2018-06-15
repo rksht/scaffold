@@ -11,7 +11,7 @@ namespace fo {
 ///
 /// Note: Regardless of which allocator is used, prefer to allocate memory in larger chunks instead of in many
 /// small allocations. This helps with data locality, fragmentation, memory usage tracking, etc.
-class DLL_PUBLIC Allocator {
+class SCAFFOLD_API Allocator {
   public:
     /// Default alignment for memory allocations.
     static constexpr uint64_t DEFAULT_ALIGN = alignof(void *);
@@ -99,20 +99,20 @@ template <typename T> void make_delete(Allocator &a, T *object) {
 namespace memory_globals {
 /// Initializes the global memory allocators. scratch_buffer_size is the size of the memory buffer used by the
 /// scratch allocators.
-DLL_PUBLIC void init(uint64_t scratch_buffer_size = 4 << 20);
+SCAFFOLD_API void init(uint64_t scratch_buffer_size = 4 << 20);
 
 /// Returns a default memory allocator that can be used for most allocations. You need to call init() for this
 /// allocator to be available.
-DLL_PUBLIC Allocator &default_allocator();
+SCAFFOLD_API Allocator &default_allocator();
 
 /// Returns a "scratch" allocator that can be used for temporary short-lived memory allocations. The scratch
 /// allocator uses a ring buffer of size  scratch_buffer_size  to service the allocations. If there is not
 /// enough memory in the buffer to match requests for scratch memory, memory from the default_allocator will
 /// be returned instaed.
-DLL_PUBLIC Allocator &default_scratch_allocator();
+SCAFFOLD_API Allocator &default_scratch_allocator();
 
 /// Shuts down the global memory allocators created by init().
-DLL_PUBLIC void shutdown();
+SCAFFOLD_API void shutdown();
 } // namespace memory_globals
 
 namespace memory {

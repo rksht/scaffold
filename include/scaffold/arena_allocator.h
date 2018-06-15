@@ -7,7 +7,7 @@ namespace fo {
 /// An ArenaAllocator allocates a buffer and bumps a pointer on each allocation.
 /// It does not support deallocating allocations individually. Instead it will
 /// deallocate all the memory it owns when it's destroyed.
-class DLL_PUBLIC ArenaAllocator : public Allocator {
+class SCAFFOLD_API ArenaAllocator : public Allocator {
   private:
     struct _Header {
         uint64_t size;

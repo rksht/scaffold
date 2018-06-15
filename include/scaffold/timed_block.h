@@ -30,7 +30,7 @@ REALLY_INLINE inline uint64_t get_timestamp_ns() {
     return std::chrono::duration<uint64_t, std::nano>(timepoint.time_since_epoch()).count();
 }
 
-struct DLL_PUBLIC Record {
+struct SCAFFOLD_API Record {
     // Key portion.
 
     // Pointer to the __func__ variable. This will be unique for each function therefore.
@@ -96,7 +96,7 @@ struct RecordScope {
     }
 };
 
-struct DLL_PUBLIC RecordTable {
+struct SCAFFOLD_API RecordTable {
     Record _records[TIMED_BLOCK_CAPACITY];
 
     RecordTable() { reset(); }
@@ -148,10 +148,10 @@ struct DLL_PUBLIC RecordTable {
     }
 };
 
-DLL_PUBLIC RecordTable &get_table();
+SCAFFOLD_API RecordTable &get_table();
 
 inline void reset() { get_table().reset(); }
 
-DLL_PUBLIC void print_record_table(FILE *f);
+SCAFFOLD_API void print_record_table(FILE *f);
 
 } // namespace timedblock

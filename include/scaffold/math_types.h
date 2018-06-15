@@ -5,8 +5,21 @@
 #include <emmintrin.h>
 
 namespace fo {
+
+struct Vector2;
+struct Vector3;
+struct Vector4;
+
 struct Vector2 {
     float x, y;
+
+    Vector2() = default;
+
+    constexpr Vector2(float x, float y)
+        : x(x)
+        , y(y) {}
+
+    constexpr Vector2(const Vector3 &v);
 };
 
 struct Vector4;
@@ -16,8 +29,13 @@ struct Vector3 {
 
     Vector3() = default;
 
-    /// Constructs a Vector3 from a Vector4 by simply ignoring the w
-    /// coordinate. A bit of implicit behavior here, but let' see how it goes.
+    Vector3(const Vector2 &v, float z)
+        : x(v.x)
+        , y(v.y)
+        , z(z) {}
+
+    /// Constructs a Vector3 from a Vector4 by simply ignoring the w coordinate. A bit of implicit behavior
+    /// here, but let' see how it goes.
     constexpr Vector3(const Vector4 &v);
 
     constexpr Vector3(float x, float y, float z)
@@ -29,6 +47,10 @@ struct Vector3 {
     constexpr float operator[](unsigned i) const { return reinterpret_cast<const float *>(this)[i]; }
     constexpr float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
 };
+
+inline Vector2::Vector2(const Vector3 &v)
+    : x(v.x)
+    , y(v.y) {}
 
 struct alignas(16) Vector4 {
     float x, y, z, w;
@@ -59,7 +81,7 @@ struct alignas(16) Vector4 {
 
 static_assert(sizeof(Vector4) == 4 * sizeof(float), "");
 
-constexpr Vector3::Vector3(const Vector4 &v)
+inline constexpr Vector3::Vector3(const Vector4 &v)
     : x(v.x)
     , y(v.y)
     , z(v.z) {}
