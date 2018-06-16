@@ -42,9 +42,9 @@ void test_array() {
     {
         Array<int> v(a);
 
-        ASSERT(array::size(v) == 0);
-        array::push_back(v, 3);
-        ASSERT(array::size(v) == 1);
+        ASSERT(size(v) == 0);
+        push_back(v, 3);
+        ASSERT(size(v) == 1);
         ASSERT(v[0] == 3);
 
         Array<int> v2(v);
@@ -55,14 +55,14 @@ void test_array() {
         v2 = v;
         ASSERT(v2[0] == 3);
 
-        ASSERT(array::end(v) - array::begin(v) == array::size(v));
-        ASSERT(*array::begin(v) == 3);
-        array::pop_back(v);
-        ASSERT(array::empty(v));
+        ASSERT(end(v) - begin(v) == size(v));
+        ASSERT(*begin(v) == 3);
+        pop_back(v);
+        ASSERT(empty(v));
 
         for (int i = 0; i < 100; ++i)
-            array::push_back(v, i);
-        ASSERT(array::size(v) == 100);
+            push_back(v, i);
+        ASSERT(size(v) == 100);
     }
 
     memory_globals::shutdown();
@@ -96,7 +96,7 @@ void test_temp_allocator() {
         TempAllocator128 ta;
         Array<int> a(ta);
         for (int i = 0; i < 100; ++i)
-            array::push_back(a, i);
+            push_back(a, i);
         ta.allocate(2 * 1024);
     }
     memory_globals::shutdown();
@@ -165,8 +165,8 @@ void test_multi_hash() {
 
         Array<int> a(ta);
         multi_hash::get(h, 0, a);
-        ASSERT(array::size(a) == 3);
-        std::sort(array::begin(a), array::end(a));
+        ASSERT(size(a) == 3);
+        std::sort(begin(a), end(a));
         ASSERT(a[0] == 1 && a[1] == 2 && a[2] == 3);
 
         multi_hash::remove(h, multi_hash::find_first(h, 0));
@@ -189,10 +189,10 @@ void test_pointer_arithmetic() {
 
     TempAllocator512 ta;
     Array<char> buffer(ta);
-    array::set_capacity(buffer, test_size);
-    memset(array::begin(buffer), 0, array::size(buffer));
+    set_capacity(buffer, test_size);
+    memset(begin(buffer), 0, size(buffer));
 
-    void *data = array::begin(buffer);
+    void *data = begin(buffer);
     for (unsigned i = 0; i != test_size; ++i) {
         buffer[i] = check;
         char *value = (char *)memory::pointer_add(data, i);

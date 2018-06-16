@@ -64,7 +64,7 @@ template <typename T> inline Buffer &printf_small(Buffer &b, const char *fmt, co
 
 namespace string_stream {
 inline Buffer &operator<<(Buffer &b, char c) {
-    array::push_back(b, c);
+    push_back(b, c);
     return b;
 }
 
@@ -83,18 +83,18 @@ inline Buffer &operator<<(Buffer &b, uint64_t i) {
 inline Buffer &operator<<(Buffer &b, double r) { return string_stream_internal::printf_small(b, "%.5f", r); }
 
 inline Buffer &push(Buffer &b, const char *data, uint32_t n) {
-    unsigned int end = array::size(b);
-    array::resize(b, end + n);
-    memcpy(array::begin(b) + end, data, n);
+    unsigned int end = size(b);
+    resize(b, end + n);
+    memcpy(begin(b) + end, data, n);
     return b;
 }
 
 inline const char *c_str(Buffer &b) {
     // Ensure there is a \0 at the end of the buffer. This works because `Array::pop_back` never actually
     // frees its memory until it is deleted or moved-from.
-    array::push_back(b, '\0');
-    array::pop_back(b);
-    return array::begin(b);
+    push_back(b, '\0');
+    pop_back(b);
+    return begin(b);
 }
 
 } // namespace string_stream

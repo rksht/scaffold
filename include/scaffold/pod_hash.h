@@ -2,6 +2,7 @@
 
 #include <scaffold/array.h>
 #include <scaffold/collection_types.h>
+#include <scaffold/debug.h>
 #include <scaffold/memory.h>
 
 #include <algorithm> // std::swap
@@ -13,6 +14,13 @@
 #include <type_traits>
 
 namespace fo {
+
+// Passing this instead of a callable to `HashFnType` will simply use the value of the key as its hash.
+template <typename T> struct IdentityHashTag { static_assert(std::is_integral<T>::value, ""); };
+
+// Passing this instead of a callable "equal" comparison will simply make the table use operator== on the
+// keys.
+template <typename T> struct IdentityEqualTag {};
 
 namespace pod_hash_internal {
 
@@ -26,7 +34,11 @@ template <typename K, typename V> struct Entry {
 
 /// 'PodHash' is similar hash table like the one in collection_types.h, but can use any 'trivially-
 /// copyassignable' data type as key.
-template <typename K, typename V, typename HashFnType, typename EqualFnType> struct PodHash {
+template <typename K,
+          typename V,
+          typename HashFnType = IdentityHashTag<K>,
+          typename EqualFnType = IdentityEqualTag<V>>
+struct PodHash {
     using Entry = pod_hash_internal::Entry<K, V>;
     using HashFn = HashFnType;
     using EqualFn = EqualFnType;
@@ -49,14 +61,16 @@ template <typename K, typename V, typename HashFnType, typename EqualFnType> str
         , _entries(entry_alloc)
         , _hashfn(std::move(hash_func))
         , _equalfn(std::move(equal_func)) {
-
-        // Check that the provided function types are ok. This is catch the error early.
+        // Check that the provided function types are ok. This is to catch the error early. This check is
+        // performed only in c++17 mode
+#if IS_CPP_17
         using returned_hash_type = decltype(_hashfn(std::declval<K>()));
         static_assert(std::is_constructible<uint64_t, returned_hash_type>::value,
                       "Incompatible hash function");
 
         using equal_result = decltype(_equalfn(std::declval<K>(), std::declval<K>()));
         static_assert(std::is_constructible<bool, equal_result>::value, "Incompatible equals function");
+#endif
     }
 
     PodHash(const PodHash &) = default;
@@ -125,7 +139,13 @@ struct FindResult {
 };
 
 template <TypeList> uint32_t hash_slot(const PodHashSig &h, const K &k) {
-    return h._hashfn(k) % fo::array::size(h._hashes);
+    if
+        SCAFFOLD_IF_CONSTEXPR(std::is_same<HashFnType, IdentityHashTag<K>>::value) {
+            return k % fo::size(h._hashes);
+        }
+    else {
+        return h._hashfn(k) % fo::size(h._hashes);
+    }
 }
 
 // Forward declaration
@@ -137,17 +157,32 @@ template <TypeList> void grow(PodHashSig &h);
 // Forward declaration
 template <TypeList> void insert(PodHashSig &h, const K &key, const V &value);
 
+template <TypeList> struct KeyEqualCaller {
+    static bool key_equal(const PodHashSig &h, const K &k1, const K &k2) { return h._equalfn(k1, k2); }
+};
+
+template <typename K, typename V, typename HashFnType>
+struct KeyEqualCaller<K, V, HashFnType, IdentityEqualTag<K>> {
+    static bool key_equal(const PodHash<K, V, HashFnType, IdentityEqualTag<K>> &h, const K &k1, const K &k2) {
+        return k1 == k2;
+    }
+};
+
+template <TypeList> REALLY_INLINE inline auto key_equal(const PodHashSig &h, const K &key1, const K &key2) {
+    return KeyEqualCaller<TypeList>::key_equal(h, key1, key2);
+};
+
 template <TypeList> FindResult find(const PodHashSig &h, const K &key) {
     FindResult fr = {END_OF_LIST, END_OF_LIST, END_OF_LIST};
 
-    if (fo::array::size(h._hashes) == 0) {
+    if (fo::size(h._hashes) == 0) {
         return fr;
     }
 
     fr.hash_i = hash_slot(h, key);
     fr.entry_i = h._hashes[fr.hash_i];
     while (fr.entry_i != END_OF_LIST) {
-        if (h._equalfn(h._entries[fr.entry_i].key, key)) {
+        if (key_equal(h, h._entries[fr.entry_i].key, key)) {
             return fr;
         }
         fr.entry_prev = fr.entry_i;
@@ -164,8 +199,8 @@ template <TypeList> struct PushEntry<K, V, HashFnType, EqualFnType, true> {
         typename PodHashSig::Entry e{};
         e.key = key;
         e.next = END_OF_LIST;
-        uint32_t ei = fo::array::size(h._entries);
-        fo::array::push_back(h._entries, e);
+        uint32_t ei = fo::size(h._entries);
+        fo::push_back(h._entries, e);
         return ei;
     }
 };
@@ -175,8 +210,8 @@ template <TypeList> struct PushEntry<K, V, HashFnType, EqualFnType, false> {
         typename PodHashSig::Entry e;
         e.key = key;
         e.next = END_OF_LIST;
-        uint32_t ei = fo::array::size(h._entries);
-        fo::array::push_back(h._entries, e);
+        uint32_t ei = fo::size(h._entries);
+        fo::push_back(h._entries, e);
         return ei;
     }
 };
@@ -226,9 +261,9 @@ template <TypeList> void rehash(PodHashSig &h, uint32_t new_size) {
     PodHashSig new_hash(*h._hashes._allocator, *h._entries._allocator, h._hashfn, h._equalfn);
 
     // Don't need the previous hashes.
-    fo::array::free(h._hashes);
-    fo::array::resize(new_hash._hashes, new_size);
-    fo::array::reserve(new_hash._entries, fo::array::size(h._entries));
+    fo::free(h._hashes);
+    fo::resize(new_hash._hashes, new_size);
+    fo::reserve(new_hash._entries, fo::size(h._entries));
 
     // Empty out hashes
     for (uint32_t &entry_i : new_hash._hashes) {
@@ -244,7 +279,7 @@ template <TypeList> void rehash(PodHashSig &h, uint32_t new_size) {
 }
 
 template <TypeList> void grow(PodHashSig &h) {
-    uint32_t new_size = fo::array::size(h._entries) * 2 + 10;
+    uint32_t new_size = fo::size(h._entries) * 2 + 10;
     rehash(h, new_size);
 }
 
@@ -254,7 +289,7 @@ template <TypeList> void grow(PodHashSig &h) {
 /// too.
 template <TypeList> bool full(const PodHashSig &h) {
     const float max_load_factor = 0.7;
-    return fo::array::size(h._entries) >= fo::array::size(h._hashes) * max_load_factor;
+    return fo::size(h._entries) >= fo::size(h._hashes) * max_load_factor;
 }
 
 /// Inserts an entry by simply appending to the chain, so if no chain already
@@ -262,7 +297,7 @@ template <TypeList> bool full(const PodHashSig &h) {
 /// just adds a new entry to the chain, and does not overwrite any entry having
 /// the same key
 template <TypeList> void insert(PodHashSig &h, const K &key, const V &value) {
-    if (fo::array::size(h._hashes) == 0) {
+    if (fo::size(h._hashes) == 0) {
         grow(h);
     }
 
@@ -281,13 +316,13 @@ template <TypeList> void erase(PodHashSig &h, const FindResult &fr) {
         h._entries[fr.entry_prev].next = h._entries[fr.entry_i].next;
     }
 
-    if (fr.entry_i == fo::array::size(h._entries) - 1) {
-        fo::array::pop_back(h._entries);
+    if (fr.entry_i == fo::size(h._entries) - 1) {
+        fo::pop_back(h._entries);
         return;
     }
 
-    h._entries[fr.entry_i] = h._entries[fo::array::size(h._entries) - 1];
-    fo::array::pop_back(h._entries);
+    h._entries[fr.entry_i] = h._entries[fo::size(h._entries) - 1];
+    fo::pop_back(h._entries);
     FindResult last = find(h, h._entries[fr.entry_i].key);
 
     if (last.entry_prev == END_OF_LIST) {
@@ -313,7 +348,7 @@ namespace fo {
 template <TypeList> void reserve(PodHashSig &h, uint32_t size) { pod_hash_internal::rehash(h, size); }
 
 template <TypeList> void set(PodHashSig &h, const K &key, const V &value) {
-    if (fo::array::size(h._hashes) == 0) {
+    if (fo::size(h._hashes) == 0) {
         pod_hash_internal::grow(h);
     }
     const uint32_t ei = pod_hash_internal::find_or_make(h, key, false);
@@ -337,7 +372,7 @@ template <TypeList> typename PodHashSig::iterator get(const PodHashSig &h, const
 }
 
 template <TypeList> V &PodHashSig::operator[](const K &key) {
-    if (fo::array::size(_hashes) == 0) {
+    if (fo::size(_hashes) == 0) {
         pod_hash_internal::grow(*this);
     }
     auto ei = pod_hash_internal::find_or_make(*this, key, true);
@@ -347,7 +382,7 @@ template <TypeList> V &PodHashSig::operator[](const K &key) {
 template <TypeList> V &set_default(PodHashSig &h, const K &key, const V &deffault) {
     pod_hash_internal::FindResult fr = pod_hash_internal::find(h, key);
     if (fr.entry_i == pod_hash_internal::END_OF_LIST) {
-        if (fo::array::size(h._hashes) == 0) {
+        if (fo::size(h._hashes) == 0) {
             pod_hash_internal::grow(h);
         }
         const uint32_t ei = pod_hash_internal::make(h, key);
@@ -376,7 +411,7 @@ template <TypeList> void remove(PodHashSig &h, const K &key) { pod_hash_internal
 template <TypeList> uint32_t max_chain_length(const PodHashSig &h) {
     uint32_t max_length = 0;
 
-    for (uint32_t i = 0; i < fo::array::size(h._entries); ++i) {
+    for (uint32_t i = 0; i < fo::size(h._entries); ++i) {
         if (h._hashes[i] == pod_hash_internal::END_OF_LIST) {
             continue;
         }
@@ -396,3 +431,6 @@ template <TypeList> uint32_t max_chain_length(const PodHashSig &h) {
 }
 
 } // namespace fo
+
+#undef TypeList
+#undef PodHashSig

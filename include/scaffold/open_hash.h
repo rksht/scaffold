@@ -404,7 +404,7 @@ template <typename K, typename V, typename Params> void rehash_if_needed(OpenHas
     using deleted_ty = typename Params::OpenDeletedTy;
 
     static constexpr float max_load_factor = 0.5;
-    // const uint32_t array_size = array::size(h._keys);
+    // const uint32_t array_size = size(h._keys);
 
     const float real_load_factor = (h._num_valid + h._num_deleted) / float(h._num_slots);
     const float valid_load_factor = h._num_valid / float(h._num_slots);

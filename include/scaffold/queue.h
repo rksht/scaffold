@@ -4,7 +4,6 @@
 #include <scaffold/collection_types.h>
 
 namespace fo {
-namespace queue {
 /// Returns the number of items in the queue.
 template <typename T> uint32_t size(const Queue<T> &q);
 /// Returns the ammount of free space in the queue/ring buffer.
@@ -50,34 +49,29 @@ template <typename T> struct ChunkExtent {
 
 template <typename T> ChunkExtent<T> get_extent(Queue<T> &q, uint32_t start, uint32_t size);
 
-} // namespace queue
-
 namespace queue_internal {
 // Can only be used to increase the capacity.
 template <typename T> void increase_capacity(Queue<T> &q, uint32_t new_capacity) {
-    uint32_t end = array::size(q._data);
-    array::resize(q._data, new_capacity);
+    uint32_t end = size(q._data);
+    resize(q._data, new_capacity);
     if (q._offset + q._size > end) {
         uint32_t end_items = end - q._offset;
-        memmove(array::begin(q._data) + new_capacity - end_items, array::begin(q._data) + q._offset,
-                end_items * sizeof(T));
+        memmove(begin(q._data) + new_capacity - end_items, begin(q._data) + q._offset, end_items * sizeof(T));
         q._offset += new_capacity - end;
     }
 }
 
 template <typename T> void grow(Queue<T> &q, uint32_t min_capacity = 0) {
-    uint32_t new_capacity = array::size(q._data) * 2 + 8;
+    uint32_t new_capacity = size(q._data) * 2 + 8;
     if (new_capacity < min_capacity)
         new_capacity = min_capacity;
     increase_capacity(q, new_capacity);
 }
 } // namespace queue_internal
 
-namespace queue {
-
 template <typename T> inline uint32_t size(const Queue<T> &q) { return q._size; }
 
-template <typename T> inline uint32_t space(const Queue<T> &q) { return array::size(q._data) - q._size; }
+template <typename T> inline uint32_t space(const Queue<T> &q) { return size(q._data) - q._size; }
 
 template <typename T> void reserve(Queue<T> &q, uint32_t size) {
     if (size > q._size)
@@ -95,64 +89,62 @@ template <typename T> inline void pop_back(Queue<T> &q) { --q._size; }
 template <typename T> inline void push_front(Queue<T> &q, const T &item) {
     if (!space(q))
         queue_internal::grow(q);
-    q._offset = (q._offset - 1 + array::size(q._data)) % array::size(q._data);
+    q._offset = (q._offset - 1 + size(q._data)) % size(q._data);
     ++q._size;
     q[0] = item;
 }
 
 template <typename T> inline void pop_front(Queue<T> &q) {
-    q._offset = (q._offset + 1) % array::size(q._data);
+    q._offset = (q._offset + 1) % size(q._data);
     --q._size;
 }
 
 template <typename T> inline void consume(Queue<T> &q, uint32_t n) {
-    q._offset = (q._offset + n) % array::size(q._data);
+    q._offset = (q._offset + n) % size(q._data);
     q._size -= n;
 }
 
 template <typename T> void push(Queue<T> &q, const T *items, uint32_t n) {
     if (space(q) < n)
         queue_internal::grow(q, size(q) + n);
-    const uint32_t size = array::size(q._data);
+    const uint32_t size = size(q._data);
     const uint32_t insert = (q._offset + q._size) % size;
     uint32_t to_insert = n;
     if (insert + to_insert > size)
         to_insert = size - insert;
-    memcpy(array::begin(q._data) + insert, items, to_insert * sizeof(T));
+    memcpy(begin(q._data) + insert, items, to_insert * sizeof(T));
     q._size += to_insert;
     items += to_insert;
     n -= to_insert;
-    memcpy(array::begin(q._data), items, n * sizeof(T));
+    memcpy(begin(q._data), items, n * sizeof(T));
     q._size += n;
 }
 
-template <typename T> inline T *begin_front(Queue<T> &q) { return array::begin(q._data) + q._offset; }
+template <typename T> inline T *begin_front(Queue<T> &q) { return begin(q._data) + q._offset; }
 
-template <typename T> inline const T *begin_front(const Queue<T> &q) {
-    return array::begin(q._data) + q._offset;
-}
+template <typename T> inline const T *begin_front(const Queue<T> &q) { return begin(q._data) + q._offset; }
 
 template <typename T> T *end_front(Queue<T> &q) {
     uint32_t end = q._offset + q._size;
-    return end > array::size(q._data) ? array::end(q._data) : array::begin(q._data) + end;
+    return end > size(q._data) ? end(q._data) : begin(q._data) + end;
 }
 
 template <typename T> const T *end_front(const Queue<T> &q) {
     uint32_t end = q._offset + q._size;
-    return end > array::size(q._data) ? array::end(q._data) : array::begin(q._data) + end;
+    return end > size(q._data) ? end(q._data) : begin(q._data) + end;
 }
 
 template <typename T> ChunkExtent<T> get_extent(Queue<T> &q, uint32_t start, uint32_t size) {
     ChunkExtent<T> e;
 
-    uint32_t first_chunk_start = (q._offset + start) % array::size(q._data);
+    uint32_t first_chunk_start = (q._offset + start) % size(q._data);
     uint32_t first_chunk_end = first_chunk_start + size;
 
     e.first_chunk = &q._data[first_chunk_start];
 
-    if (first_chunk_end > array::size(q._data)) {
-        e.first_chunk_size = array::size(q._data) - first_chunk_start;
-        e.second_chunk = array::data(q._data);
+    if (first_chunk_end > size(q._data)) {
+        e.first_chunk_size = size(q._data) - first_chunk_start;
+        e.second_chunk = data(q._data);
         e.second_chunk_size = size - e.first_chunk_size;
     } else {
         e.first_chunk_size = size;
@@ -162,8 +154,6 @@ template <typename T> ChunkExtent<T> get_extent(Queue<T> &q, uint32_t start, uin
 
     return e;
 }
-
-} // namespace queue
 
 template <typename T>
 Queue<T>::Queue(Allocator &allocator)
@@ -192,10 +182,10 @@ template <typename T> Queue<T> &Queue<T>::operator=(Queue<T> &&other) {
 }
 
 template <typename T> inline T &Queue<T>::operator[](uint32_t i) {
-    return _data[(i + _offset) % array::size(_data)];
+    return _data[(i + _offset) % size(_data)];
 }
 
 template <typename T> inline const T &Queue<T>::operator[](uint32_t i) const {
-    return _data[(i + _offset) % array::size(_data)];
+    return _data[(i + _offset) % size(_data)];
 }
 } // namespace fo

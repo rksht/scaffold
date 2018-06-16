@@ -33,7 +33,7 @@ int main() {
         for (int i = 0; i < nr_objects; ++i) {
             student_p =
                 MAKE_NEW(default_arena_allocator(), Student, i, i, 65 + (i % 26));
-            array::push_back(students, student_p);
+            push_back(students, student_p);
         }
         for (Student *p : students) {
             printf("id = %li\n", p->id);
@@ -41,7 +41,7 @@ int main() {
         printf("Total allocated: %u bytes\n",
                default_arena_allocator().total_allocated());
         int j = 0;
-        for (Student **i = array::begin(students); i != array::end(students);
+        for (Student **i = begin(students); i != end(students);
              ++i) {
             if ((*i)->id != (*i)->mana && (*i)->c == j % 128) {
                 printf("%li %li %c at %d, size = %u\n", (*i)->id, (*i)->mana,

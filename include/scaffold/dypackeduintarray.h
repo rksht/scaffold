@@ -93,8 +93,8 @@ template <typename Word = unsigned long, typename GetTy = Word> struct DyPackedU
 
         assert(_num_ints > 0 && "DyPackedUintArray - I don't allow this");
 
-        array::resize(_words, _num_words);
-        assert(array::size(_words) == _num_words);
+        resize(_words, _num_words);
+        assert(size(_words) == _num_words);
         memset(_words._data, 0, sizeof(Word) * _num_words);
     }
 
@@ -170,12 +170,12 @@ template <typename Word = unsigned long, typename GetTy = Word> struct DyPackedU
             b << n << " = " << *i << "\t";
             tab(b, 8);
             ++n;
-            if (array::size(b) >= 80) {
+            if (size(b) >= 80) {
                 ::fprintf(f, "%s\n", c_str(b));
-                array::clear(b);
+                clear(b);
             }
         }
-        if (array::size(b) != 0) {
+        if (size(b) != 0) {
             ::fprintf(f, "%s\n", c_str(b));
         }
     }

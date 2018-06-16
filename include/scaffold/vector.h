@@ -1,3 +1,5 @@
+#pragma once
+
 #include <scaffold/const_log.h>
 #include <scaffold/non_pods.h>
 
@@ -15,8 +17,9 @@ namespace fo {
 
 template <typename T> void resize(Vector<T> &a, u32 new_size);
 template <typename T> void resize_with_given(Vector<T> &a, u32 new_size, const T &t);
-template <typename T> void reserve(Vector<T> &a, u32 new_capacity);
+template <typename T> u32 reserve(Vector<T> &a, u32 new_capacity);
 template <typename T> u32 size(const Vector<T> &a);
+template <typename T> u32 capacity(const Vector<T> &a);
 
 template <typename T> T &push_back(Vector<T> &a, const T &element);
 template <typename T> void pop_back(Vector<T> &a);
@@ -43,11 +46,12 @@ template <typename T> void fill_with_given(T *elements, u32 count, const T &elem
 
 namespace fo {
 
-template <typename T> void reserve(Vector<T> &a, u32 new_capacity) {
+template <typename T> u32 reserve(Vector<T> &a, u32 new_capacity) {
     if (new_capacity < a._capacity) {
         return;
     }
     internal::set_capacity(a, u32(1) << log2_ceil(new_capacity));
+    return a._capacity;
 }
 
 template <typename T> void resize(Vector<T> &a, u32 new_size) {
@@ -124,6 +128,8 @@ template <typename T> T &back(Vector<T> &a) { return a._data[a._size - 1]; }
 template <typename T> T &front(Vector<T> &a) { return a._data[0]; }
 
 template <typename T> u32 size(const Vector<T> &a) { return a._size; }
+
+template <typename T> u32 capacity(const Vector<T> &a) { return a._capacity; }
 
 template <typename T>
 Vector<T>::Vector(u32 initial_count, fo::Allocator &a)

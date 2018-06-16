@@ -46,3 +46,11 @@
 #if !defined(SCAFFOLD_LOCAL)
 #define SCAFFOLD_LOCAL
 #endif
+
+#define IS_CPP_17 (__cplusplus >= 201703L || ( defined _MSC_VER && _MSVC_LANG >= 201703L) )
+
+#if IS_CPP_17
+#define SCAFFOLD_IF_CONSTEXPR constexpr
+#else
+#define SCAFFOLD_IF_CONSTEXPR
+#endif

@@ -162,16 +162,16 @@ template <typename Key, typename T> void delete_all_nodes(RBTree<Key, T> &tree, 
 
     TempAllocator1024 ta(memory_globals::default_allocator());
     Array<RBNode<Key, T> *> stack(ta);
-    array::reserve(stack, 512 / sizeof(RBNode<Key, T> *));
+    reserve(stack, 512 / sizeof(RBNode<Key, T> *));
 
-    array::push_back(stack, tree._root);
+    push_back(stack, tree._root);
 
-    while (array::size(stack) != 0) {
-        RBNode<Key, T> *p = array::back(stack);
-        array::pop_back(stack);
+    while (size(stack) != 0) {
+        RBNode<Key, T> *p = back(stack);
+        pop_back(stack);
         for (u32 i = 0; i < 2; ++i) {
             if (!is_nil_node(tree, p->_childs[i])) {
-                array::push_back(stack, p->_childs[i]);
+                push_back(stack, p->_childs[i]);
             }
         }
         make_delete(*tree._allocator, p);
@@ -198,15 +198,15 @@ template <typename Key, typename T> void copy_tree(RBTree<Key, T> &tree, const R
     fo::Array<RBNode<Key, T> *> others_stack(ta);
     fo::Array<RBNode<Key, T> *> wips_stack(ta);
 
-    fo::array::push_back(others_stack, other._root);
-    fo::array::push_back(wips_stack, tree._root);
+    fo::push_back(others_stack, other._root);
+    fo::push_back(wips_stack, tree._root);
 
-    while (fo::array::size(others_stack) != 0) {
-        auto wips_top = fo::array::back(wips_stack);
-        auto others_top = fo::array::back(others_stack);
+    while (fo::size(others_stack) != 0) {
+        auto wips_top = fo::back(wips_stack);
+        auto others_top = fo::back(others_stack);
 
-        fo::array::pop_back(wips_stack);
-        fo::array::pop_back(others_stack);
+        fo::pop_back(wips_stack);
+        fo::pop_back(others_stack);
 
         wips_top->_color = others_top->_color;
 
@@ -217,8 +217,8 @@ template <typename Key, typename T> void copy_tree(RBTree<Key, T> &tree, const R
                 // Create the child node
                 wips_top->_childs[i] = make_new<RBNode<Key, T>>(
                     *tree._allocator, others_top->_childs[i]->k, others_top->_childs[i]->v);
-                fo::array::push_back(others_stack, others_top->_childs[i]);
-                fo::array::push_back(wips_stack, wips_top->_childs[i]);
+                fo::push_back(others_stack, others_top->_childs[i]);
+                fo::push_back(wips_stack, wips_top->_childs[i]);
             }
         }
     }

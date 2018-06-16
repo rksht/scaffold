@@ -84,8 +84,8 @@ struct PackedUintArray {
     /// Ctor - sets all to 0
     PackedUintArray(Allocator &allocator = memory_globals::default_allocator())
         : _words{allocator} {
-        array::resize(_words, _num_words);
-        assert(array::size(_words) == _num_words);
+        resize(_words, _num_words);
+        assert(size(_words) == _num_words);
         memset(_words._data, 0, sizeof(T) * _num_words);
     }
 
@@ -160,12 +160,12 @@ struct PackedUintArray {
             b << n << " = " << *i << "\t";
             tab(b, 8);
             ++n;
-            if (array::size(b) >= 80) {
+            if (size(b) >= 80) {
                 ::fprintf(f, "%s\n", c_str(b));
-                array::clear(b);
+                clear(b);
             }
         }
-        if (array::size(b) != 0) {
+        if (size(b) != 0) {
             ::fprintf(f, "%s\n", c_str(b));
         }
     }

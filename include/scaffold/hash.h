@@ -76,8 +76,8 @@ template <typename T> uint32_t add_entry(Hash<T> &h, uint64_t key) {
     typename Hash<T>::Entry e;
     e.key = key;
     e.next = END_OF_LIST;
-    uint32_t ei = array::size(h._data);
-    array::push_back(h._data, e);
+    uint32_t ei = size(h._data);
+    push_back(h._data, e);
     return ei;
 }
 
@@ -87,10 +87,10 @@ template <typename T> FindResult find(const Hash<T> &h, uint64_t key) {
     fr.data_prev = END_OF_LIST;
     fr.data_i = END_OF_LIST;
 
-    if (array::size(h._hash) == 0)
+    if (size(h._hash) == 0)
         return fr;
 
-    fr.hash_i = key % array::size(h._hash);
+    fr.hash_i = key % size(h._hash);
     fr.data_i = h._hash[fr.hash_i];
     while (fr.data_i != END_OF_LIST) {
         if (h._data[fr.data_i].key == key)
@@ -107,12 +107,12 @@ template <typename T> void erase(Hash<T> &h, const FindResult &fr) {
     else
         h._data[fr.data_prev].next = h._data[fr.data_i].next;
 
-    if (fr.data_i == array::size(h._data) - 1) {
-        array::pop_back(h._data);
+    if (fr.data_i == size(h._data) - 1) {
+        pop_back(h._data);
         return;
     }
 
-    h._data[fr.data_i] = h._data[array::size(h._data) - 1];
+    h._data[fr.data_i] = h._data[size(h._data) - 1];
     FindResult last = find(h, h._data[fr.data_i].key);
 
     if (last.data_prev != END_OF_LIST)
@@ -128,10 +128,10 @@ FindResult find(const Hash<T> &h, const typename Hash<T>::Entry *e) {
     fr.data_prev = END_OF_LIST;
     fr.data_i = END_OF_LIST;
 
-    if (array::size(h._hash) == 0)
+    if (size(h._hash) == 0)
         return fr;
 
-    fr.hash_i = e->key % array::size(h._hash);
+    fr.hash_i = e->key % size(h._hash);
     fr.data_i = h._hash[fr.hash_i];
     while (fr.data_i != END_OF_LIST) {
         if (&h._data[fr.data_i] == e)
@@ -181,11 +181,11 @@ template <typename T> void find_and_erase(Hash<T> &h, uint64_t key) {
 
 template <typename T> void rehash(Hash<T> &h, uint32_t new_size) {
     Hash<T> nh(*h._hash._allocator);
-    array::resize(nh._hash, new_size);
-    array::reserve(nh._data, array::size(h._data));
+    resize(nh._hash, new_size);
+    reserve(nh._data, size(h._data));
     for (uint32_t i = 0; i < new_size; ++i)
         nh._hash[i] = END_OF_LIST;
-    for (uint32_t i = 0; i < array::size(h._data); ++i) {
+    for (uint32_t i = 0; i < size(h._data); ++i) {
         const typename Hash<T>::Entry &e = h._data[i];
         multi_hash::insert(nh, e.key, e.value);
     }
@@ -198,11 +198,11 @@ template <typename T> void rehash(Hash<T> &h, uint32_t new_size) {
 
 template <typename T> bool full(const Hash<T> &h) {
     const float max_load_factor = 0.7f;
-    return array::size(h._data) >= array::size(h._hash) * max_load_factor;
+    return size(h._data) >= size(h._hash) * max_load_factor;
 }
 
 template <typename T> void grow(Hash<T> &h) {
-    const uint32_t new_size = array::size(h._data) * 2 + 10;
+    const uint32_t new_size = size(h._data) * 2 + 10;
     rehash(h, new_size);
 }
 }
@@ -219,7 +219,7 @@ const T &get(const Hash<T> &h, uint64_t key, const T &deffault) {
 }
 
 template <typename T> void set(Hash<T> &h, uint64_t key, const T &value) {
-    if (array::size(h._hash) == 0)
+    if (size(h._hash) == 0)
         hash_internal::grow(h);
 
     const uint32_t i = hash_internal::find_or_make(h, key);
@@ -237,11 +237,11 @@ template <typename T> void reserve(Hash<T> &h, uint32_t size) {
 }
 
 template <typename T> const typename Hash<T>::Entry *begin(const Hash<T> &h) {
-    return array::begin(h._data);
+    return begin(h._data);
 }
 
 template <typename T> const typename Hash<T>::Entry *end(const Hash<T> &h) {
-    return array::end(h._data);
+    return end(h._data);
 }
 }
 
@@ -278,13 +278,13 @@ template <typename T>
 void get(const Hash<T> &h, uint64_t key, Array<T> &items) {
     const typename Hash<T>::Entry *e = find_first(h, key);
     while (e) {
-        array::push_back(items, e->value);
+        push_back(items, e->value);
         e = find_next(h, e);
     }
 }
 
 template <typename T> void insert(Hash<T> &h, uint64_t key, const T &value) {
-    if (array::size(h._hash) == 0)
+    if (size(h._hash) == 0)
         hash_internal::grow(h);
 
     const uint32_t i = hash_internal::make(h, key);

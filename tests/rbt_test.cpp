@@ -52,11 +52,11 @@ int main() {
 
         Tree tree(memory_globals::default_allocator());
         Array<int> arr_val(memory_globals::default_allocator());
-        array::resize(arr_val, keyend);
-        memset(array::data(arr_val), 0, keyend * sizeof(int));
+        resize(arr_val, keyend);
+        memset(data(arr_val), 0, keyend * sizeof(int));
 
         Array<Tree::node_type> nodes(memory_globals::default_allocator());
-        array::resize(nodes, num_inserts);
+        resize(nodes, num_inserts);
 
         for (int i = 0; i < num_inserts; ++i) {
             Tree::node_type *node = &nodes[i];

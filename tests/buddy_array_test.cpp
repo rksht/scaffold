@@ -20,9 +20,9 @@ int main() {
         Array<Ob<object_sz>> a{ba};
         for (uint32_t size = 16; size <= BUFFER_SIZE / 4; size *= 2) {
             log_info("New size = %u bytes", size);
-            array::resize(a, size / object_sz);
+            resize(a, size / object_sz);
         }
-        array::clear(a);
+        clear(a);
     }
 
     memory_globals::shutdown();

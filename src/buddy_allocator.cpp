@@ -76,6 +76,7 @@ inline uint64_t BuddyAllocator::_buddy_size_at_level(uint64_t level) const { ret
 
 BuddyAllocator::BuddyAllocator(uint64_t size,
                                uint64_t min_buddy_size,
+                               bool abort_on_allocation_failure,
                                Allocator &main_allocator,
                                Allocator &extra_allocator,
                                const char *allocator_name)
@@ -90,7 +91,8 @@ BuddyAllocator::BuddyAllocator(uint64_t size,
     , _mem{nullptr}
     , _main_allocator{&main_allocator}
     , _extra_allocator{&extra_allocator}
-    , _total_allocated{0} {
+    , _total_allocated{0}
+    , _abort_on_allocation_failure(abort_on_allocation_failure) {
 
     set_name(allocator_name, strlen(allocator_name));
 
@@ -215,7 +217,13 @@ void *BuddyAllocator::allocate(uint64_t size, uint64_t align) {
             --level;
 
             if (level < 0) {
-                log_err("%s - Failed to allocate %lu bytes", __PRETTY_FUNCTION__, size);
+                log_err("%s - Failed to allocate %lu bytes, aborting...? %s",
+                        __PRETTY_FUNCTION__,
+                        size,
+                        _abort_on_allocation_failure ? "Yes" : "No");
+                if (_abort_on_allocation_failure) {
+                    abort();
+                }
                 return nullptr;
             }
 
@@ -500,14 +508,14 @@ void BuddyAllocator::_dbg_print_levels(uint64_t start, uint64_t end) const {
     for (int i = int(start); i < int(end); ++i) {
         b << i << "= (" << _level_of_leaf.get(i) << ", " << (_leaf_allocated.get(i) ? "x" : "o") << ")\t";
         tab(b, 8);
-        if (array::size(b) >= 80) {
+        if (size(b) >= 80) {
             fprintf(stderr, "%s\n", c_str(b));
-            array::clear(b);
+            clear(b);
         }
     }
-    if (array::size(b) != 0) {
+    if (size(b) != 0) {
         fprintf(stderr, "%s\n", c_str(b));
-        array::clear(b);
+        clear(b);
     }
     fprintf(stderr, "\n--\n");
 

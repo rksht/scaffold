@@ -8,10 +8,10 @@
 
 #include <stdio.h>
 
+/// Functions operating on fo::Array
+
 namespace fo {
 
-/// Functions operating on fo::Array
-namespace array {
 /// The number of elements in the array.
 template <typename T> uint32_t size(const Array<T> &a);
 /// Returns true if there are any elements in the array.
@@ -65,9 +65,6 @@ template <typename T> u32 exists_in_set(const Array<T> &a, const T &item);
 /// Removes item from set if it exists. *Invalidates older indices*.
 template <typename T> u32 remove_from_set(Array<T> &a, const T &item);
 
-} // namespace array
-
-namespace array {
 template <typename T> inline uint32_t size(const Array<T> &a) { return a._size; }
 template <typename T> inline bool any(const Array<T> &a) { return a._size != 0; }
 template <typename T> inline bool empty(const Array<T> &a) { return a._size == 0; }
@@ -149,7 +146,6 @@ template <typename T> inline void push_back(Array<T> &a, const T &item) {
 
 template <typename T> inline void pop_back(Array<T> &a) { a._size--; }
 
-
 template <typename T> u32 add_to_set(Array<T> &a, const T &item) {
     for (u32 i = 0; i < size(a); ++i) {
         if (a[i] == item) {
@@ -180,15 +176,13 @@ template <typename T> u32 remove_from_set(Array<T> &a, const T &item) {
     return std::numeric_limits<u32>::max();
 }
 
-} // namespace array
-
 template <typename T>
 inline Array<T>::Array(Allocator &allocator, uint32_t initial_size)
     : _allocator(&allocator)
     , _size(0)
     , _capacity(0)
     , _data(nullptr) {
-    array::resize(*this, initial_size);
+    resize(*this, initial_size);
 }
 
 template <typename T>
@@ -197,10 +191,10 @@ Array<T>::Array(Allocator &allocator, std::initializer_list<T> init_list)
     , _size(0)
     , _capacity(0)
     , _data(nullptr) {
-    array::reserve(*this, init_list.size());
+    reserve(*this, init_list.size());
 
     for (const auto &item : init_list) {
-        array::push_back(*this, item);
+        push_back(*this, item);
     }
 }
 
@@ -221,7 +215,7 @@ Array<T>::Array(const Array<T> &other)
     , _capacity(0)
     , _data(0) {
     const uint32_t n = other._size;
-    array::set_capacity(*this, n);
+    set_capacity(*this, n);
     memcpy(_data, other._data, sizeof(T) * n);
     _size = n;
 }
@@ -239,7 +233,7 @@ Array<T>::Array(Array<T> &&other)
 
 template <typename T> Array<T> &Array<T>::operator=(const Array<T> &other) {
     const uint32_t n = other._size;
-    array::resize(*this, n);
+    resize(*this, n);
     memcpy(_data, other._data, sizeof(T) * n);
     return *this;
 }
@@ -263,4 +257,5 @@ template <typename T> Array<T> &Array<T>::operator=(Array<T> &&other) {
 template <typename T> inline T &Array<T>::operator[](uint32_t i) { return _data[i]; }
 
 template <typename T> inline const T &Array<T>::operator[](uint32_t i) const { return _data[i]; }
+
 } // namespace fo

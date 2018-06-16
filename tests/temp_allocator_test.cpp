@@ -21,8 +21,8 @@ int main() {
     {
         TA alloc;
         Array<ElemTy> arr{alloc};
-        array::resize(arr, resize_amount(BUFFER_SIZE));
-        array::resize(arr, resize_amount(1 << 20));
+        resize(arr, resize_amount(BUFFER_SIZE));
+        resize(arr, resize_amount(1 << 20));
         for (auto &n : arr) {
             n = 0xcafebab1;
         }

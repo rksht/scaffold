@@ -262,7 +262,7 @@ void print_graph() {
         fprintf(stderr, "Failed to create/open output file\n");
         exit(EXIT_FAILURE);
     }
-    fwrite(array::data(debug_print._ss), array::size(debug_print._ss), 1, f);
+    fwrite(data(debug_print._ss), size(debug_print._ss), 1, f);
     fclose(f);
 }
 

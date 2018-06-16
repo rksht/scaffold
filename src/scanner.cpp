@@ -52,8 +52,8 @@ static inline char escape_code(char c) {
 }
 
 int next(Scanner &s) {
-    const char *p = array::begin(s._text);
-    const char *e = array::end(s._text);
+    const char *p = begin(s._text);
+    const char *e = end(s._text);
 
     p += s.offset;
     if (p == e) {
@@ -74,7 +74,7 @@ int next(Scanner &s) {
         }
     }
     if (*p == '"' && (s.mode & SCAN_STRINGS)) {
-        s.token_start = p - array::begin(s._text);
+        s.token_start = p - begin(s._text);
         do {
             if (*p == '\\') {
                 ++p;
@@ -101,18 +101,18 @@ int next(Scanner &s) {
     if (*p >= '0' && *p <= '9' && (s.mode & (SCAN_INTS | SCAN_FLOATS))) {
         const char *endp;
         int ret = INT;
-        s.token_start = p - array::begin(s._text);
+        s.token_start = p - begin(s._text);
         s.current_int = strtol(p, (char **)&endp, 0);
         if (endp != e && *endp == '.' && (s.mode & SCAN_FLOATS)) {
             s.current_float = strtod(p, (char **)&endp);
             ret = FLOAT;
         }
-        s.offset = endp - array::begin(s._text);
+        s.offset = endp - begin(s._text);
         s.col += endp - p;
         SET_TOK_AND_RET(s, ret);
     }
     if (((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') || (*p == '_')) && (s.mode & SCAN_IDENTS)) {
-        s.token_start = p - array::begin(s._text);
+        s.token_start = p - begin(s._text);
         do {
             ++p;
             ++s.offset;
@@ -125,7 +125,7 @@ int next(Scanner &s) {
         ++s.line;
         s.col = 0;
     }
-    s.token_start = p - array::begin(s._text);
+    s.token_start = p - begin(s._text);
     ++s.offset;
     ++s.col;
     if ((s.mode & SCAN_SPACES) && (*p == ' ' || *p == '\t' || *p == '\n')) {

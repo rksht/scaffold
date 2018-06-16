@@ -48,7 +48,7 @@ struct Vector3 {
     constexpr float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
 };
 
-inline Vector2::Vector2(const Vector3 &v)
+inline constexpr Vector2::Vector2(const Vector3 &v)
     : x(v.x)
     , y(v.y) {}
 

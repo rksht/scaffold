@@ -41,6 +41,7 @@ class SCAFFOLD_API BuddyAllocator : public Allocator {
     Allocator *_extra_allocator;                       // The allocator used to allocate the data structures
     uint64_t _total_allocated;                         // Total allocated at any moment
     uint64_t _unavailable;
+    bool _abort_on_allocation_failure;
 
   public:
     /// Creates a buddy allocator. It will manage  buddies of size `min_buddy_size` in a buffer of `size`
@@ -48,6 +49,7 @@ class SCAFFOLD_API BuddyAllocator : public Allocator {
     /// to allocate that. `extra_allocator` is use to allocate the internal data structures.
     BuddyAllocator(uint64_t size,
                    uint64_t min_buddy_size,
+                   bool abort_on_allocation_failure,
                    Allocator &main_allocator,
                    Allocator &extra_allocator = memory_globals::default_allocator(),
                    const char *name = "Unnamed");

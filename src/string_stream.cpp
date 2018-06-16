@@ -11,21 +11,21 @@ Buffer &printf(Buffer &b, const char *format, ...) {
     int n = vsnprintf(NULL, 0, format, args);
     va_end(args);
 
-    uint32_t end = array::size(b);
-    array::resize(b, end + n + 1);
+    uint32_t end = size(b);
+    resize(b, end + n + 1);
 
     va_start(args, format);
-    vsnprintf(array::begin(b) + end, n + 1, format, args);
+    vsnprintf(begin(b) + end, n + 1, format, args);
     va_end(args);
 
-    array::resize(b, end + n);
+    resize(b, end + n);
 
     return b;
 }
 
 Buffer &tab(Buffer &b, uint32_t column) {
     uint32_t current_column = 0;
-    uint32_t i = array::size(b) - 1;
+    uint32_t i = size(b) - 1;
     while (i != 0xffffffffu && b[i] != '\n' && b[i] != '\r') {
         ++current_column;
         --i;
@@ -37,19 +37,19 @@ Buffer &tab(Buffer &b, uint32_t column) {
 
 Buffer &repeat(Buffer &b, uint32_t count, char c) {
     for (uint32_t i = 0; i < count; ++i)
-        array::push_back(b, c);
+        push_back(b, c);
     return b;
 }
 
 CstrReturn c_str_own(Buffer &&b) {
     // Ensure there is a \0 at the end of the buffer.
-    array::push_back(b, '\0');
-    array::pop_back(b);
+    push_back(b, '\0');
+    pop_back(b);
 
     CstrReturn ret;
     ret.c_str = b._data;
     ret.allocator = b._allocator;
-    ret.length = array::size(b);
+    ret.length = size(b);
 
     b._data = nullptr;
     b._size = 0;
