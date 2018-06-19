@@ -3,6 +3,7 @@
 #include <scaffold/collection_types.h>
 #include <scaffold/memory.h>
 
+#include <limits>
 #include <memory>
 #include <string.h>
 

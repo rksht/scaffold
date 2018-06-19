@@ -138,14 +138,22 @@ struct FindResult {
     uint32_t entry_prev;
 };
 
-template <TypeList> uint32_t hash_slot(const PodHashSig &h, const K &k) {
-    if
-        SCAFFOLD_IF_CONSTEXPR(std::is_same<HashFnType, IdentityHashTag<K>>::value) {
-            return k % fo::size(h._hashes);
-        }
-    else {
+template <TypeList> struct KeyHashSlot {
+    static REALLY_INLINE uint64_t hash_slot(const PodHashSig &h, const K &k) {
         return h._hashfn(k) % fo::size(h._hashes);
     }
+};
+
+template <typename K, typename V, typename EqualFnType>
+struct KeyHashSlot<K, V, IdentityHashTag<K>, EqualFnType> {
+    static REALLY_INLINE uint64_t hash_slot(const PodHash<K, V, IdentityHashTag<K>, EqualFnType> &h,
+                                            const K &k) {
+        return k % fo::size(h._hashes);
+    }
+};
+
+template <TypeList> uint32_t hash_slot(const PodHashSig &h, const K &k) {
+    return KeyHashSlot<K, V, HashFnType, EqualFnType>::hash_slot(h, k);
 }
 
 // Forward declaration
@@ -169,7 +177,7 @@ struct KeyEqualCaller<K, V, HashFnType, IdentityEqualTag<K>> {
 };
 
 template <TypeList> REALLY_INLINE inline auto key_equal(const PodHashSig &h, const K &key1, const K &key2) {
-    return KeyEqualCaller<TypeList>::key_equal(h, key1, key2);
+    return KeyEqualCaller<K, V, HashFnType, EqualFnType>::key_equal(h, key1, key2);
 };
 
 template <TypeList> FindResult find(const PodHashSig &h, const K &key) {

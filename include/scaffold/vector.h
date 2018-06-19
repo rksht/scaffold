@@ -1,17 +1,10 @@
 #pragma once
 
 #include <scaffold/const_log.h>
+#include <scaffold/debug.h>
 #include <scaffold/non_pods.h>
 
 #include <algorithm>
-
-// clang-format off
-#if __cplusplus > 201402L
-#define IF_CONSTEXPR if contexpr 
-#else
-#define IF_CONSTEXPR if
-#endif
-// clang-format on
 
 namespace fo {
 
@@ -51,7 +44,7 @@ namespace fo {
 
 template <typename T> u32 reserve(Vector<T> &a, u32 new_capacity) {
     if (new_capacity < a._capacity) {
-        return;
+        return a._capacity;
     }
     internal::set_capacity(a, u32(1) << log2_ceil(new_capacity));
     return a._capacity;
@@ -239,9 +232,10 @@ template <typename T> void set_capacity(Vector<T> &a, u32 new_capacity) {
 }
 
 template <typename T> void move(T *source, T *destination, u32 source_size) {
-    IF_CONSTEXPR(std::is_trivially_move_constructible<T>::value) {
-        memcpy(destination, source, source_size * sizeof(T));
-    }
+    if
+        SCAFFOLD_IF_CONSTEXPR(std::is_trivially_move_constructible<T>::value) {
+            memcpy(destination, source, source_size * sizeof(T));
+        }
     else {
         for (u32 i = 0; i < source_size; ++i) {
             new (&destination[i]) T(std::move(source[i]));
@@ -250,9 +244,10 @@ template <typename T> void move(T *source, T *destination, u32 source_size) {
 }
 
 template <typename T> void copy(T *source, T *destination, u32 source_size) {
-    IF_CONSTEXPR(std::is_trivially_copy_constructible<T>::value) {
-        memcpy(destination, source, source_size * sizeof(T));
-    }
+    if
+        SCAFFOLD_IF_CONSTEXPR(std::is_trivially_copy_constructible<T>::value) {
+            memcpy(destination, source, source_size * sizeof(T));
+        }
     else {
         for (u32 i = 0; i < source_size; ++i) {
             new (&destination[i]) T(source[i]);
@@ -261,17 +256,19 @@ template <typename T> void copy(T *source, T *destination, u32 source_size) {
 }
 
 template <typename T> void destroy_elements(T *elements, u32 count) {
-    IF_CONSTEXPR(!std::is_trivially_destructible<T>::value) {
-        T *const end = elements + count;
-        while (elements != end) {
-            elements->~T();
-            ++elements;
+    if
+        SCAFFOLD_IF_CONSTEXPR(!std::is_trivially_destructible<T>::value) {
+            T *const end = elements + count;
+            while (elements != end) {
+                elements->~T();
+                ++elements;
+            }
         }
-    }
 }
 
 template <typename T> void fill_with_default(T *elements, u32 count) {
-    IF_CONSTEXPR(std::is_trivially_default_constructible<T>::value) { return; }
+    if
+        SCAFFOLD_IF_CONSTEXPR(std::is_trivially_default_constructible<T>::value) { return; }
     T *end = elements + count;
     while (elements != end) {
         // Note that C++11 onwards, `new T()` is value initialization for both class and non-class types.

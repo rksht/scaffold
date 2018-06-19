@@ -32,7 +32,7 @@
 #define TOKENPASTE2(x, y) TOKENPASTE(x, y)
 
 #ifndef REALLY_INLINE
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
 #define REALLY_INLINE __forceinline
 #else
 #define REALLY_INLINE __attribute__((always_inline))
@@ -44,12 +44,14 @@
 #endif
 
 #if !defined(SCAFFOLD_LOCAL)
+#if defined(_MSC_VER)
 #define SCAFFOLD_LOCAL
+#else
+#define SCAFFOLD_LOCAL __attribute__((visibility("hidden")))
+#endif
 #endif
 
-#define IS_CPP_17 (__cplusplus >= 201703L || ( defined _MSC_VER && _MSVC_LANG >= 201703L) )
-
-#if IS_CPP_17
+#if (__cplusplus >= 201703L || (defined _MSC_VER && _MSVC_LANG >= 201703L))
 #define SCAFFOLD_IF_CONSTEXPR constexpr
 #else
 #define SCAFFOLD_IF_CONSTEXPR
