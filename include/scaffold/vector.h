@@ -28,6 +28,9 @@ template <typename T> const T &front(const Vector<T> &a);
 template <typename T> T &back(Vector<T> &a);
 template <typename T> T &front(Vector<T> &a);
 
+template <typename T> T *data(Vector<T> &a);
+template <typename T> const T *data(const Vector<T> &a);
+
 namespace internal {
 
 template <typename T> void grow(Vector<T> &a);
@@ -130,6 +133,10 @@ template <typename T> T &front(Vector<T> &a) { return a._data[0]; }
 template <typename T> u32 size(const Vector<T> &a) { return a._size; }
 
 template <typename T> u32 capacity(const Vector<T> &a) { return a._capacity; }
+
+template <typename T> T *data(Vector<T> &a) { return a._data; }
+
+template <typename T> const T *data(const Vector<T> &a) { return a._data; }
 
 template <typename T>
 Vector<T>::Vector(u32 initial_count, fo::Allocator &a)
