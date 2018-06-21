@@ -1,5 +1,7 @@
 #pragma once
 
+#include <scaffold/debug.h>
+
 namespace fo {
-class Allocator;
+class SCAFFOLD_API Allocator;
 }

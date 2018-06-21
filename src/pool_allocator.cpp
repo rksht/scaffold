@@ -11,7 +11,7 @@ static constexpr uint64_t END_NUMBER = 0xffffffffu;
 
 // Node number to corresponding node's memory
 static inline uint32_t *num_to_mem(fo::PoolAllocator *a, uint32_t node_num) {
-    char *nodes = (char *)fo::memory::align_forward(a->_mem + sizeof(fo::PoolAllocator), 16);
+    char *nodes = (char *)fo::memory::align_forward(a->_mem + sizeof(fo::PoolAllocator), 16u);
     return (uint32_t *)(nodes + node_num * a->_node_size);
 }
 
@@ -38,14 +38,14 @@ PoolAllocator::PoolAllocator(uint64_t node_size, uint64_t num_nodes, Allocator &
     assert(node_size >= sizeof(uint64_t));
 
     // _mem = (char *)calloc(1, sizeof(PoolAllocator) + 16 + node_size * num_nodes);
-    _mem = (char *)_backing->allocate(sizeof(PoolAllocator) + 16 + node_size * num_nodes, 16);
+    _mem = (char *)_backing->allocate(sizeof(PoolAllocator) + 16 + node_size * num_nodes, 16u);
 
     log_assert(uintptr_t(_mem) % 16 == 0, "");
 
     // Default construct next allocator to denote it doesn't own any memory
     new (_mem) PoolAllocator;
 
-    char *_nodes = (char *)fo::memory::align_forward(_mem + sizeof(PoolAllocator), 16);
+    char *_nodes = (char *)fo::memory::align_forward(_mem + sizeof(PoolAllocator), 16u);
 
     uint32_t i = 1;
     for (char *h = _nodes; h < _nodes + _node_size * _num_nodes; h += _node_size) {
@@ -99,7 +99,7 @@ void PoolAllocator::deallocate(void *p) {
         return;
     }
 
-    char *nodes = (char *)fo::memory::align_forward(_mem + sizeof(PoolAllocator), 16);
+    char *nodes = (char *)fo::memory::align_forward(_mem + sizeof(PoolAllocator), 16u);
     char *end = nodes + _num_nodes * _node_size;
     if (nodes <= (char *)p && (char *)p < end) {
         // p is in range of this pool

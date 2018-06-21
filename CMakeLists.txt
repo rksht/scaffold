@@ -24,6 +24,13 @@ if(MALLOC_ALLOC_DONT_TRACK_SIZE)
   add_definitions(-DMALLOC_ALLOC_DONT_TRACK_SIZE)
 endif()
 
+
+option(SCAFFOLD_USE_ASAN "Use address sanitizer" off)
+
+if (${SCAFFOLD_USE_ASAN})
+	add_compile_options(-fsanitize=address)
+endif()
+
 # Source
 add_subdirectory(src)
 

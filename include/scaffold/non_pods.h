@@ -35,10 +35,10 @@ template <typename T> struct Vector {
     const T *end() const { return _data + _size; }
 
     const T *cbegin() { return _data; }
-    const T *cend() { return _data; }
+    const T *cend() { return _data + _size; }
 
     const T *cbegin() const { return _data; }
-    const T *cend() const { return _data; }
+    const T *cend() const { return _data + _size; }
 };
 
 template <typename Key, typename Value> struct OrderedMap {

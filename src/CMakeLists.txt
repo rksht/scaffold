@@ -33,3 +33,7 @@ endif()
 
 target_compile_options(scaffold PRIVATE "-DBUILDING_DLL=1" "-fvisibility=hidden")
 target_include_directories(scaffold PUBLIC ${PROJECT_SOURCE_DIR}/include)
+
+if (${SCAFFOLD_USE_ASAN})
+  target_link_libraries(scaffold -lasan)
+endif()

@@ -7,6 +7,9 @@
 #include <scaffold/types.h>
 
 namespace fo {
+
+using AddrUint = typename std::conditional<sizeof(void *) == 8, uint64_t, uint32_t>::type;
+
 /// Base class for memory allocators.
 ///
 /// Note: Regardless of which allocator is used, prefer to allocate memory in larger chunks instead of in many
@@ -32,7 +35,7 @@ class SCAFFOLD_API Allocator {
     /// nothing.
     virtual void deallocate(void *p) = 0;
 
-    static const uint64_t SIZE_NOT_TRACKED = ~uint64_t(0);
+    static constexpr uint64_t SIZE_NOT_TRACKED = ~uint64_t(0);
 
     /// Returns the amount of usable memory allocated at p. p must be a pointer returned by allocate() that
     /// has not yet been deallocated. The value returned will be at least the size specified to allocate(),
@@ -80,7 +83,6 @@ class SCAFFOLD_API Allocator {
         }                                                                                                    \
     } while (0)
 
-
 /// What the above macros do, but takes the arguments as template parameters. Better. Use this.
 template <typename T, typename... Args> T *make_new(Allocator &a, Args &&... args) {
     return new (a.allocate(sizeof(T), alignof(T))) T(std::forward<Args>(args)...);
@@ -116,19 +118,19 @@ SCAFFOLD_API void shutdown();
 } // namespace memory_globals
 
 namespace memory {
-inline void *align_forward(void *p, uint64_t align);
+template <typename T> inline void *align_forward(void *p, T align);
 inline void *pointer_add(void *p, uint64_t bytes);
 inline const void *pointer_add(const void *p, uint64_t bytes);
 inline void *pointer_sub(void *p, uint64_t bytes);
 inline const void *pointer_sub(const void *p, uint64_t bytes);
-} // namespace memory
 
-// ---------------------------------------------------------------
-// Inline function implementations
-// ---------------------------------------------------------------
+// -- Inline implementations
 
 // Aligns p to the specified alignment by moving it forward if necessary and returns the result.
-inline void *memory::align_forward(void *p, uint64_t align) {
+
+template <typename T> inline void *align_forward(void *p, T align) {
+    static_assert(std::is_same<T, uint32_t>::value || std::is_same<T, uint64_t>::value,
+                  "Must be unsigned 32 or 64 bit int");
     uintptr_t pi = uintptr_t(p);
     const uint64_t mod = pi % align;
     if (mod)
@@ -137,16 +139,19 @@ inline void *memory::align_forward(void *p, uint64_t align) {
 }
 
 /// Returns the result of advancing p by the specified number of bytes
-inline void *memory::pointer_add(void *p, uint64_t bytes) { return (void *)((char *)p + bytes); }
+inline void *pointer_add(void *p, uint64_t bytes) { return (void *)((char *)p + bytes); }
 
-inline const void *memory::pointer_add(const void *p, uint64_t bytes) {
+inline const void *pointer_add(const void *p, uint64_t bytes) {
     return (const void *)((const char *)p + bytes);
 }
 
 /// Returns the result of moving p back by the specified number of bytes
-inline void *memory::pointer_sub(void *p, uint64_t bytes) { return (void *)((char *)p - bytes); }
+inline void *pointer_sub(void *p, uint64_t bytes) { return (void *)((char *)p - bytes); }
 
-inline const void *memory::pointer_sub(const void *p, uint64_t bytes) {
+inline const void *pointer_sub(const void *p, uint64_t bytes) {
     return (const void *)((const char *)p - bytes);
 }
+
+} // namespace memory
+
 } // namespace fo

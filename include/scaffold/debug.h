@@ -40,7 +40,7 @@
 #endif
 
 #if !defined(SCAFFOLD_API)
-#define SCAFFOLD_API extern
+#define SCAFFOLD_API
 #endif
 
 #if !defined(SCAFFOLD_LOCAL)
