@@ -2,8 +2,6 @@
 
 #include <scaffold/types.h>
 
-#include <emmintrin.h>
-
 namespace fo {
 
 struct Vector2;
@@ -70,10 +68,6 @@ struct alignas(16) Vector4 {
         , z(z)
         , w(w) {}
 
-    Vector4(__m128 pack) { _mm_store_ps(reinterpret_cast<float *>(this), pack); }
-
-    __m128 get_xmm() const { return _mm_load_ps(reinterpret_cast<const float *>(this)); }
-
     /// Array like accessor
     constexpr float operator[](unsigned i) const { return reinterpret_cast<const float *>(this)[i]; }
     constexpr float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
@@ -99,18 +93,28 @@ struct alignas(16) Matrix3x3_aligned16 {
     Vector3 _pad;
 };
 
-struct alignas(16) Matrix4x4 {
+struct Matrix4x4 {
     Vector4 x, y, z, t;
 };
 
-using Matrix4x4_aligned16 = Matrix4x4;
+static_assert(alignof(Matrix4x4) >= 16, "");
 
 struct AABB {
     Vector3 min, max;
 };
 
+#if 0
+// This... idk, never gonna use this representation.
 struct OOBB {
     Matrix4x4 tm;
     AABB aabb;
 };
+#endif
+
+struct OBB {
+    Vector3 center; // center
+    Vector3 xyz[3]; // local x, y, z axes
+    Vector3 he;     // half-extents along local axes
+};
+
 } // namespace fo

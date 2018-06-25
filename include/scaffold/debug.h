@@ -35,7 +35,7 @@
 #if defined(_MSC_VER)
 #define REALLY_INLINE __forceinline
 #else
-#define REALLY_INLINE __attribute__((always_inline))
+#define REALLY_INLINE __attribute__((always_inline)) inline
 #endif
 #endif
 
