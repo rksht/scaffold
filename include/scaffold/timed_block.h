@@ -24,7 +24,7 @@ static_assert((TIMED_BLOCK_CAPACITY & (TIMED_BLOCK_CAPACITY - 1)) == 0, "Must be
 namespace timedblock {
 
 // Returns a monotonically increasing nanosecond count
-REALLY_INLINE inline uint64_t get_timestamp_ns() {
+REALLY_INLINE uint64_t get_timestamp_ns() {
     // On windows high_resolution_clock uses QPC, so we are good.
     auto timepoint = std::chrono::high_resolution_clock::now();
     return std::chrono::duration<uint64_t, std::nano>(timepoint.time_since_epoch()).count();

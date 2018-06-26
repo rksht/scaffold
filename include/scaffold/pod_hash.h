@@ -176,7 +176,7 @@ struct KeyEqualCaller<K, V, HashFnType, IdentityEqualTag<K>> {
     }
 };
 
-template <TypeList> REALLY_INLINE inline auto key_equal(const PodHashSig &h, const K &key1, const K &key2) {
+template <TypeList> REALLY_INLINE auto key_equal(const PodHashSig &h, const K &key1, const K &key2) {
     return KeyEqualCaller<K, V, HashFnType, EqualFnType>::key_equal(h, key1, key2);
 };
 
