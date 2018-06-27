@@ -1,79 +1,82 @@
-// A type-safe bit flag.
 #pragma once
 
 #include <stdint.h>
 
 namespace fo {
 
+// A type-safe bit mask where each bit represents an on/off state. The BitType is meant to be an enum class
+// with each constant in it representing an integer bit mask.
 template <typename BitType, typename MaskType = uint32_t> struct BitFlags {
     // No warranty if you explcitly access this. Haven't made this private to
     // keep it a trivially-copyable type
     MaskType _mask;
 
-    BitFlags()
+    constexpr BitFlags()
         : _mask(0) {}
 
-    // From enum
-    BitFlags(BitType bit)
+    // Implicit construction from the enum class.
+    constexpr BitFlags(BitType bit)
         : _mask(static_cast<MaskType>(bit)) {}
 
     // Copy
-    BitFlags(BitFlags const &rhs)
+    constexpr BitFlags(BitFlags const &rhs)
         : _mask(rhs._mask) {}
 
-    BitFlags &operator=(BitFlags const &rhs) {
+    constexpr BitFlags &operator=(BitFlags const &rhs) {
         _mask = rhs._mask;
         return *this;
     }
 
-    BitFlags &operator|=(BitFlags const &rhs) {
+    constexpr BitFlags &operator|=(BitFlags const &rhs) {
         _mask |= rhs._mask;
         return *this;
     }
 
-    BitFlags &operator&=(BitFlags const &rhs) {
+    constexpr BitFlags &operator&=(BitFlags const &rhs) {
         _mask &= rhs._mask;
         return *this;
     }
 
-    BitFlags &operator^=(BitFlags const &rhs) {
+    constexpr BitFlags &operator^=(BitFlags const &rhs) {
         _mask ^= rhs._mask;
         return *this;
     }
 
-    BitFlags operator|(BitFlags const &rhs) const {
+    constexpr BitFlags operator|(BitFlags const &rhs) const {
         BitFlags result(*this);
         result |= rhs;
         return result;
     }
 
-    BitFlags operator&(BitFlags const &rhs) const {
+    constexpr BitFlags operator&(BitFlags const &rhs) const {
         BitFlags result(*this);
         result &= rhs;
         return result;
     }
 
-    BitFlags operator^(BitFlags const &rhs) const {
+    constexpr BitFlags operator^(BitFlags const &rhs) const {
         BitFlags result(*this);
         result ^= rhs;
         return result;
     }
 
-    bool operator!() const { return !_mask; }
+    constexpr bool operator!() const { return !_mask; }
 
-    BitFlags operator~() const {
+    constexpr BitFlags operator~() const {
         BitFlags result(*this);
         result._mask ^= ~MaskType(0);
         return result;
     }
 
-    bool operator==(BitFlags const &rhs) const { return _mask == rhs._mask; }
+    constexpr bool operator==(BitFlags const &rhs) const { return _mask == rhs._mask; }
 
-    bool operator!=(BitFlags const &rhs) const { return _mask != rhs._mask; }
+    constexpr bool operator!=(BitFlags const &rhs) const { return _mask != rhs._mask; }
 
-    explicit operator bool() const { return !!_mask; }
+    // Conversion to bool. True denotes no bit is set.
+    constexpr explicit operator bool() const { return !!_mask; }
 
-    explicit operator MaskType() const { return _mask; }
+    // Conversion to the underlying integer type is explicit.
+    constexpr explicit operator MaskType() const { return _mask; }
 };
 
 } // namespace fo
