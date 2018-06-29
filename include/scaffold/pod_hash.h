@@ -16,11 +16,11 @@
 namespace fo {
 
 // Passing this instead of a callable to `HashFnType` will simply use the value of the key as its hash.
-template <typename T> struct IdentityHashTag { static_assert(std::is_integral<T>::value, ""); };
+template <typename K> struct IdentityHashTag { static_assert(std::is_integral<K>::value, ""); };
 
 // Passing this instead of a callable "equal" comparison will simply make the table use operator== on the
 // keys.
-template <typename T> struct IdentityEqualTag {};
+template <typename K> struct IdentityEqualTag {};
 
 namespace pod_hash_internal {
 
@@ -86,6 +86,15 @@ struct PodHash {
 
 #define TypeList typename K, typename V, typename HashFnType, typename EqualFnType
 #define PodHashSig PodHash<K, V, HashFnType, EqualFnType>
+
+// A 'make_' function for convenience. Takes just one allocator used to allocate both the buckets and entries.
+// You can call like this - fo::make_pod_hash<u32, const char *>(alloc) - for example.
+template <TypeList>
+PodHashSig make_pod_hash(fo::Allocator &alloc,
+                         HashFnType hash_func = IdentityHashTag<K>(),
+                         EqualFnType equal_func = IdentityEqualTag<K>()) {
+    return PodHashSig(alloc, alloc, std::move(hash_func), std::move(equal_func));
+}
 
 // -- Iterators on PodHash
 template <TypeList> auto cbegin(const PodHashSig &h) { return h._entries.begin(); }
