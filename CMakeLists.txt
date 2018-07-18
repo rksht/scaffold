@@ -4,6 +4,12 @@ project(scaffold)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Benchmark
+option(SCAFFOLD_ENABLE_BENCHMARKS "Build the benchmarks" off)
+if (SCAFFOLD_ENABLE_BENCHMARKS)
+  add_subdirectory(bench)
+endif()
+
 # Options to propagate
 if (GNU)
 	add_compile_options(-std=c++17)
@@ -12,18 +18,19 @@ elseif(MSVC)
 endif()
 
 option(BUDDY_ALLOC_LEVEL_LOGGING "Log buddy allocator" off)
-option(MALLOC_ALLOC_DONT_TRACK_SIZE "Don't track size in MallocAllocator" off)
+option(MALLOC_ALLOCATOR_DONT_TRACK_SIZE "Don't track size in MallocAllocator" off)
 
 if(BUDDY_ALLOC_LEVEL_LOGGING)
   message("Turning level logging on")
   add_definitions(-DBUDDY_ALLOC_LEVEL_LOGGING)
 endif()
 
-if(MALLOC_ALLOC_DONT_TRACK_SIZE)
+if(MALLOC_ALLOCATOR_DONT_TRACK_SIZE)
   message("MallocAllocator will NOT track size")
-  add_definitions(-DMALLOC_ALLOC_DONT_TRACK_SIZE)
+  add_compile_options(-DMALLOC_ALLOCATOR_DONT_TRACK_SIZE=1)
+else()
+  add_compile_options(-DMALLOC_ALLOCATOR_DONT_TRACK_SIZE=0)
 endif()
-
 
 option(SCAFFOLD_USE_ASAN "Use address sanitizer" off)
 
@@ -33,12 +40,6 @@ endif()
 
 # Source
 add_subdirectory(src)
-
-# Benchmark
-option(SCAFFOLD_ENABLE_BENCHMARKS "Build the benchmarks" off)
-if (SCAFFOLD_ENABLE_BENCHMARKS)
-  add_subdirectory(bench)
-endif()
 
 option(SCAFFOLD_ENABLE_TESTS "Build the tests" off)
 

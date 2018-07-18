@@ -1,20 +1,21 @@
 // For posix_memalign
-#ifdef MALLOC_ALLOC_DONT_TRACK_SIZE
+#if MALLOC_ALLOCATOR_DONT_TRACK_SIZE
 #if !defined(_POSIX_C_SOURCE) || (_POSIX_C_SOURCE < 200112L)
 #define _POSIX_C_SOURCE 200112L
 #endif
 #endif
 
+#include <scaffold/const_log.h>
 #include <scaffold/debug.h>
 #include <scaffold/memory.h>
 
 #include <assert.h>
-#include <iostream>
 #include <mutex>
 #include <new>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 
 namespace fo {
 
@@ -30,42 +31,47 @@ namespace {
 
 using namespace fo;
 
-constexpr AddrUint header_alignment() { return alignof(AddrUint); }
+template <typename SizeType> struct Header {
+    SizeType size;
 
-// Allocations contain a memory region allocated like <Header> <Pad>* <UsableChunk>. We want to find the
-// header given a pointer to the UsableChunk. Since UsableChunk cannot be the max value of a uint32_t or
-// uint64_t, depending on the platform, we can use that as the pad values.
-constexpr AddrUint header_pad_value() { return std::numeric_limits<AddrUint>::max(); }
-
-struct Header {
-    AddrUint size;
+    // Allocations contain a memory region allocated like <Header> <Pad>* <UsableChunk>. We want to find the
+    // header given a pointer to the UsableChunk. Since UsableChunk cannot be the max value of a uint32_t or
+    // uint64_t, depending on the platform, we can use that as the pad values.
+    static constexpr SizeType pad_value = std::numeric_limits<SizeType>::max();
+    static constexpr SizeType alignment = alignof(SizeType);
+    using size_type = SizeType;
 };
 
-static_assert(sizeof(Header) == sizeof(AddrUint), "");
+using Header32 = Header<u32>;
+using Header64 = Header<u64>;
+using HeaderNative = Header<AddrUint>;
 
-// If we need to align the memory allocation we pad the header with this value after storing the size.
-
-// Given a pointer to the header, returns a pointer to the data that follows it.
-inline void *data_pointer(Header *header, uint32_t align) {
+// Given a pointer to the header, returns a pointer to the data that immediately follows it.
+template <typename HeaderType> inline void *data_pointer(HeaderType *header, uint32_t align) {
     void *p = header + 1;
     return memory::align_forward(p, align);
 }
 
 // Given a pointer to the data, returns a pointer to the header before it.
-inline Header *header(void *data) {
-    AddrUint *p = (AddrUint *)data;
-    while (p[-1] == header_pad_value()) {
+template <typename HeaderType> inline HeaderType *header_before_data(void *data) {
+    auto *p = reinterpret_cast<typename HeaderType::size_type *>(data);
+    while (p[-1] == HeaderType::pad_value) {
         --p;
     }
-    return reinterpret_cast<Header *>(p) - 1;
+    return reinterpret_cast<HeaderType *>(p) - 1;
 }
 
-// Stores the size in the header and pads with header_pad_value() up to the data pointer.
-inline void fill_with_padding(Header *header, void *data, uint64_t size) {
-    header->size = static_cast<AddrUint>(size);
-    AddrUint *p = (AddrUint *)(header + 1);
+// Stores the size in the header and pads with pad_value up to the data pointer.
+template <typename HeaderType>
+inline void fill_with_padding(HeaderType *header, void *data, typename HeaderType::size_type size) {
+    using size_type = typename HeaderType::size_type;
+
+    header->size = static_cast<size_type>(size);
+
+    size_type *p = reinterpret_cast<size_type *>(header + 1);
+
     while (p < data) {
-        *p++ = header_pad_value();
+        *p++ = HeaderType::pad_value;
     }
 }
 
@@ -75,27 +81,27 @@ inline void fill_with_padding(Header *header, void *data, uint64_t size) {
 /// Note: An OS-specific allocator that can do alignment and tracks size does need this padding and can thus
 /// be more efficient than the MallocAllocator
 class MallocAllocator : public Allocator {
-    uint64_t _total_allocated;
+    AddrUint _total_allocated;
 
     std::mutex _mutex;
 
     // Returns the size to allocate from malloc() for a given size and align.
-    static inline uint64_t size_with_padding(uint64_t size, uint64_t align) {
-        return size + align + sizeof(Header);
+    static inline AddrUint size_with_padding(AddrUint size, AddrUint align) {
+        return size + align + sizeof(HeaderNative);
     }
 
   public:
     MallocAllocator()
         : _total_allocated(0)
         , _mutex{} {
-#ifdef MALLOC_ALLOC_DONT_TRACK_SIZE
+#if MALLOC_ALLOCATOR_DONT_TRACK_SIZE
         _total_allocated = SIZE_NOT_TRACKED;
 #endif
     }
 
     ~MallocAllocator() {
         // Check that we don't have any memory leaks when allocator is destroyed.
-#ifndef MALLOC_ALLOC_DONT_TRACK_SIZE
+#if MALLOC_ALLOCATOR_DONT_TRACK_SIZE == 0
         if (_total_allocated != 0) {
             log_assert(false, "MallocAllocator %s _total_allocated = %lu\n", name(), _total_allocated);
         }
@@ -108,7 +114,7 @@ class MallocAllocator : public Allocator {
         return _total_allocated;
     }
 
-#ifdef MALLOC_ALLOC_DONT_TRACK_SIZE
+#if MALLOC_ALLOCATOR_DONT_TRACK_SIZE
     void *allocate(uint64_t size, uint64_t align) override {
         std::lock_guard<std::mutex> lk(_mutex);
 
@@ -150,8 +156,10 @@ class MallocAllocator : public Allocator {
     void *allocate(uint64_t size, uint64_t align) override {
         std::lock_guard<std::mutex> lk(_mutex);
 
-        const uint64_t ts = size_with_padding(size, align);
-        Header *h = (Header *)malloc(ts);
+        const AddrUint ts = size_with_padding(size, align);
+
+        HeaderNative *h = reinterpret_cast<HeaderNative *>(malloc(ts));
+
         void *p = data_pointer(h, align);
         fill_with_padding(h, p, ts);
         _total_allocated += ts;
@@ -162,10 +170,11 @@ class MallocAllocator : public Allocator {
     void deallocate(void *p) override {
         std::lock_guard<std::mutex> lk(_mutex);
 
-        if (!p)
+        if (!p) {
             return;
+        }
 
-        Header *h = header(p);
+        HeaderNative *h = header_before_data<HeaderNative>(p);
         _total_allocated -= h->size;
         free(h);
     }
@@ -173,7 +182,7 @@ class MallocAllocator : public Allocator {
     uint64_t allocated_size(void *p) override {
         // No need to lock since if some other thread is deallocating the memory region, there is already a
         // data race on the user side. Just saying.
-        return header(p)->size;
+        return header_before_data<HeaderNative>(p)->size;
     }
 #endif
 };
@@ -186,7 +195,7 @@ class MallocAllocator : public Allocator {
 /// memory  is freed.
 ///
 /// It is important that the scratch allocator is only used for short-lived memory allocations. A long lived
-/// allocator will lock the "free" pointer and prevent the "allocate" pointer from proceeding past it, which
+/// allocator will lock the "head" pointer and prevent the "tail" pointer from proceeding past it, which
 /// means the ring buffer can't be used. If possible, do large allocations, as opposed to small ones, as
 /// that would waste extra space due to each allocation also requiring allocating a 4 or 8 byte header.
 ///
@@ -197,80 +206,116 @@ class ScratchAllocator : public Allocator {
 
     std::mutex _mutex;
 
-    // Start and end of the ring buffer.
-    char *_begin, *_end;
+    u8 *_begin; // Start of the whole underlying buffer
+    u8 *_end;   // End of the whole underlying buffer
+    u8 *_tail;  // Allocations happen starting with this address. Aligned to 4 bytes always
+    u8 *_head;  // Allocations cannot proceed past this pointer
 
-    // Pointers to where to allocate memory and where to free memory. Always points to multiple of 4
-    // addresses.
-    char *_allocate, *_free;
+    // The header of free blocks have the `size` field's msb set to 1.
+    static constexpr u32 FREE_BLOCK_MASK = u32(1) << 31;
+
+    // Just a check
+    static_assert(alignof(Header32) == 4, "");
+
+    // Returns true if the addresss p is within the allocable range
+    bool _in_use(void *p) {
+        // Happens when the scratch buffer capacity is altogether too small for allocation.
+        if (_head == _tail) {
+            return p >= _end;
+        }
+
+        // Case when there's no wrap-around in the buffer.
+        if (_tail > _head) {
+            return p >= _head && p < _tail;
+        }
+
+        // Case when the allocations currently wrapped around.
+        return p < _tail || p >= _head;
+    }
 
   public:
     /// Creates a ScratchAllocator. The allocator will use the backing allocator to create the ring buffer
     /// and to service any requests that don't fit in the ring buffer.
     ///
-    /// size specifies the size of the ring buffer.
+    /// size specifies the capacity of the ring buffer.
     ScratchAllocator(Allocator &backing, uint64_t size)
         : _backing(backing)
         , _mutex{} {
-        _begin = (char *)_backing.allocate(size);
+        // Increase size to multiple of 4 if it isn't already.
+        size = ((size + 3) / 4) * 4;
+        _begin = (u8 *)_backing.allocate(size, 16);
         _end = _begin + size;
-        _allocate = _begin;
-        _free = _begin;
+        _tail = _begin;
+        _head = _begin;
+        // memset(_begin, 200, size);
     }
 
     ~ScratchAllocator() {
-        assert(_free == _allocate);
+        assert(_head == _tail);
         _backing.deallocate(_begin);
-    }
-
-    // Returns true if the addresss p is within the allocable range
-    bool in_use(void *p) {
-        if (_free == _allocate) {
-            return p >= _end;
-        }
-        if (_allocate > _free) {
-            return p >= _free && p < _allocate;
-        }
-        return p >= _free || p < _allocate;
     }
 
     void *allocate(uint64_t size, uint64_t align) override {
         std::lock_guard<std::mutex> lk(_mutex);
 
+        // Guard against shenanigans.
+        if (size == 0) {
+            return nullptr;
+        }
+
+        // Ensures the _tail pointer will be pointing to a multiple of 4 address after allocation.
         assert(align % 4 == 0);
 
-        char *p = _allocate;
-        Header *h = (Header *)p;
-        char *data = (char *)data_pointer(h, align);
+        u8 *p = _tail;
+        Header32 *h = (Header32 *)p;
+        u8 *data = (u8 *)data_pointer(h, (u32)align);
 
+        // Round up the size to a multiple of alignment
         size = ((size + 3) / 4) * 4;
+
         p = data + size;
 
-        // Reached the end of the buffer, wrap around to the beginning.
+        // Reached the end of the buffer.
         if (p > _end) {
-            h->size = (_end - (char *)h) | 0x80000000u;
+            // Should hold since capacity is a multiple of 4
+            assert((u8 *)h <= _end);
+
+            // If there is an unusable portion at the tail, mark it as a free block.
+            if ((u8 *)h != _end) {
+                h->size = u32(_end - (u8 *)h);
+                h->size |= FREE_BLOCK_MASK;
+            }
 
             p = _begin;
-            h = (Header *)p;
-            data = (char *)data_pointer(h, align);
-            p = data + size;
+            h = (Header32 *)_begin;
+
+            data = (u8 *)data_pointer(h, align);
+            p = data + (u32)size;
         }
 
         // If the buffer is exhausted use the backing allocator instead.
-        if (in_use(p)) {
-            log_info("Using backing allocator");
+        if (_in_use(p)) {
+            log_info("ScratchAllocator - %s, using backing allocator", name());
             return _backing.allocate(size, align);
         }
 
-        log_info("Using scratch storage");
+        fill_with_padding(h, data, p - (u8 *)h);
+        _tail = p;
 
-        fill_with_padding(h, data, p - (char *)h);
-        _allocate = p;
+        // log_info("ScratchAlloctor - %s - Allocated %u bytes - pointer - %p ", name(), (u32)size, data);
+
         return data;
     }
 
     void deallocate(void *p) override {
         std::lock_guard<std::mutex> lk(_mutex);
+
+#if 0
+        {
+            auto s = p ? std::to_string(allocated_size(p)) : "<null>";
+            log_info("Deallocated - %s bytes - pointer - %p", s.c_str(), p);
+        }
+#endif
 
         if (!p) {
             return;
@@ -281,27 +326,27 @@ class ScratchAllocator : public Allocator {
             return;
         }
 
-        // Mark this slot as free (set the msb of header->size to 1)
-        Header *h = header(p);
-        assert((h->size & (uint32_t(1) << 31)) == 0);
-        h->size = h->size | (uint32_t(1) << 31);
+        // Mark this slot as free
+        Header32 *h = header_before_data<Header32>(p);
+        assert((h->size & FREE_BLOCK_MASK) == 0);
+        h->size |= FREE_BLOCK_MASK;
 
         // Advance the free pointer past all free slots.
-        while (_free != _allocate) {
-            Header *h = (Header *)_free;
-            if ((h->size & (uint32_t(1) << 31)) == 0) {
+        while (_head != _tail) {
+            Header32 *h = (Header32 *)_head;
+            if ((h->size & FREE_BLOCK_MASK) == 0) {
                 break;
             }
 
-            _free += h->size & ((uint32_t(1) << 31) - 1);
-            if (_free == _end) {
-                _free = _begin;
+            _head += (h->size & ~FREE_BLOCK_MASK);
+            if (_head == _end) {
+                _head = _begin;
             }
         }
     }
 
     uint64_t allocated_size(void *p) override {
-        Header *h = header(p);
+        Header32 *h = header_before_data<Header32>(p);
         return h->size - ((char *)p - (char *)h);
     }
 
