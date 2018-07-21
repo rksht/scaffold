@@ -6,9 +6,9 @@
 #include <string.h>
 
 #ifdef NDEBUG
-#define debug(M, ...)
+#    define debug(M, ...)
 #else
-#define debug(M, ...) fprintf(stderr, "DEBUG %s:%d: " M "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+#    define debug(M, ...) fprintf(stderr, "DEBUG %s:%d: " M "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 #endif
 
 #define clean_errno() (errno == 0 ? "errno is OK" : strerror(errno))
@@ -32,27 +32,37 @@
 #define TOKENPASTE2(x, y) TOKENPASTE(x, y)
 
 #ifndef REALLY_INLINE
-#if defined(_MSC_VER)
-#define REALLY_INLINE __forceinline
-#else
-#define REALLY_INLINE __attribute__((always_inline)) inline
-#endif
-#endif
-
-#if !defined(SCAFFOLD_API)
-#define SCAFFOLD_API
+#    if defined(_MSC_VER)
+#        define REALLY_INLINE __forceinline
+#    else
+#        define REALLY_INLINE __attribute__((always_inline)) inline
+#    endif
 #endif
 
-#if !defined(SCAFFOLD_LOCAL)
-#if defined(_MSC_VER)
-#define SCAFFOLD_LOCAL
+#if defined(SCAFFOLD_API_EXPORT)
+#    if defined(_MSC_VER)
+#        define SCAFFOLD_API __declspec(dllexport)
+#    else
+#        define SCAFFOLD_API __attribute__((visibility("default")))
+#    endif
+#elif defined(SCAFFOLD_API_IMPORT)
+#    if defined(_MSC_VER)
+#        define SCAFFOLD_API __declspec(dllimport)
+#    else
+#        define SCAFFOLD_API __attribute__((visibility("default")))
+#    endif
 #else
-#define SCAFFOLD_LOCAL __attribute__((visibility("hidden")))
+#    error "SCAFFOLD_API_EXPORT or SCAFFOLD_API_IMPORT needs to be defined"
 #endif
+
+#if defined(_MSC_VER)
+#    define SCAFFOLD_INTERNAL
+#else
+#    define SCAFFOLD_INTERNAL __attribute__((visibility("hidden")))
 #endif
 
 #if (__cplusplus >= 201703L || (defined _MSC_VER && _MSVC_LANG >= 201703L))
-#define SCAFFOLD_IF_CONSTEXPR constexpr
+#    define SCAFFOLD_IF_CONSTEXPR constexpr
 #else
-#define SCAFFOLD_IF_CONSTEXPR
+#    define SCAFFOLD_IF_CONSTEXPR
 #endif
