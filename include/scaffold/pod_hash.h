@@ -37,7 +37,7 @@ template <typename K, typename V> struct Entry {
 template <typename K,
           typename V,
           typename HashFnType = IdentityHashTag<K>,
-          typename EqualFnType = IdentityEqualTag<V>>
+          typename EqualFnType = IdentityEqualTag<K>>
 struct PodHash {
     using Entry = pod_hash_internal::Entry<K, V>;
     using HashFn = HashFnType;
