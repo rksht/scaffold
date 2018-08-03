@@ -100,6 +100,14 @@ template <typename T> T &push_back(Vector<T> &a, const T &element) {
     return a._data[a._size - 1];
 }
 
+template <typename T> T &push_back(Vector<T> &a, T &&element) {
+    if (a._size == a._capacity) {
+        internal::grow(a);
+    }
+    a._data[a._size++] = std::forward<T>(element);
+    return a._data[a._size - 1];
+}
+
 template <typename T, typename... Args> T &emplace_back(Vector<T> &a, Args &&... args) {
     static_assert(std::is_constructible<T, decltype(std::forward<Args>(args))...>::value, "");
     if (a._size == a._capacity) {
