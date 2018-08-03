@@ -5,11 +5,11 @@
 #include <type_traits>
 
 #ifdef max
-#undef max
+#    undef max
 #endif
 
 #ifdef min
-#undef min
+#    undef min
 #endif
 
 namespace {
@@ -27,6 +27,11 @@ template <typename T> inline constexpr T clip_to_power_of_2(T x) {
     return x + 1;
 }
 
+template <typename T> inline constexpr bool is_power_of_2(T x) {
+    static_assert(std::is_integral<T>::value, "Must be integral");
+    return (x & (x - 1)) == 0;
+}
+
 /// Returns floor(log_2(n))  (integer logarithm of n)
 template <typename T> inline constexpr T log2_floor(T n) {
     static_assert(std::is_integral<T>::value, "Must be integral");
@@ -38,12 +43,8 @@ template <typename T> inline constexpr T log2_floor(T n) {
     return i;
 }
 
-constexpr uint64_t _t[6] = {0xFFFFFFFF00000000ull,
-                            0x00000000FFFF0000ull,
-                            0x000000000000FF00ull,
-                            0x00000000000000F0ull,
-                            0x000000000000000Cull,
-                            0x0000000000000002ull};
+constexpr uint64_t _t[6] = { 0xFFFFFFFF00000000ull, 0x00000000FFFF0000ull, 0x000000000000FF00ull,
+                             0x00000000000000F0ull, 0x000000000000000Cull, 0x0000000000000002ull };
 
 inline constexpr uint64_t log2_ceil(uint64_t x) {
     uint64_t y = (((x & (x - 1)) == 0) ? 0 : 1);
