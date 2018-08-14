@@ -1,6 +1,7 @@
 #pragma once
 
 #include <scaffold/debug.h>
+#include <scaffold/timed_block.h>
 
 #include <chrono>
 #include <limits>

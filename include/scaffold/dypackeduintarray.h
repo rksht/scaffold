@@ -81,13 +81,14 @@ template <typename Word = unsigned long, typename GetTy = Word> struct DyPackedU
 
     /// Ctor. Creates an array that holds `num_int` packed unsigned integers
     /// which are representable with at least `_bits_per_int` bits.
-    DyPackedUintArray(unsigned bits_per_int, unsigned num_ints,
-                      Allocator &allocator = memory_globals::default_allocator())
-        : _bits_per_int{bits_per_int}
-        , _ints_per_word{_num_bits / _bits_per_int}
-        , _num_ints{num_ints}
-        , _num_words{ceil_div(_num_ints, _ints_per_word)}
-        , _words{allocator} {
+    DyPackedUintArray(unsigned bits_per_int,
+                      unsigned num_ints,
+                      Allocator &allocator = fo::memory_globals::default_allocator())
+        : _bits_per_int { bits_per_int }
+        , _ints_per_word { _num_bits / _bits_per_int }
+        , _num_ints { num_ints }
+        , _num_words { ceil_div(_num_ints, _ints_per_word) }
+        , _words { allocator } {
 
         assert(_bits_per_int <= _num_bits && "DyPackedUintArray - Bits per small integer too big");
 
@@ -156,15 +157,15 @@ template <typename Word = unsigned long, typename GetTy = Word> struct DyPackedU
     }
 
     /// A forward const iterator
-    const_iterator cbegin() const { return const_iterator{this, 0}; }
+    const_iterator cbegin() const { return const_iterator { this, 0 }; }
 
-    const_iterator cend() const { return const_iterator{this, _num_ints}; }
+    const_iterator cend() const { return const_iterator { this, _num_ints }; }
 
     void print(FILE *f = stderr) const {
         int n = 0;
         using namespace string_stream;
 
-        Buffer b(memory_globals::default_allocator());
+        Buffer b(fo::memory_globals::default_allocator());
 
         for (auto i = this->cbegin(), e = this->cend(); i != e; ++i) {
             b << n << " = " << *i << "\t";

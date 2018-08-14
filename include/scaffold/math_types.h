@@ -117,4 +117,42 @@ struct OBB {
     Vector3 he;     // half-extents along local axes
 };
 
+// Integer vectors
+
+struct IVector2 {
+    i32 x, y;
+
+    IVector2() = default;
+    IVector2(i32 x, i32 y)
+        : x(x)
+        , y(y) {}
+
+    explicit operator Vector2() const { return Vector2 { (f32)x, (f32)y }; }
+};
+
+struct IVector3 {
+    i32 x, y, z;
+
+    IVector3() = default;
+    IVector3(i32 x, i32 y, i32 z)
+        : x(x)
+        , y(y)
+        , z(z) {}
+
+    explicit operator Vector3() const { return { (f32)x, (f32)y, (f32)z }; }
+};
+
+struct alignas(16) IVector4 {
+    i32 x, y, z, w;
+
+    IVector4() = default;
+    IVector4(i32 x, i32 y, i32 z, i32 w)
+        : x(x)
+        , y(y)
+        , z(z)
+        , w(w) {}
+
+    explicit operator Vector4() const { return { (f32)x, (f32)y, (f32)z, (f32)w }; }
+};
+
 } // namespace fo
