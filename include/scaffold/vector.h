@@ -162,6 +162,18 @@ Vector<T>::Vector(u32 initial_count, const T &fill_element, fo::Allocator &a)
 }
 
 template <typename T>
+Vector<T>::Vector(std::initializer_list<T> items)
+    : _data(nullptr)
+    , _size(0)
+    , _capacity(0)
+    , _allocator(&fo::memory_globals::default_allocator()) {
+    reserve(*this, items.size());
+    for (auto &item : items) {
+        push_back(*this, std::move(item));
+    }
+}
+
+template <typename T>
 Vector<T>::Vector(const Vector<T> &o)
     : _data(nullptr)
     , _size(o._size)

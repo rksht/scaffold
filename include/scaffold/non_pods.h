@@ -4,6 +4,8 @@
 #include <scaffold/rbt.h>
 #include <scaffold/types.h>
 
+#include <initializer_list>
+
 namespace fo {
 
 template <typename T> struct Vector {
@@ -17,6 +19,8 @@ template <typename T> struct Vector {
     Vector(u32 initial_count,
            const T &fill_element,
            fo::Allocator &a = fo::memory_globals::default_allocator());
+
+    Vector(std::initializer_list<T> items);
 
     Vector(const Vector &);
     Vector(Vector &&);
