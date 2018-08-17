@@ -27,7 +27,7 @@ template <typename T> const T *data(const Vector<T> &a);
 namespace internal {
 
 template <typename T> void grow(Vector<T> &a);
-template <typename T> void set_capacity(Vector<T> &a, u32 new_size);
+template <typename T> void set_capacity(Vector<T> &a, u32 new_size, bool is_resize);
 template <typename T> void move(T *source, T *destination, u32 source_size);
 template <typename T> void copy(T *source, T *destination, u32 source_size);
 template <typename T> void destroy_elements(T *elements, u32 count);
@@ -46,7 +46,7 @@ template <typename T> u32 reserve(Vector<T> &a, u32 new_capacity) {
     if (new_capacity < a._capacity) {
         return a._capacity;
     }
-    internal::set_capacity(a, u32(1) << log2_ceil(new_capacity));
+    internal::set_capacity(a, u32(1) << log2_ceil(new_capacity), false);
     return a._capacity;
 }
 
@@ -68,7 +68,7 @@ template <typename T> void resize(Vector<T> &a, u32 new_size) {
 
     // Means a._capacity <= new_size.
     u32 new_capacity = u32(1) << log2_ceil(new_size);
-    internal::set_capacity(a, new_capacity);
+    internal::set_capacity(a, new_capacity, true);
     internal::fill_with_default(&a._data[a._size], new_size - a._size);
     a._size = new_size;
 }
@@ -96,7 +96,14 @@ template <typename T> T &push_back(Vector<T> &a, const T &element) {
     if (a._size == a._capacity) {
         internal::grow(a);
     }
-    a._data[a._size++] = element;
+
+    if
+        SCAFFOLD_IF_CONSTEXPR(std::is_trivially_copy_constructible<T>::value) {
+            a._data[a._size++] = element;
+        }
+    else {
+        new (a._data + (a._size++)) T(element);
+    }
     return a._data[a._size - 1];
 }
 
@@ -104,7 +111,15 @@ template <typename T> T &push_back(Vector<T> &a, T &&element) {
     if (a._size == a._capacity) {
         internal::grow(a);
     }
-    a._data[a._size++] = std::forward<T>(element);
+
+    if
+        SCAFFOLD_IF_CONSTEXPR(std::is_trivially_move_constructible<T>::value) {
+            a._data[a._size++] = element;
+        }
+    else {
+        new (a._data + (a._size++)) T(std::forward<T>(element));
+    }
+
     return a._data[a._size - 1];
 }
 
@@ -162,14 +177,15 @@ Vector<T>::Vector(u32 initial_count, const T &fill_element, fo::Allocator &a)
 }
 
 template <typename T>
-Vector<T>::Vector(std::initializer_list<T> items)
+Vector<T>::Vector(std::initializer_list<T> init_list)
     : _data(nullptr)
     , _size(0)
     , _capacity(0)
     , _allocator(&fo::memory_globals::default_allocator()) {
-    reserve(*this, items.size());
-    for (auto &item : items) {
-        push_back(*this, std::move(item));
+    reserve(*this, init_list.size());
+    // log_info("Reserved - %u elements", capacity(*this));
+    for (auto &element : init_list) {
+        push_back(*this, std::move(element));
     }
 }
 
@@ -196,6 +212,7 @@ Vector<T>::Vector(Vector<T> &&o)
 
 template <typename T> Vector<T>::~Vector() {
     if (_data) {
+        internal::destroy_elements(_data, _size);
         _allocator->deallocate(_data);
         _data = nullptr;
         _size = _capacity = 0;
@@ -234,18 +251,28 @@ namespace internal {
 
 template <typename T> void grow(Vector<T> &a) {
     u32 new_capacity = a._capacity == 0 ? 1 : a._capacity * 2;
-    set_capacity(a, new_capacity);
+    set_capacity(a, new_capacity, false);
 }
 
-template <typename T> void set_capacity(Vector<T> &a, u32 new_capacity) {
+template <typename T> void set_capacity(Vector<T> &a, u32 new_capacity, bool is_resize) {
     if (new_capacity == a._capacity) {
         return;
     }
 
     T *new_allocation = reinterpret_cast<T *>(
         a._allocator->allocate(new_capacity * sizeof(T), std::max(alignof(T), size_t(16))));
+
     log_assert(new_allocation != nullptr, "Failed to allocate capacity: %u", new_capacity);
+
     move(a._data, new_allocation, a._size);
+
+    // If storing non-pod-ish elements and resizing, store default constructed elements.
+    if (is_resize && !std::is_trivially_constructible<T>::value) {
+        for (u32 i = a._size; i < new_capacity; ++i) {
+            new (a._data + i) T{};
+        }
+    }
+
     a._allocator->deallocate(a._data);
     a._data = new_allocation;
     a._capacity = new_capacity;

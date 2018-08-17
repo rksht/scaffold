@@ -1,6 +1,6 @@
 #pragma once
 
-#include <scaffold/memory_types.h>
+#include <scaffold/memory.h>
 #include <scaffold/types.h>
 
 #include <initializer_list>
@@ -23,8 +23,8 @@ template <typename T> struct Array {
 
     static_assert(std::is_trivially_destructible<T>::value, "");
 
-    Array(Allocator &a, uint32_t initial_size = 0);
-    Array(Allocator &a, std::initializer_list<T> init_list);
+    Array(Allocator &a = fo::memory_globals::default_allocator(), uint32_t initial_size = 0);
+    Array(std::initializer_list<T> init_list, Allocator &a = fo::memory_globals::default_allocator());
     ~Array();
     Array(const Array &other);
     Array &operator=(const Array &other);

@@ -187,7 +187,7 @@ inline Array<T>::Array(Allocator &allocator, uint32_t initial_size)
 }
 
 template <typename T>
-Array<T>::Array(Allocator &allocator, std::initializer_list<T> init_list)
+Array<T>::Array(std::initializer_list<T> init_list, Allocator &allocator)
     : _allocator(&allocator)
     , _size(0)
     , _capacity(0)

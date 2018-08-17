@@ -89,7 +89,10 @@ struct PodHash {
 
 // A 'make_' function for convenience. Takes just one allocator used to allocate both the buckets and entries.
 // You can call like this - fo::make_pod_hash<u32, const char *>(alloc) - for example.
-template <TypeList>
+template <typename K,
+          typename V,
+          typename HashFnType = IdentityHashTag<K>,
+          typename EqualFnType = IdentityEqualTag<K>>
 PodHashSig make_pod_hash(fo::Allocator &alloc,
                          HashFnType hash_func = IdentityHashTag<K>(),
                          EqualFnType equal_func = IdentityEqualTag<K>()) {
@@ -190,7 +193,7 @@ template <TypeList> REALLY_INLINE auto key_equal(const PodHashSig &h, const K &k
 };
 
 template <TypeList> FindResult find(const PodHashSig &h, const K &key) {
-    FindResult fr = {END_OF_LIST, END_OF_LIST, END_OF_LIST};
+    FindResult fr = { END_OF_LIST, END_OF_LIST, END_OF_LIST };
 
     if (fo::size(h._hashes) == 0) {
         return fr;
