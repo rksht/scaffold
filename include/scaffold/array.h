@@ -1,6 +1,7 @@
 #pragma once
 
 #include <scaffold/collection_types.h>
+#include <scaffold/const_log.h>
 #include <scaffold/memory.h>
 
 #include <limits>
@@ -103,7 +104,7 @@ template <typename T> void resize(Array<T> &a, uint32_t new_size) {
         if (std::is_trivial<T>::value) {
             memset(&a._data[a._size], 0, (new_size - a._size) * sizeof(T));
         } else {
-            std::fill(&a._data[a._size], a._data + new_size, T{});
+            std::fill(&a._data[a._size], a._data + new_size, T {});
         }
 #endif
     }
@@ -134,8 +135,10 @@ template <typename T> void set_capacity(Array<T> &a, uint32_t new_capacity) {
 
 template <typename T> void grow(Array<T> &a, uint32_t min_capacity) {
     uint32_t new_capacity = a._capacity ? a._capacity * 2 : 2;
-    if (new_capacity < min_capacity)
+    if (new_capacity < min_capacity) {
         new_capacity = min_capacity;
+        new_capacity = clip_to_power_of_2(new_capacity);
+    }
     set_capacity(a, new_capacity);
 }
 
