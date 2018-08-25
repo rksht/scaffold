@@ -76,7 +76,7 @@ template <typename Word = unsigned long, typename GetTy = Word> struct DyPackedU
     static constexpr size_t space_required(unsigned bits_per_int, unsigned num_ints) {
         const auto ints_per_word = _num_bits / bits_per_int;
         const auto num_words = ceil_div(num_ints, ints_per_word);
-        return clip_to_power_of_2(num_words * sizeof(Word));
+        return clip_to_pow2(num_words * sizeof(Word));
     }
 
     /// Ctor. Creates an array that holds `num_int` packed unsigned integers

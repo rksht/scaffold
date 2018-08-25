@@ -80,7 +80,7 @@ BuddyAllocator::BuddyAllocator(uint64_t size,
                                Allocator &main_allocator,
                                Allocator &extra_allocator,
                                const char *allocator_name)
-    : _buffer_size{clip_to_power_of_2(size)}
+    : _buffer_size{clip_to_pow2(size)}
     , _leaf_buddy_size{min_buddy_size}
     , _num_levels{log2_ceil(_buffer_size / _leaf_buddy_size) + 1}
     , _leaf_buddy_size_power{uint64_t(log2_ceil(_leaf_buddy_size))}
@@ -96,7 +96,7 @@ BuddyAllocator::BuddyAllocator(uint64_t size,
 
     set_name(allocator_name, strlen(allocator_name));
 
-    // log_assert(clip_to_power_of_2(size) == size, "size given %lu is not a power of 2", size);
+    // log_assert(clip_to_pow2(size) == size, "size given %lu is not a power of 2", size);
 
     // Allocate the buffer
     _mem = (char *)_main_allocator->allocate(size, alignof(BuddyHead));
@@ -114,7 +114,7 @@ BuddyAllocator::BuddyAllocator(uint64_t size,
 
     // Now, there's could be a portion to the left of the buffer which we must make unavailable by marking it
     // as allocated. This is the size of that portion. The rest of this code deals with that.
-    _unavailable = clip_to_power_of_2(_buffer_size - size);
+    _unavailable = clip_to_pow2(_buffer_size - size);
     _mem = _mem - _unavailable;
 
     // If size was a power of of two, all buddies are free, otherwise, we have to artifically mark the dummy
@@ -196,7 +196,7 @@ void *BuddyAllocator::allocate(uint64_t size, uint64_t align) {
     TIMED_BLOCK;
 
     (void)align; // unused
-    size = clip_to_power_of_2(size);
+    size = clip_to_pow2(size);
 
     log_assert(size >= _leaf_buddy_size,
                "Cannot allocate a buddy size smaller than the minimum size of %lu",

@@ -22,6 +22,9 @@ namespace fo {
 Allocator::Allocator() { strcpy(_name, "<Unnamed>"); };
 
 void Allocator::set_name(const char *name, uint64_t len) {
+    if (len == 0) {
+        len = (uint64_t)strlen(name);
+    }
     assert(len < ALLOCATOR_NAME_SIZE && "Allocator name too large");
     memcpy(_name, name, len);
 }
@@ -93,7 +96,7 @@ class MallocAllocator : public Allocator {
   public:
     MallocAllocator()
         : _total_allocated(0)
-        , _mutex {} {
+        , _mutex{} {
 #if MALLOC_ALLOCATOR_DONT_TRACK_SIZE
         _total_allocated = SIZE_NOT_TRACKED;
 #endif
@@ -242,7 +245,7 @@ class ScratchAllocator : public Allocator {
     /// size specifies the capacity of the ring buffer.
     ScratchAllocator(Allocator &backing, uint64_t size)
         : _backing(backing)
-        , _mutex {} {
+        , _mutex{} {
         // Increase size to multiple of 4 if it isn't already.
         size = ((size + 3) / 4) * 4;
         _begin = (u8 *)_backing.allocate(size, 16);
@@ -383,9 +386,9 @@ static const char default_scratch_allocator_name[] = "default_scratch_alloc";
 
 /// ... And add the initialization code here ...
 void init(uint64_t scratch_buffer_size) {
-    _memory_globals.default_allocator = new (_memory_globals._default_allocator) MallocAllocator {};
+    _memory_globals.default_allocator = new (_memory_globals._default_allocator) MallocAllocator{};
     _memory_globals.default_scratch_allocator = new (_memory_globals._default_scratch_allocator)
-        ScratchAllocator { *(MallocAllocator *)_memory_globals.default_allocator, scratch_buffer_size };
+        ScratchAllocator{ *(MallocAllocator *)_memory_globals.default_allocator, scratch_buffer_size };
 
     default_allocator().set_name(default_allocator_name, sizeof(default_allocator_name));
     default_scratch_allocator().set_name(default_scratch_allocator_name,
@@ -402,7 +405,7 @@ void shutdown() {
     // MallocAllocator must be last as its used as the backing allocator for
     // others
     _memory_globals.default_allocator->~MallocAllocator();
-    _memory_globals = MemoryGlobals {};
+    _memory_globals = MemoryGlobals{};
 }
 } // namespace memory_globals
 } // namespace fo

@@ -137,7 +137,7 @@ template <typename T> void grow(Array<T> &a, uint32_t min_capacity) {
     uint32_t new_capacity = a._capacity ? a._capacity * 2 : 2;
     if (new_capacity < min_capacity) {
         new_capacity = min_capacity;
-        new_capacity = clip_to_power_of_2(new_capacity);
+        new_capacity = clip_to_pow2(new_capacity);
     }
     set_capacity(a, new_capacity);
 }

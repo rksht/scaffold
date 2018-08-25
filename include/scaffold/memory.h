@@ -60,7 +60,7 @@ class SCAFFOLD_API Allocator {
     /// be empty. `len` is the length of the string _including_ the '\0' character. Most allocators names
     /// should be known at compile time, so you can just use sizeof(literal) to obtain the size including the
     /// '\0'.
-    void set_name(const char *name, uint64_t len);
+    void set_name(const char *name, uint64_t len = 0);
 
     /// Allocators cannot be copied.
     Allocator(const Allocator &other) = delete;

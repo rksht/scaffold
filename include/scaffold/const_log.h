@@ -16,7 +16,7 @@ namespace {
 
 /// Clips the given integer x to the closest power of 2 greater than or equal
 /// to x.
-template <typename T> inline constexpr T clip_to_power_of_2(T x) {
+template <typename T> inline constexpr T clip_to_pow2(T x) {
     static_assert(std::is_integral<T>::value, "Must be integral");
     x = x - 1;
     x = x | (x >> 1);

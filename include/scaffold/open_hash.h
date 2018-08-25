@@ -283,7 +283,7 @@ OpenHash<K, V, Params>::OpenHash(Allocator &allocator, uint32_t initial_size,
     , _equal_fn(equal_fn) {
     _allocator = &allocator;
 
-    _num_slots = clip_to_power_of_2(initial_size);
+    _num_slots = clip_to_pow2(initial_size);
     open_hash::internal::allocate_buffer(this, _num_slots);
 
     K *keys = (K *)(_buffer + _keys_offset);
