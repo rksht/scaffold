@@ -1,66 +1,47 @@
-#if 0
-
-#include "arena.h"
-#include "array.h"
-#include "hash.h"
-#include "memory.h"
-#include "murmur_hash.h"
-
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <utility>
+#include <scaffold/arena_allocator.h>
+#include <scaffold/array.h>
 
 using namespace fo;
-using namespace memory_globals;
 
-struct Student {
-    long id;
-    long mana;
-    char c;
+template <size_t size> struct Block { u32 a[size]; };
 
-    Student(long id, long mana, char c) : id(id), mana(mana), c(c) {}
-};
+void do_thing() {
+    ArenaAllocator aa(fo::memory_globals::default_allocator(), 4096);
+    fo::Array<Block<512>> blocks(aa);
+
+    const u32 num_iters = 1000;
+
+    fo::reserve(blocks, num_iters);
+
+    for (u32 i = 0; i < num_iters; ++i) {
+        fo::push_back(blocks, Block<512>());
+        log_info("Pushed block - %u", i);
+    }
+
+    log_info("Total allocated after %lf KB iterations, or request for %u bytes = %lu",
+             num_iters * 512 / 1024.0,
+             num_iters * 512,
+             aa.total_allocated());
+
+    fo::Array<ArenaInfo> arena_chain;
+    aa.get_chain_info(arena_chain);
+
+    for (u32 i = 0; i < size(arena_chain); ++i) {
+        auto &info = arena_chain[i];
+        printf("%*cArena %u, size = %.3f, allocated = %.3f\n",
+               i * 2,
+               ' ',
+               i,
+               info.buffer_size / 1024.0,
+               info.total_allocated / 1024.0);
+    }
+}
 
 int main() {
-    init();
-    {
-        const int nr_objects = (2 * 1024 * 1024) / sizeof(Student);
-        printf("Size = %f kbytes\n",
-               (float)nr_objects * sizeof(Student) / 1024);
-        Array<Student *> students(default_allocator());
-        Student *student_p;
-        for (int i = 0; i < nr_objects; ++i) {
-            student_p =
-                MAKE_NEW(default_arena_allocator(), Student, i, i, 65 + (i % 26));
-            push_back(students, student_p);
-        }
-        for (Student *p : students) {
-            printf("id = %li\n", p->id);
-        }
-        printf("Total allocated: %u bytes\n",
-               default_arena_allocator().total_allocated());
-        int j = 0;
-        for (Student **i = begin(students); i != end(students);
-             ++i) {
-            if ((*i)->id != (*i)->mana && (*i)->c == j % 128) {
-                printf("%li %li %c at %d, size = %u\n", (*i)->id, (*i)->mana,
-                       (*i)->c, j,
-                       default_arena_allocator().allocated_size(*i));
-                fflush(stdout);
-                assert(0);
-            } else {
-                uint32_t size = default_arena_allocator().allocated_size(*i);
-                assert(size == sizeof(Student));
-                printf("%li %li %c at %d, size = %u\n", (*i)->id, (*i)->mana,
-                       (*i)->c, j, size);
-            }
-            ++j;
-        }
-    }
-    shutdown();
-    return 0;
-}
-#endif
 
-int main() {}
+    memory_globals::init();
+
+    { do_thing(); }
+
+    memory_globals::shutdown();
+}

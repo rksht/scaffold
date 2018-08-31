@@ -7,8 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <loguru.hpp>
-
 static constexpr uint64_t END_NUMBER = 0xffffffffu;
 
 // Node number to corresponding node's memory
@@ -81,7 +79,8 @@ void *PoolAllocator::allocate(uint64_t size, uint64_t align) {
     assert(size <= _node_size);
 
     if (_first_free == END_NUMBER) {
-        LOG_F(WARNING, "Pool Allocator '%s' is allocating a new pool", name());
+        // LOG_F(WARNING, "Pool Allocator '%s' is allocating a new pool", name());
+        log_warn("Pool Allocator '%s' is allocating a new pool", name());
 
         PoolAllocator *next_alloc = (PoolAllocator *)_mem;
         if (next_alloc->_num_nodes == 0) {

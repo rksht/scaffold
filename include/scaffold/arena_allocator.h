@@ -1,45 +1,69 @@
 #pragma once
 
+#include <limits>
+#include <scaffold/array.h>
 #include <scaffold/memory.h>
+#include <scaffold/debug.h>
 
 namespace fo {
 
-/// An ArenaAllocator allocates a buffer and bumps a pointer on each allocation.
-/// It does not support deallocating allocations individually. Instead it will
-/// deallocate all the memory it owns when it's destroyed.
+struct ArenaInfo {
+    AddrUint buffer_size;
+    AddrUint total_allocated;
+};
+
+// Implementation of an ArenaAllocator that only allocates from a buffer, and does not deallocate. Allocations
+// must be aligned to at least 16 bytes.
+/// An ArenaAllocator allocates a buffer and bumps a pointer on each allocation. It does not support
+/// deallocating allocations individually. Instead it will deallocate all the memory it owns when it's
+/// destroyed.
 class SCAFFOLD_API ArenaAllocator : public Allocator {
   private:
-    struct _Header {
-        uint64_t size;
-    };
+    Allocator *_backing = nullptr;
+    u8 *_mem = nullptr;
+
+    // In case the current buffer is exhausted, we can allow the allocator to
+    ArenaAllocator *_child = nullptr;
+
+    AddrUint _buffer_size = 0;
+    AddrUint _top = 0;
+    bool _full = false;
 
   private:
-    static constexpr uint64_t HEADER_PAD_VALUE = ~uint64_t(0);
+    // Constructs an unitialized allocator stored at the head of the buffer.
+    ArenaAllocator() = default;
 
-  private:
-    Allocator *_backing;
-    void *_mem;
-    _Header *_top_header;
-    _Header *_next_header;
-    uint64_t _total_allocated;
-    uint64_t _wasted;
+    void *allocate_from_child(AddrUint size, AddrUint align, u32 info);
 
-  private:
-    // Returns a size that is a multiple of alignof(_Header)
-    uint64_t _aligned_size_with_padding(uint64_t size);
+    u8 *end() const { return _mem + _buffer_size; }
+
+    void set_full() {
+        if (!_full) {
+            log_info("ArenaAllocator - %s full. Allocating child", name());
+        }
+        _full = true;
+    }
+
+    bool is_initialized() const { return _mem != nullptr; }
 
   public:
-    ArenaAllocator(Allocator &backing, uint64_t size);
+    ArenaAllocator(Allocator &backing, AddrUint buffer_size);
 
     ~ArenaAllocator();
 
-    void *allocate(uint64_t size, uint64_t align) override;
+    void *allocate(AddrUint size, AddrUint align = DEFAULT_ALIGN) override {
+        return this->allocate_with_info(size, align, 0);
+    }
 
-    /// Do not use it explicitly
+    void *allocate_with_info(AddrUint size, AddrUint align = DEFAULT_ALIGN, u32 info = 0) override;
+
     void deallocate(void *p) override;
 
     uint64_t allocated_size(void *p) override;
 
-    uint64_t total_allocated() override { return _total_allocated; }
+    uint64_t total_allocated() override;
+
+    void get_chain_info(fo::Array<ArenaInfo> &a);
 };
+
 } // namespace fo

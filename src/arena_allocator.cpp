@@ -1,89 +1,202 @@
 #include <scaffold/arena_allocator.h>
-#include <scaffold/debug.h>
-#include <string.h>
-
-#include <assert.h>
+#include <scaffold/const_log.h>
 
 namespace fo {
-uint64_t ArenaAllocator::_aligned_size_with_padding(uint64_t size) {
-    uint64_t total = size + sizeof(_Header);
-    int mod = total % alignof(_Header);
-    if (mod) {
-        total += alignof(_Header) - mod;
+
+namespace arena_internal {
+
+// This header is only used for supporting `allocated_size` method and debugging purposes. Contains the size
+// of the allocated region and a
+struct AllocationHeader {
+    AddrUint user_info;
+    AddrUint size;
+
+    static constexpr AddrUint PADDING = std::numeric_limits<AddrUint>::max();
+};
+
+static_assert(sizeof(AllocationHeader) == 2 * sizeof(AddrUint), "");
+
+}; // namespace arena_internal
+
+using namespace arena_internal;
+
+static inline AddrUint size_with_padding(AddrUint size, AddrUint align) {
+    return sizeof(AllocationHeader) + align + size;
+}
+
+static inline void *data_pointer(AllocationHeader *header, AddrUint align) {
+    AddrUint *p = reinterpret_cast<AddrUint *>(header + 1);
+    return memory::align_forward(p, align);
+}
+
+static inline void fill_with_padding(void *data, AllocationHeader *header) {
+    AddrUint *p = reinterpret_cast<AddrUint *>(header + 1);
+
+    while (p < data) {
+        *p = AllocationHeader::PADDING;
+        ++p;
     }
-    return total;
 }
 
-ArenaAllocator::ArenaAllocator(Allocator &backing, uint64_t size)
-    : _backing{&backing} {
-    uint64_t adjusted_size = _aligned_size_with_padding(size);
-    _mem = _backing->allocate(adjusted_size, alignof(_Header));
-    memset(_mem, 0, adjusted_size);
-    _top_header = (_Header *)_mem;
-    _top_header->size = 0;
-    _next_header = _top_header;
-    _total_allocated = 0;
+ArenaAllocator::ArenaAllocator(Allocator &backing, AddrUint buffer_size)
+    : _backing(&backing) {
+
+    _buffer_size = buffer_size;
+
+    // Size required to store a pointer header
+    const AddrUint next_allocator_chunk_size =
+        size_with_padding(sizeof(ArenaAllocator), alignof(ArenaAllocator));
+
+    if (_buffer_size < next_allocator_chunk_size) {
+        _buffer_size = next_allocator_chunk_size;
+
+        log_warn(
+            "Size of buffer managed by ArenaAllocator should be >= sizeof(ArenaAllocator) which is %zu bytes",
+            sizeof(ArenaAllocator));
+    }
+
+    _mem = (u8 *)_backing->allocate_with_info(_buffer_size, alignof(AllocationHeader));
+
+    AllocationHeader *h = reinterpret_cast<AllocationHeader *>(_mem);
+
+    // Set the header
+    {
+        AllocationHeader next_allocator_header;
+        next_allocator_header.size = sizeof(ArenaAllocator);
+        next_allocator_header.user_info = 0;
+        *h = next_allocator_header;
+    }
+
+    // Advance to the data pointer
+    {
+        void *data = data_pointer(h, alignof(ArenaAllocator));
+        fill_with_padding(data, h);
+
+        // Create the uninitialized child ArenaAllocator at the head.
+        new (data) ArenaAllocator();
+        _child = reinterpret_cast<ArenaAllocator *>(data);
+
+        _top = ((u8 *)data + sizeof(ArenaAllocator)) - _mem;
+    }
 }
 
-void *ArenaAllocator::allocate(uint64_t size, uint64_t align) {
-    char *after_header, *aligned_start;
-    uint64_t pad_size;
+void *ArenaAllocator::allocate_with_info(AddrUint size, AddrUint align, u32 info) {
+    if (size == 0) {
+        return nullptr;
+    }
 
-    if (size % alignof(_Header) != 0) {
-        log_err("ArenaAllocator - size not multiple of header\n");
-        int mod = size % alignof(_Header);
-        if (mod) {
-            size += alignof(_Header) - mod;
+    u8 *top_mem = _mem + _top;
+
+    top_mem = (u8 *)memory::align_forward(top_mem, alignof(AllocationHeader));
+
+    AddrUint total_chunk_size = size_with_padding(size, align);
+
+    if (top_mem + total_chunk_size > end()) {
+        set_full();
+        return allocate_from_child(size, align, info);
+    }
+
+    AllocationHeader *h = reinterpret_cast<AllocationHeader *>(top_mem);
+
+    {
+        AllocationHeader header;
+        header.size = size;
+        header.user_info = info;
+        *h = header;
+    }
+
+    {
+        void *data = data_pointer(h, align);
+        fill_with_padding(data, h);
+
+        _top = ((u8 *)data + size) - _mem;
+
+        return data;
+    }
+}
+
+void ArenaAllocator::deallocate(void *) {}
+
+uint64_t ArenaAllocator::total_allocated() { return _buffer_size + _child ? _child->total_allocated() : 0; }
+
+uint64_t ArenaAllocator::allocated_size(void *p) {
+    u8 *p8 = (u8 *)p;
+
+    if (p8 < _mem || p8 >= end()) {
+        if (_child->is_initialized()) {
+            return _child->allocated_size(p);
+        } else {
+            log_assert(false, "Pointer %p not in range of ArenaAllocator", p);
         }
     }
 
-    assert(align % alignof(_Header) == 0);
-
-    after_header = (char *)(_next_header + 1);
-    aligned_start = (char *)memory::align_forward(after_header, align);
-
-    // Would go past last byte?
-    if (aligned_start + size > (char *)_mem + _backing->allocated_size(_mem)) {
-        log_err("ArenaAllocator(%s) exhausted, using fallback allocator", name());
-    }
-
-    pad_size = (uint64_t)(aligned_start - after_header);
-
-    // wasted
-    _wasted += sizeof(_Header) + pad_size;
-
-    for (uint64_t *p = (uint64_t *)after_header; p != (uint64_t *)aligned_start; ++p) {
-        p[0] = HEADER_PAD_VALUE;
-    }
-
-    _next_header->size = size;
-    _total_allocated += _next_header->size + pad_size;
-    _top_header = _next_header;
-    _next_header = (_Header *)((char *)_top_header + sizeof(_Header) + pad_size + _top_header->size);
-
-    return (void *)aligned_start;
-}
-
-/// Do not use it explicitly
-void ArenaAllocator::deallocate(void *p) {
-    (void)p;
-    assert(false && "You must not call this");
-}
-
-uint64_t ArenaAllocator::allocated_size(void *p) {
-    uint64_t *pad = (uint64_t *)p;
-    while (pad[-1] == HEADER_PAD_VALUE) {
+    AddrUint *pad = reinterpret_cast<AddrUint *>(p8);
+    pad -= 1;
+    while (*pad == AllocationHeader::PADDING) {
         --pad;
     }
-    --pad;
-    return ((_Header *)pad)->size;
+
+    AllocationHeader *h = reinterpret_cast<AllocationHeader *>(pad - 1);
+    return h->size;
 }
 
-/// Destructor
-ArenaAllocator::~ArenaAllocator() {
-    if (_mem)
-        _backing->deallocate(_mem);
-    _mem = 0;
-    _top_header = (_Header *)0;
+void *ArenaAllocator::allocate_from_child(AddrUint size, AddrUint align, u32 info) {
+    // Create a child allocator if there isn't one.
+
+    if (!_child->is_initialized()) {
+        AddrUint child_buffer_size_needed =
+            sizeof(AllocationHeader) + alignof(ArenaAllocator) + sizeof(ArenaAllocator) + align + size;
+
+        // If the size of allocation is more than 4 times the initial buffer size, fail.
+        AddrUint multiple = ceil_div(child_buffer_size_needed, _buffer_size);
+
+        if (multiple > 4) {
+            log_warn("Arena Allocator %s of buffer size = %lu bytes requested allocation of size %lu bytes",
+                     name(),
+                     (u64)_buffer_size,
+                     (u64)size);
+        }
+
+        child_buffer_size_needed = clip_to_pow2(child_buffer_size_needed);
+
+        log_info("ArenaAllocator of size %.2f KB  allocating a child buffer of size %.2f KB",
+                 _buffer_size / 1024.0,
+                 child_buffer_size_needed / 1024.0);
+
+        // Delete the empty child allocator and create a new ArenaAllocator. This deletion could be skipped,
+        // but it's undefined behavior to overwrite an object
+        _child->~ArenaAllocator();
+        new (_child) ArenaAllocator(*_backing, child_buffer_size_needed);
+    }
+
+    return _child->allocate_with_info(size, align, info);
 }
+
+ArenaAllocator::~ArenaAllocator() {
+    if (_child) {
+        _child->~ArenaAllocator();
+        _child = nullptr;
+    }
+
+    if (_mem) {
+        _backing->deallocate(_mem);
+        _buffer_size = 0;
+        _top = 0;
+        _mem = nullptr;
+        _full = false;
+    }
+}
+
+void ArenaAllocator::get_chain_info(fo::Array<ArenaInfo> &a) {
+    ArenaInfo info;
+    info.buffer_size = _buffer_size;
+    info.total_allocated = _top;
+
+    push_back(a, info);
+
+    if (_child) {
+        _child->get_chain_info(a);
+    }
+}
+
 } // namespace fo

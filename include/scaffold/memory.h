@@ -29,11 +29,18 @@ class SCAFFOLD_API Allocator {
 
     /// Allocates the specified amount of memory aligned to the specified
     /// alignment.
-    virtual void *allocate(uint64_t size, uint64_t align = DEFAULT_ALIGN) = 0;
+    virtual void *allocate(AddrUint size, AddrUint align = DEFAULT_ALIGN) = 0;
 
     /// Frees an allocation previously made with allocate(). If `p` is nullptr, then simply returns doing
     /// nothing.
     virtual void deallocate(void *p) = 0;
+
+    /// Allocates with a 32 bit integer given as token. What it does, depends on the specific allocator
+    /// implementation. Default implementation simply ignores it.
+    virtual void *allocate_with_info(AddrUint size, AddrUint align = DEFAULT_ALIGN, u32 info = 0) {
+        static_cast<void>(info);
+        return this->allocate(size, align);
+    }
 
     static constexpr uint64_t SIZE_NOT_TRACKED = ~uint64_t(0);
 

@@ -14,8 +14,8 @@
 
 namespace {
 
-/// Clips the given integer x to the closest power of 2 greater than or equal
-/// to x.
+/// Clips the given integer x to the closest power of 2 greater than or equal to x. Returns 0 if x is 0. x
+/// must be < 2^(N - 1) where N is the number of bits of the unsigned integer representation.
 template <typename T> inline constexpr T clip_to_pow2(T x) {
     static_assert(std::is_integral<T>::value, "Must be integral");
     x = x - 1;
