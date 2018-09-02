@@ -120,6 +120,8 @@ void ArenaAllocator::deallocate(void *) {}
 uint64_t ArenaAllocator::total_allocated() { return _buffer_size + _child ? _child->total_allocated() : 0; }
 
 uint64_t ArenaAllocator::allocated_size(void *p) {
+    std::lock_guard<std::mutex> lk(_mutex);
+
     u8 *p8 = (u8 *)p;
 
     if (p8 < _mem || p8 >= end()) {
@@ -143,6 +145,8 @@ uint64_t ArenaAllocator::allocated_size(void *p) {
 void *ArenaAllocator::allocate_from_child(AddrUint size, AddrUint align, u32 info) {
     // Create a child allocator if there isn't one.
 
+    std::lock_guard<std::mutex> lk(_mutex);
+
     if (!_child->is_initialized()) {
         AddrUint child_buffer_size_needed =
             sizeof(AllocationHeader) + alignof(ArenaAllocator) + sizeof(ArenaAllocator) + align + size;
@@ -158,6 +162,11 @@ void *ArenaAllocator::allocate_from_child(AddrUint size, AddrUint align, u32 inf
         }
 
         child_buffer_size_needed = clip_to_pow2(child_buffer_size_needed);
+
+        // Double the buffer for new allocation if that option is enabled.
+        if ((_options & 0x2) && child_buffer_size_needed < 2 * _buffer_size) {
+            child_buffer_size_needed = 2 * _buffer_size;
+        }
 
         log_info("ArenaAllocator of size %.2f KB  allocating a child buffer of size %.2f KB",
                  _buffer_size / 1024.0,
@@ -183,11 +192,13 @@ ArenaAllocator::~ArenaAllocator() {
         _buffer_size = 0;
         _top = 0;
         _mem = nullptr;
-        _full = false;
+        _options = 0;
     }
 }
 
-void ArenaAllocator::get_chain_info(fo::Array<ArenaInfo> &a) {
+void ArenaAllocator::get_chain_info(fo::Array<ArenaInfo> &a) const {
+    std::lock_guard<std::mutex> lk(_mutex);
+
     ArenaInfo info;
     info.buffer_size = _buffer_size;
     info.total_allocated = _top;

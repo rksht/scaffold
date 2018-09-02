@@ -2,8 +2,10 @@
 
 #include <limits>
 #include <scaffold/array.h>
-#include <scaffold/memory.h>
 #include <scaffold/debug.h>
+#include <scaffold/memory.h>
+
+#include <mutex>
 
 namespace fo {
 
@@ -19,6 +21,8 @@ struct ArenaInfo {
 /// destroyed.
 class SCAFFOLD_API ArenaAllocator : public Allocator {
   private:
+    mutable std::mutex _mutex;
+
     Allocator *_backing = nullptr;
     u8 *_mem = nullptr;
 
@@ -27,7 +31,7 @@ class SCAFFOLD_API ArenaAllocator : public Allocator {
 
     AddrUint _buffer_size = 0;
     AddrUint _top = 0;
-    bool _full = false;
+    u32 _options = 0;
 
   private:
     // Constructs an unitialized allocator stored at the head of the buffer.
@@ -38,10 +42,10 @@ class SCAFFOLD_API ArenaAllocator : public Allocator {
     u8 *end() const { return _mem + _buffer_size; }
 
     void set_full() {
-        if (!_full) {
+        if (!(_options & 0x1)) {
             log_info("ArenaAllocator - %s full. Allocating child", name());
         }
-        _full = true;
+        _options |= 0x1;
     }
 
     bool is_initialized() const { return _mem != nullptr; }
@@ -63,7 +67,9 @@ class SCAFFOLD_API ArenaAllocator : public Allocator {
 
     uint64_t total_allocated() override;
 
-    void get_chain_info(fo::Array<ArenaInfo> &a);
+    void get_chain_info(fo::Array<ArenaInfo> &a) const;
+
+    void set_mul_by_2() { _options |= 0x2; }
 };
 
 } // namespace fo

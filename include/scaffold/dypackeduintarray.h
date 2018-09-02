@@ -181,4 +181,7 @@ template <typename Word = unsigned long, typename GetTy = Word> struct DyPackedU
         }
     }
 };
+
+using TightUnsignedArray = DyPackedUintArray<>;
+
 } // namespace fo
