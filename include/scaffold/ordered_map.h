@@ -35,11 +35,17 @@ template <typename Key, typename Value> const Value &OrderedMap<Key, Value>::ope
     return set_default(*this, k, Value())->value;
 }
 
+#if 0
+
+// Ctor
 template <typename Key, typename Value>
 OrderedMap<Key, Value>::OrderedMap(fo::Allocator &allocator)
     : _rbt(allocator) {}
 
+// Dtor
 template <typename Key, typename Value> OrderedMap<Key, Value>::~OrderedMap() {}
+
+#endif
 
 // # Begin and end iterators
 

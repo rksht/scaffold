@@ -53,8 +53,10 @@ template <typename Key, typename Value> struct OrderedMap {
     using iterator = fo::rbt::Iterator<Key, Value, false>;
     using const_iterator = fo::rbt::Iterator<Key, Value, true>;
 
-    OrderedMap(fo::Allocator &allocator);
-    ~OrderedMap();
+    OrderedMap(fo::Allocator &allocator)
+        : _rbt(allocator) {}
+
+    ~OrderedMap() {}
 
     // Take an rbt and use as an OrderedMap
     OrderedMap(const Rbt &rbt)

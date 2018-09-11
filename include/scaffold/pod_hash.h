@@ -51,6 +51,7 @@ struct PodHash {
     fo::Array<Entry> _entries;   // Array of entries
     HashFnType _hashfn;          // The hash function to use
     EqualFnType _equalfn;        // The equal function to use
+    float _load_factor = 0.7f;
 
     /// Constructor
     PodHash(fo::Allocator &hash_alloc,
@@ -93,7 +94,7 @@ template <typename K,
           typename V,
           typename HashFnType = IdentityHashTag<K>,
           typename EqualFnType = IdentityEqualTag<K>>
-PodHashSig make_pod_hash(fo::Allocator &alloc,
+PodHashSig make_pod_hash(fo::Allocator &alloc = fo::memory_globals::default_allocator(),
                          HashFnType hash_func = IdentityHashTag<K>(),
                          EqualFnType equal_func = IdentityEqualTag<K>()) {
     return PodHashSig(alloc, alloc, std::move(hash_func), std::move(equal_func));
@@ -136,6 +137,9 @@ template <TypeList> const K &get_key(const PodHashSig &h, K const &key, K const 
 
 /// Removes the entry with the given key
 template <TypeList> void remove(PodHashSig &h, const K &key);
+
+/// Set the load factor
+template <TypeList> void set_load_factor(PodHashSig &h, float new_load_factor);
 
 } // namespace fo
 
@@ -303,19 +307,17 @@ template <TypeList> void grow(PodHashSig &h) {
     rehash(h, new_size);
 }
 
-/// Returns true if the number of entries is more than 70% of the number of
-/// hashes. Note that if the number of entries is less than that of hashes
-/// then surely the hash table is not exhausted. So this function detects that
-/// too.
+/// Returns true if the number of entries is more than 70% of the number of hashes. Note that if the number of
+/// entries is less than that of hashes then surely the hash table is not exhausted. So this function detects
+/// that too.
 template <TypeList> bool full(const PodHashSig &h) {
-    const float max_load_factor = 0.7;
+    const float max_load_factor = h._load_factor;
     return fo::size(h._entries) >= fo::size(h._hashes) * max_load_factor;
 }
 
-/// Inserts an entry by simply appending to the chain, so if no chain already
-/// exists for the given key, it's same as creating a new entry. Otherwise, it
-/// just adds a new entry to the chain, and does not overwrite any entry having
-/// the same key
+/// Inserts an entry by simply appending to the chain, so if no chain already exists for the given key, it's
+/// same as creating a new entry. Otherwise, it just adds a new entry to the chain, and does not overwrite any
+/// entry having the same key
 template <TypeList> void insert(PodHashSig &h, const K &key, const V &value) {
     if (fo::size(h._hashes) == 0) {
         grow(h);
@@ -426,6 +428,11 @@ template <TypeList> const K &get_key(const PodHashSig &h, K const &key, K const 
 
 /// Removes the entry with the given key if it exists.
 template <TypeList> void remove(PodHashSig &h, const K &key) { pod_hash_internal::find_and_erase(h, key); }
+
+template <TypeList> void remove(PodHashSig &h, float new_load_factor) {
+    log_assert(new_load_factor <= 1.0f, "Must have load factor < 1.0f for decent performance");
+    h._load_factor = new_load_factor;
+}
 
 /// Finds the maximum chain length in the hash table.
 template <TypeList> uint32_t max_chain_length(const PodHashSig &h) {
