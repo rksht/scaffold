@@ -3,21 +3,30 @@
 #include <scaffold/memory.h>
 
 namespace fo {
-/// A temporary memory allocator that primarily allocates memory from a
-/// local stack buffer of size BUFFER_SIZE. If that memory is exhausted it will
-/// use the backing allocator (typically a scratch allocator).
+/// A temporary memory allocator that primarily allocates memory from a local stack buffer of size
+/// BUFFER_SIZE. If that memory is exhausted it will use the backing allocator (typically a scratch
+/// allocator).
 ///
-/// Memory allocated with a TempAllocator does not have to be deallocated. It
-/// is automatically deallocated when the TempAllocator is destroyed.  It's
-/// easiest to this allocator as a local variable, tying its lifetime to a
-/// scope. Otherwise, if you create this allocator on the heap, or global
-/// storage make sure to  call the destructor after all objects using it are
-/// dead.
+/// Memory allocated with a TempAllocator does not have to be deallocated. It is automatically deallocated
+/// when the TempAllocator is destroyed.  It's easiest to this allocator as a local variable, tying its
+/// lifetime to a scope. Otherwise, if you create this allocator on the heap, or global storage make sure to
+/// call the destructor after all objects using it are dead.
+
+struct TempAllocatorConfig {
+    fo::Allocator *backing_allocator = &fo::memory_globals::default_allocator(); // Backing allocator
+    unsigned chunk_size = 4 * 1024; // Chunks to allocate from backing allocator
+    bool log_on_exhaustion;
+    const char *name = nullptr;
+
+    TempAllocatorConfig() = default;
+    TempAllocatorConfig(fo::Allocator &backing_allocator)
+        : backing_allocator(&backing_allocator) {}
+};
+
 template <int BUFFER_SIZE> class TempAllocator : public Allocator {
   public:
     /// Creates a new temporary allocator using the specified backing allocator.
-    TempAllocator(
-        Allocator &backing = memory_globals::default_scratch_allocator());
+    TempAllocator(const TempAllocatorConfig &config = TempAllocatorConfig());
     virtual ~TempAllocator();
 
     void *allocate(uint64_t size, uint64_t align = DEFAULT_ALIGN) override;
@@ -34,11 +43,12 @@ template <int BUFFER_SIZE> class TempAllocator : public Allocator {
 
   private:
     char _buffer[BUFFER_SIZE]; //< Local stack buffer for allocations.
-    Allocator &_backing;  //< Backing allocator if local memory is exhausted.
-    char *_start;         //< Start of current allocation region
-    char *_p;             //< Current allocation pointer.
-    char *_end;           //< End of current allocation region
-    unsigned _chunk_size; //< Chunks to allocate from backing allocator
+    Allocator &_backing;       //< Backing allocator if local memory is exhausted.
+    char *_start;              //< Start of current allocation region
+    char *_p;                  //< Current allocation pointer.
+    char *_end;                //< End of current allocation region
+    unsigned _chunk_size;      //< Chunks to allocate from backing allocator
+    int _first_time_exhausted; //< 0 => Don't log on exhausttion. 1 => Not exhausted, 2 => Just exhausted
 };
 
 // If possible, use one of these predefined sizes for the TempAllocator to avoid
@@ -56,12 +66,18 @@ typedef TempAllocator<4096> TempAllocator4096;
 // ---------------------------------------------------------------
 
 template <int BUFFER_SIZE>
-TempAllocator<BUFFER_SIZE>::TempAllocator(Allocator &backing)
-    : _backing(backing), _chunk_size(4 * 1024) {
+TempAllocator<BUFFER_SIZE>::TempAllocator(const TempAllocatorConfig &config)
+    : _backing(*config.backing_allocator)
+    , _chunk_size(config.chunk_size)
+    , _first_time_exhausted((int)config.log_on_exhaustion) {
     _p = _start = _buffer;
     _end = _start + BUFFER_SIZE;
     *(void **)_start = 0;
     _p += sizeof(void *);
+
+    if (config.name) {
+        set_name(config.name);
+    }
 }
 
 template <int BUFFER_SIZE> TempAllocator<BUFFER_SIZE>::~TempAllocator() {
@@ -76,20 +92,10 @@ template <int BUFFER_SIZE> TempAllocator<BUFFER_SIZE>::~TempAllocator() {
     }
 }
 
-template <int BUFFER_SIZE>
-void *TempAllocator<BUFFER_SIZE>::allocate(uint64_t size, uint64_t align) {
+template <int BUFFER_SIZE> void *TempAllocator<BUFFER_SIZE>::allocate(uint64_t size, uint64_t align) {
     _p = (char *)memory::align_forward(_p, align);
     if ((int)size > _end - _p) {
-        // Total space to allocate is the size given plus the "next" pointer
-        // which is stored at the head of the allocated region. Due to this we
-        // can use the region only by entering a little into it. If v is the
-        // start location as returned by the backing allocator, we want the
-        // following to hold -
-        //
-        //      v + sizeof(void *) + padding == 0 (modulo align)
-        // So the maximum padding needed will be when (v + sizeof(void *)) is
-        // 1 modulo n, in which case padding neede will be (align - 1). We
-        // always ask for align bytes more as a safe over-estimate.
+        // Sizeof next pointer + requested + aligment (safe estimate)
         uint64_t to_allocate = sizeof(void *) + size + align;
         if (to_allocate < _chunk_size)
             to_allocate = _chunk_size;
@@ -101,9 +107,15 @@ void *TempAllocator<BUFFER_SIZE>::allocate(uint64_t size, uint64_t align) {
         *(void **)_start = 0;
         _p += sizeof(void *);
         memory::align_forward(p, align);
+
+        if (_first_time_exhausted == 1) {
+            log_info("TempAllocator - '%s' allocated from backing allocator (chunk_size = %u)", name(), _chunk_size);
+            _first_time_exhausted = 2;
+        }
     }
+
     void *result = _p;
     _p += size;
     return result;
 }
-}
+} // namespace fo
