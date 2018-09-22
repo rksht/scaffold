@@ -26,6 +26,8 @@ using f64 = double;
 using uint = unsigned int;
 using ulong = unsigned long;
 
+using bool32 = i32;
+
 #if defined(_MSC_VER) && !defined(__PRETTY_FUNCTION__)
 #define __PRETTY_FUNCTION__ __FUNCSIG__
 #endif

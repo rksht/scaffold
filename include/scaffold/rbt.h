@@ -386,22 +386,22 @@ namespace rbt {
 template <typename Key, typename T> RBTree<Key, T>::RBTree(Allocator &allocator) {
     _allocator = &allocator;
     _nil = make_new<internal::ChildPointers<Key, T>>(*_allocator);
-    _nil->_childs[LEFT] = reinterpret_cast<RBNode<Key, T> *>(_nil);
-    _nil->_childs[RIGHT] = reinterpret_cast<RBNode<Key, T> *>(_nil);
-    _nil->_parent = reinterpret_cast<RBNode<Key, T> *>(_nil);
+    _nil->_childs[LEFT] = static_cast<RBNode<Key, T> *>(_nil);
+    _nil->_childs[RIGHT] = static_cast<RBNode<Key, T> *>(_nil);
+    _nil->_parent = static_cast<RBNode<Key, T> *>(_nil);
     // _nil->_parent = nullptr;
     // _nil->_childs[LEFT] = nullptr;
     // _nil->_childs[RIGHT] = nullptr;
-    _root = reinterpret_cast<RBNode<Key, T> *>(_nil);
+    _root = static_cast<RBNode<Key, T> *>(_nil);
 }
 
 template <typename Key, typename T> RBTree<Key, T>::RBTree(const RBTree &other, Allocator *allocator) {
     _allocator = allocator ? allocator : other._allocator;
     _nil = make_new<internal::ChildPointers<Key, T>>(*_allocator);
-    _nil->_childs[LEFT] = reinterpret_cast<RBNode<Key, T> *>(_nil);
-    _nil->_childs[RIGHT] = reinterpret_cast<RBNode<Key, T> *>(_nil);
-    _nil->_parent = reinterpret_cast<RBNode<Key, T> *>(_nil);
-    _root = reinterpret_cast<RBNode<Key, T> *>(_nil);
+    _nil->_childs[LEFT] = static_cast<RBNode<Key, T> *>(_nil);
+    _nil->_childs[RIGHT] = static_cast<RBNode<Key, T> *>(_nil);
+    _nil->_parent = static_cast<RBNode<Key, T> *>(_nil);
+    _root = static_cast<RBNode<Key, T> *>(_nil);
 
     rbt::internal::copy_tree(*this, other);
 }
@@ -534,9 +534,9 @@ template <typename Key, typename T> Result<Key, T, true> get(const RBTree<Key, T
 template <typename Key, typename T> Result<Key, T, false> set(RBTree<Key, T> &rbt, Key k, T v) {
     if (is_nil_node(rbt, rbt._root)) {
         rbt._root = make_new<RBNode<Key, T>>(*rbt._allocator, std::move(k), std::move(v));
-        rbt._root->_childs[0] = reinterpret_cast<RBNode<Key, T> *>(rbt._nil);
-        rbt._root->_childs[1] = reinterpret_cast<RBNode<Key, T> *>(rbt._nil);
-        rbt._root->_parent = reinterpret_cast<RBNode<Key, T> *>(rbt._nil);
+        rbt._root->_childs[0] = static_cast<RBNode<Key, T> *>(rbt._nil);
+        rbt._root->_childs[1] = static_cast<RBNode<Key, T> *>(rbt._nil);
+        rbt._root->_parent = static_cast<RBNode<Key, T> *>(rbt._nil);
         return Result<Key, T, false>{false, Iterator<Key, T, false>(rbt, rbt._root)};
     }
 

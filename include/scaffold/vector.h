@@ -316,11 +316,13 @@ template <typename T> void destroy_elements(T *elements, u32 count) {
 template <typename T> void fill_with_default(T *elements, u32 count) {
     if
         SCAFFOLD_IF_CONSTEXPR(std::is_trivially_default_constructible<T>::value) { return; }
-    T *end = elements + count;
-    while (elements != end) {
-        // Note that C++11 onwards, `new T()` is value initialization for both class and non-class types.
-        new (elements) T;
-        ++elements;
+    else {
+        T *end = elements + count;
+        while (elements != end) {
+            // Note that C++11 onwards, `new T()` is value initialization for both class and non-class types.
+            new (elements) T;
+            ++elements;
+        }
     }
 }
 

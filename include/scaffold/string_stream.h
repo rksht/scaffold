@@ -68,7 +68,7 @@ inline Buffer &operator<<(Buffer &b, char c) {
     return b;
 }
 
-inline Buffer &operator<<(Buffer &b, const char *s) { return push(b, s, strlen(s)); }
+inline Buffer &operator<<(Buffer &b, const char *s) { return push(b, s, (uint32_t)strlen(s)); }
 
 inline Buffer &operator<<(Buffer &b, float f) { return string_stream_internal::printf_small(b, "%g", f); }
 

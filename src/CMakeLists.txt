@@ -31,8 +31,11 @@ else()
   add_library(scaffold ${SOURCE_FILES})
 endif()
 
-target_compile_definitions(scaffold PRIVATE SCAFFOLD_API_EXPORT INTERFACE SCAFFOLD_API_IMPORT)
 target_include_directories(scaffold PUBLIC ${PROJECT_SOURCE_DIR}/include)
+
+if (BUILD_SHARED_LIBS)
+  target_compile_definitions(scaffold PRIVATE SCAFFOLD_API_EXPORT INTERFACE SCAFFOLD_API_IMPORT)
+endif()
 
 if (${SCAFFOLD_USE_ASAN})
   target_link_libraries(scaffold -lasan)

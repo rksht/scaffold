@@ -155,14 +155,14 @@ struct FindResult {
 };
 
 template <TypeList> struct KeyHashSlot {
-    static REALLY_INLINE uint64_t hash_slot(const PodHashSig &h, const K &k) {
+    static REALLY_INLINE uint32_t hash_slot(const PodHashSig &h, const K &k) {
         return h._hashfn(k) % fo::size(h._hashes);
     }
 };
 
 template <typename K, typename V, typename EqualFnType>
 struct KeyHashSlot<K, V, IdentityHashTag<K>, EqualFnType> {
-    static REALLY_INLINE uint64_t hash_slot(const PodHash<K, V, IdentityHashTag<K>, EqualFnType> &h,
+    static REALLY_INLINE uint32_t hash_slot(const PodHash<K, V, IdentityHashTag<K>, EqualFnType> &h,
                                             const K &k) {
         return k % fo::size(h._hashes);
     }

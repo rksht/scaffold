@@ -52,7 +52,7 @@
 #        define SCAFFOLD_API __attribute__((visibility("default")))
 #    endif
 #else
-#    error "SCAFFOLD_API_EXPORT or SCAFFOLD_API_IMPORT needs to be defined"
+#define SCAFFOLD_API
 #endif
 
 #if defined(_MSC_VER)

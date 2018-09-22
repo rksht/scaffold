@@ -51,7 +51,7 @@ inline constexpr uint64_t log2_ceil(uint64_t x) {
     uint64_t j = 32;
 
     for (uint32_t i = 0; i < 6; i++) {
-        int k = (((x & _t[i]) == 0) ? 0 : j);
+        uint64_t k = (((x & _t[i]) == 0) ? 0 : j);
         y += k;
         x >>= k;
         j >>= 1;
