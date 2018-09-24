@@ -155,10 +155,11 @@ void *ArenaAllocator::allocate_from_child(AddrUint size, AddrUint align, u32 inf
         AddrUint multiple = ceil_div(child_buffer_size_needed, _buffer_size);
 
         if (multiple > 4) {
-            log_warn("Arena Allocator %s of buffer size = %lu bytes requested allocation of size %lu bytes",
+            log_warn("Arena Allocator %s of buffer size = " ADDRUINT_FMT
+                     "bytes requested allocation of size" ADDRUINT_FMT "bytes",
                      name(),
-                     (u64)_buffer_size,
-                     (u64)size);
+                     _buffer_size,
+                     size);
         }
 
         child_buffer_size_needed = clip_to_pow2(child_buffer_size_needed);

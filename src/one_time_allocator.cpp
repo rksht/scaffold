@@ -1,4 +1,3 @@
-#include <scaffold/debug.h>
 #include <scaffold/one_time_allocator.h>
 
 #include <assert.h>
@@ -6,14 +5,14 @@
 #include <limits>
 
 #if __has_include(<sys/mman.h>)
-#define MMAP_AVAILABLE 1
-#include <sys/mman.h>
+#    define MMAP_AVAILABLE 1
+#    include <sys/mman.h>
 #else
-#define MMAP_AVAILABLE 0
+#    define MMAP_AVAILABLE 0
 #endif
 
 // Keeping the state information in the `_total_allocated` member itself, which = 0 denotes initialized, =
-// ~uint64_t(0) denotes deallocated, otherwise it means memory is currenlty allocated.
+// ~AddrUint(0) denotes deallocated, otherwise it means memory is currenlty allocated.
 
 namespace fo {
 
@@ -22,12 +21,12 @@ OneTimeAllocator::OneTimeAllocator()
     , _mem(nullptr) {}
 
 OneTimeAllocator::~OneTimeAllocator() {
-    log_assert(_total_allocated == std::numeric_limits<uint64_t>::max(),
+    log_assert(_total_allocated == std::numeric_limits<AddrUint>::max(),
                "%s - Memory is still allocated",
                __PRETTY_FUNCTION__);
 }
 
-void *OneTimeAllocator::allocate(uint64_t size, uint64_t align) {
+void *OneTimeAllocator::allocate(AddrUint size, AddrUint align) {
     assert(size != 0 && "Size must not be 0");
 
     (void)align;
@@ -42,7 +41,7 @@ void *OneTimeAllocator::allocate(uint64_t size, uint64_t align) {
 #endif
 
     log_assert(
-        _mem != nullptr, "%s - Failed to allocate size = %" PRIu64 " bytes", __PRETTY_FUNCTION__, size);
+        _mem != nullptr, "%s - Failed to allocate size = " ADDRUINT_FMT " bytes", __PRETTY_FUNCTION__, size);
     _total_allocated = size;
 
     return _mem;
@@ -50,7 +49,7 @@ void *OneTimeAllocator::allocate(uint64_t size, uint64_t align) {
 
 void OneTimeAllocator::deallocate(void *p) {
     log_assert(p == _mem, "Pointer to deallocate is not the same one that got allocated!");
-    log_assert(_total_allocated != 0 && _total_allocated != std::numeric_limits<uint64_t>::max(),
+    log_assert(_total_allocated != 0 && _total_allocated != std::numeric_limits<AddrUint>::max(),
                "Either unallocated or tried to deallocated twice");
 
 #if MMAP_AVAILABLE
@@ -62,12 +61,12 @@ void OneTimeAllocator::deallocate(void *p) {
 
 #endif
     _mem = nullptr;
-    _total_allocated = std::numeric_limits<uint64_t>::max();
+    _total_allocated = std::numeric_limits<AddrUint>::max();
 }
 
-uint64_t OneTimeAllocator::total_allocated() { return _total_allocated; }
+AddrUint OneTimeAllocator::total_allocated() { return _total_allocated; }
 
-uint64_t OneTimeAllocator::allocated_size(void *p) {
+AddrUint OneTimeAllocator::allocated_size(void *p) {
     (void)p;
     assert(_mem == p);
     return _total_allocated;

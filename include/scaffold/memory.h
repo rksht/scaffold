@@ -2,13 +2,29 @@
 
 #include <new>
 
+#include <scaffold/types.h>
+
 #include <scaffold/debug.h>
 #include <scaffold/memory_types.h>
-#include <scaffold/types.h>
 
 namespace fo {
 
+// Represents the type (u32 or u64) that can hold the largest memory size on the platform.
 using AddrUint = typename std::conditional<sizeof(void *) == 8, uint64_t, uint32_t>::type;
+
+#if !defined(PRIu64) || !defined(PRIu32)
+
+#    error "..."
+
+#endif
+
+// For dealing with printf formats.
+#if defined(SCAFFOLD_32_BIT)
+#    define ADDRUINT_FMT "%" PRIu32
+
+#else
+#    define ADDRUINT_FMT "%" PRIu64
+#endif
 
 /// Base class for memory allocators.
 ///

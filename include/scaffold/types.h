@@ -8,7 +8,10 @@
 #endif
 */
 
+#define __STDC_FORMAT_MACROS
+
 #include <stdint.h>
+#include <inttypes.h>
 
 using u64 = uint64_t;
 using u32 = uint32_t;
@@ -33,3 +36,26 @@ using zu = size_t;
 #if defined(_MSC_VER) && !defined(__PRETTY_FUNCTION__)
 #define __PRETTY_FUNCTION__ __FUNCSIG__
 #endif
+
+// Check windows
+#if _WIN32 || _WIN64
+#if _WIN64
+#define SCAFFOLD_64_BIT 1
+#else
+#define SCAFFOLD_32_BIT 1
+#endif
+#endif
+
+// Check GCC
+#if defined(__GNUC__) || defined(__clang__)
+#if __x86_64__ || __ppc64__
+#define SCAFFOLD_64_BIT 1
+#else
+#define SCAFFOLD_32_BIT 1
+#endif
+#endif
+
+// Prefer using exact formats in printf/etc. But sometimes would like to just cast to lu or u to compile the
+// thing first.
+#define CAST_TO_LU(n) (long unsigned int)(n)
+#define CAST_TO_U(n) (unsigned int)(n)

@@ -64,7 +64,7 @@ struct BuddyHead {
 
 using buddy_allocator_internal::BuddyHead;
 
-static inline bool alignment_ok(uint64_t requested_align) {
+static inline bool alignment_ok(AddrUint requested_align) {
     if (requested_align < alignof(BuddyHead)) {
         return alignof(BuddyHead) % requested_align == 0;
     } else {
@@ -72,26 +72,26 @@ static inline bool alignment_ok(uint64_t requested_align) {
     }
 }
 
-inline uint64_t BuddyAllocator::_buddy_size_at_level(uint64_t level) const { return _buffer_size >> level; }
+inline AddrUint BuddyAllocator::_buddy_size_at_level(AddrUint level) const { return _buffer_size >> level; }
 
-BuddyAllocator::BuddyAllocator(uint64_t size,
-                               uint64_t min_buddy_size,
+BuddyAllocator::BuddyAllocator(AddrUint size,
+                               AddrUint min_buddy_size,
                                bool abort_on_allocation_failure,
                                Allocator &main_allocator,
                                Allocator &extra_allocator,
                                const char *allocator_name)
-    : _buffer_size{clip_to_pow2(size)}
-    , _leaf_buddy_size{min_buddy_size}
-    , _num_levels{log2_ceil(_buffer_size / _leaf_buddy_size) + 1}
-    , _leaf_buddy_size_power{uint64_t(log2_ceil(_leaf_buddy_size))}
-    , _num_indices{uint64_t(1) << _last_level()}
-    , _free_lists{nullptr}
-    , _leaf_allocated{1, unsigned(_num_indices), extra_allocator}
-    , _level_of_leaf{unsigned(log2_ceil(_num_levels)), unsigned(_num_indices), extra_allocator}
-    , _mem{nullptr}
-    , _main_allocator{&main_allocator}
-    , _extra_allocator{&extra_allocator}
-    , _total_allocated{0}
+    : _buffer_size{ clip_to_pow2(size) }
+    , _leaf_buddy_size{ min_buddy_size }
+    , _num_levels{ log2_ceil(_buffer_size / _leaf_buddy_size) + 1 }
+    , _leaf_buddy_size_power{ AddrUint(log2_ceil(_leaf_buddy_size)) }
+    , _num_indices{ AddrUint(1) << _last_level() }
+    , _free_lists{ nullptr }
+    , _leaf_allocated{ 1, unsigned(_num_indices), extra_allocator }
+    , _level_of_leaf{ unsigned(log2_ceil(_num_levels)), unsigned(_num_indices), extra_allocator }
+    , _mem{ nullptr }
+    , _main_allocator{ &main_allocator }
+    , _extra_allocator{ &extra_allocator }
+    , _total_allocated{ 0 }
     , _abort_on_allocation_failure(abort_on_allocation_failure) {
 
     set_name(allocator_name, strlen(allocator_name));
@@ -107,10 +107,10 @@ BuddyAllocator::BuddyAllocator(uint64_t size,
     _free_lists = (BuddyHead **)extra_allocator.allocate(array_size, alignof(BuddyHead *));
     memset(_free_lists, 0, array_size);
 
-    uint64_t free_list_array_size = array_size * sizeof(BuddyHead *);
-    uint64_t leaf_allocated_size = _num_indices / 8;
-    uint64_t level_map_size = log2_ceil(_num_levels) * _num_indices / 8;
-    uint64_t extra_overhead = free_list_array_size + leaf_allocated_size + level_map_size;
+    AddrUint free_list_array_size = array_size * sizeof(BuddyHead *);
+    AddrUint leaf_allocated_size = _num_indices / 8;
+    AddrUint level_map_size = log2_ceil(_num_levels) * _num_indices / 8;
+    AddrUint extra_overhead = free_list_array_size + leaf_allocated_size + level_map_size;
 
     // Now, there's could be a portion to the left of the buffer which we must make unavailable by marking it
     // as allocated. This is the size of that portion. The rest of this code deals with that.
@@ -140,16 +140,16 @@ BuddyAllocator::BuddyAllocator(uint64_t size,
         )",
 
              name(),
-             _buffer_size,
-             _buffer_size >> 20,
-             _leaf_buddy_size,
-             _leaf_buddy_size >> 10,
-             _leaf_buddy_size_power,
-             _num_levels,
-             _buffer_size - _unavailable,
-             _unavailable,
-             1lu << _last_level(),
-             extra_overhead);
+             CAST_TO_LU(_buffer_size),
+             CAST_TO_LU(_buffer_size >> 20),
+             CAST_TO_LU(_leaf_buddy_size),
+             CAST_TO_LU(_leaf_buddy_size >> 10),
+             CAST_TO_LU(_leaf_buddy_size_power),
+             CAST_TO_LU(_num_levels),
+             CAST_TO_LU(_buffer_size - _unavailable),
+             CAST_TO_LU(_unavailable),
+             CAST_TO_LU(1lu << _last_level()),
+             CAST_TO_LU(extra_overhead));
 }
 
 inline void BuddyAllocator::_mark_unavailable_buddy() {
@@ -161,7 +161,7 @@ inline void BuddyAllocator::_mark_unavailable_buddy() {
     // Keep breaking levels upto, but excluding, the level with buddy size
     // equal to the unavailable size.
     for (uint32_t i = 0; i < l; ++i) {
-        uint64_t num_leaves = _leaves_contained(i + 1);
+        AddrUint num_leaves = _leaves_contained(i + 1);
         _level_of_leaf.set_range(num_leaves, num_leaves + num_leaves, i + 1);
 
         // The free list for this level also needs to be set up
@@ -178,38 +178,38 @@ inline void BuddyAllocator::_mark_unavailable_buddy() {
 BuddyAllocator::~BuddyAllocator() {
     _main_allocator->deallocate(_mem + _unavailable);
     if (_total_allocated != 0) {
-        log_err("BuddyAllocator::Leaking memory?! - Total Allocated = %lu", _total_allocated);
+        log_err("BuddyAllocator::Leaking memory?! - Total Allocated = " ADDRUINT_FMT, _total_allocated);
         assert(0);
     }
     _extra_allocator->deallocate(_free_lists);
 }
 
-uint64_t BuddyAllocator::total_allocated() { return _total_allocated; }
+AddrUint BuddyAllocator::total_allocated() { return _total_allocated; }
 
-uint64_t BuddyAllocator::allocated_size(void *p) {
-    const uint64_t idx = _leaf_index((BuddyHead *)p);
-    const uint64_t level = _level_of_leaf.get(idx);
+AddrUint BuddyAllocator::allocated_size(void *p) {
+    const AddrUint idx = _leaf_index((BuddyHead *)p);
+    const AddrUint level = _level_of_leaf.get(idx);
     return _buddy_size_at_level(level);
 }
 
-void *BuddyAllocator::allocate(uint64_t size, uint64_t align) {
+void *BuddyAllocator::allocate(AddrUint size, AddrUint align) {
     TIMED_BLOCK;
 
     (void)align; // unused
     size = clip_to_pow2(size);
 
     log_assert(size >= _leaf_buddy_size,
-               "Cannot allocate a buddy size smaller than the minimum size of %lu",
+               "Cannot allocate a buddy size smaller than the minimum size of " ADDRUINT_FMT,
                _leaf_buddy_size);
 
-    log_assert(alignment_ok(align), "Alignment of %lu is not valid", align);
+    log_assert(alignment_ok(align), "Alignment of " ADDRUINT_FMT " is not valid", align);
 
     int64_t level = _last_level();
-    debug("Allocating buddy of size %lu bytes", size);
+    debug("Allocating buddy of size " ADDRUINT_FMT " bytes", size);
     while (true) {
         TIMED_BLOCK;
 
-        const uint64_t buddy_size = _buddy_size_at_level(uint64_t(level));
+        const AddrUint buddy_size = _buddy_size_at_level(AddrUint(level));
 
         // Either buddies are not big enough  or none are free, either
         // way, need to go to upper level
@@ -219,7 +219,7 @@ void *BuddyAllocator::allocate(uint64_t size, uint64_t align) {
             if (level < 0) {
                 log_err("%s - Failed to allocate %lu bytes, aborting...? %s",
                         __PRETTY_FUNCTION__,
-                        size,
+                        CAST_TO_LU(size),
                         _abort_on_allocation_failure ? "Yes" : "No");
                 if (_abort_on_allocation_failure) {
                     abort();
@@ -233,30 +233,30 @@ void *BuddyAllocator::allocate(uint64_t size, uint64_t align) {
         // OK, at least 1 free and buddy size is actually a greater power of 2, break it in half and put the
         // buddies in the lower level just below, and check the lower level
         if (buddy_size > size) {
-            const uint64_t index = _leaf_index(_free_lists[level]);
+            const AddrUint index = _leaf_index(_free_lists[level]);
             _dbg_print_levels(index, index + _leaves_contained(level));
-            debug("%s - i:%lu - level - %li", __PRETTY_FUNCTION__, index, level);
+            debug("%s - i:%lu - level - %li", __PRETTY_FUNCTION__, CAST_TO_LU(index), CAST_TO_LU(level));
             _break_free(level);
             ++level;
             _dbg_print_levels(0, _num_indices);
         } else if (buddy_size == size) {
             // Got the buddy with the exact size
             BuddyHead *h = _free_lists[level];
-            const uint64_t index = _leaf_index(h);
+            const AddrUint index = _leaf_index(h);
 
-            log_assert(_level_of_leaf.get(index) == (uint64_t)level,
+            log_assert(_level_of_leaf.get(index) == (AddrUint)level,
                        "%s - Bad index - %lu, Freelist level = %li, Stored level = %lu",
                        __PRETTY_FUNCTION__,
-                       index,
-                       level,
-                       _level_of_leaf.get(index));
+                       CAST_TO_LU(index),
+                       long(level),
+                       CAST_TO_LU(_level_of_leaf.get(index)));
 
-            const uint64_t next_index = _leaves_contained(level);
+            const AddrUint next_index = _leaves_contained(level);
 
             debug("%s - Found exact size(%lu buddies) to allocate - i:%lu",
                   __PRETTY_FUNCTION__,
-                  next_index,
-                  index);
+                  CAST_TO_LU(next_index),
+                  CAST_TO_LU(index));
 
             _dbg_print_levels(index, next_index >= _num_indices ? _num_indices : next_index);
             h->remove_self_from_list(_free_lists, level);
@@ -269,15 +269,17 @@ void *BuddyAllocator::allocate(uint64_t size, uint64_t align) {
             _total_allocated += size;
             debug("%s - Allocated buddy. Level - %li, i:%lu (Size = %lu)\n--",
                   __PRETTY_FUNCTION__,
-                  level,
-                  index,
-                  size);
+                  long(level),
+                  CAST_TO_LU(index),
+                  CAST_TO_LU(size));
             _dbg_print_levels(index, next_index);
             return (void *)h;
         }
     }
 
     assert(false && "Unreachable");
+
+    return nullptr; // Unreachable
 }
 
 void BuddyAllocator::deallocate(void *p) {
@@ -294,13 +296,13 @@ void BuddyAllocator::deallocate(void *p) {
 
     // Get the index of the buddy as known from the address and then the
     // level and size of this buddy
-    uint64_t idx = _leaf_index(h);
-    const uint64_t original_level = _level_of_leaf.get(idx);
-    uint64_t level = original_level;
+    AddrUint idx = _leaf_index(h);
+    const AddrUint original_level = _level_of_leaf.get(idx);
+    AddrUint level = original_level;
 
     assert(_leaf_allocated.get(idx));
 
-    const uint64_t size = _buddy_size_at_level((uint64_t)level);
+    const AddrUint size = _buddy_size_at_level((AddrUint)level);
 
     if (!((int64_t)_total_allocated - (int64_t)size >= 0)) {
         log_assert(
@@ -308,10 +310,10 @@ void BuddyAllocator::deallocate(void *p) {
             R"(%s -- Should not happen index (index_allocated = %d?) i:%lu, level - %lu, size - %lu, _total_allocated - %lu)",
             __PRETTY_FUNCTION__,
             int(_leaf_allocated.get(idx)),
-            idx,
-            level,
-            size,
-            _total_allocated);
+            CAST_TO_LU(idx),
+            CAST_TO_LU(level),
+            CAST_TO_LU(size),
+            CAST_TO_LU(_total_allocated));
         abort();
     }
 
@@ -329,25 +331,30 @@ void BuddyAllocator::deallocate(void *p) {
     BuddyHead *right = nullptr;
     BuddyHead *tmp = nullptr;
 
-    debug("%s - set initial block headed by i:%lu to free", __PRETTY_FUNCTION__, idx);
+    debug("%s - set initial block headed by i:%lu to free", __PRETTY_FUNCTION__, CAST_TO_LU(idx));
     _dbg_print_levels(idx, idx + 20 >= _num_indices ? _num_indices : idx + 20);
 
     while (level >= 1) {
         TIMED_BLOCK;
 
-        debug("%s - MERGE START - %lu, level - %lu", __PRETTY_FUNCTION__, original_level - level, level);
+        debug("%s - MERGE START - %lu, level - %lu",
+              __PRETTY_FUNCTION__,
+              CAST_TO_LU(original_level - level),
+              CAST_TO_LU(level));
+
         _dbg_print_levels(0, _num_indices);
-        const uint64_t size = _buddy_size_at_level(level);
-        const uint64_t buddies_inside = _leaves_contained(level);
-        uint64_t left_idx = _leaf_index(left);
-        uint64_t right_idx = left_idx + buddies_inside;
+
+        const AddrUint size = _buddy_size_at_level(level);
+        const AddrUint buddies_inside = _leaves_contained(level);
+        AddrUint left_idx = _leaf_index(left);
+        AddrUint right_idx = left_idx + buddies_inside;
 
         // Suppose that a buddy head is pointing to a buddy currently located at level 'n'. The level can be
         // 'chunked' into _leaves_contained(n) buddies of size _buddy_size_at_level(n). We want to know the
         // index of the buddy our current buddy head is pointing at level n, if we see level n as such an
         // array. If that index is odd, the buddy we should merge with is located to the left, otherwise it's
         // to the right.
-        const uint64_t level_idx = left_idx / _leaves_contained(level);
+        const AddrUint level_idx = left_idx / _leaves_contained(level);
         if (level_idx % 2 != 0) {
             tmp = left;
             left = (BuddyHead *)((char *)left - size);
@@ -362,7 +369,7 @@ void BuddyAllocator::deallocate(void *p) {
         // simple. Same thing for level. One of them is guaranteed to be in the current `level`.
         if (!_leaf_allocated.get(left_idx) && !_leaf_allocated.get(right_idx) &&
             _level_of_leaf.get(left_idx) == _level_of_leaf.get(right_idx)) {
-            debug("\tBEFORE MERGE - left i:%lu and right i:%lu", left_idx, right_idx);
+            debug("\tBEFORE MERGE - left i:%lu and right i:%lu", CAST_TO_LU(left_idx), CAST_TO_LU(right_idx));
 
             // Print the surrounding buddy status
             _dbg_print_levels(idx, idx + 20 >= _num_indices ? _num_indices : idx + 20);
@@ -372,7 +379,9 @@ void BuddyAllocator::deallocate(void *p) {
             --level;
             _push_free(left, level);
 
-            debug("BuddyAlloc::AFTER MERGE - left i:%lu and right i:%lu", left_idx, right_idx);
+            debug("BuddyAlloc::AFTER MERGE - left i:%lu and right i:%lu",
+                  CAST_TO_LU(left_idx),
+                  CAST_TO_LU(right_idx));
             _dbg_print_levels(idx, idx + 20 >= _num_indices ? _num_indices : idx + 20);
         } else {
             debug("BuddyAlloc::DONE MERGING");
@@ -385,38 +394,38 @@ void BuddyAllocator::deallocate(void *p) {
         --
     )",
           __PRETTY_FUNCTION__,
-          original_level,
-          level,
-          idx,
-          size);
+          CAST_TO_LU(original_level),
+          CAST_TO_LU(level),
+          CAST_TO_LU(idx),
+          CAST_TO_LU(size));
 }
 
 inline buddy_allocator_internal::BuddyHead *BuddyAllocator::_head_at(void *p) {
 #ifndef NDEBUG
     assert(p >= _mem);
-    uint64_t diff = (char *)p - _mem;
+    AddrUint diff = (char *)p - _mem;
     int mod = diff % _leaf_buddy_size;
     assert(mod == 0);
 #endif
     return static_cast<buddy_allocator_internal::BuddyHead *>(p);
 }
 
-inline uint64_t BuddyAllocator::_leaf_index(buddy_allocator_internal::BuddyHead *p) const {
+inline AddrUint BuddyAllocator::_leaf_index(buddy_allocator_internal::BuddyHead *p) const {
     assert((char *)p >= _mem);
     assert((char *)p <= _mem + _buffer_size);
-    const uint64_t diff = (char *)p - _mem;
+    const AddrUint diff = (char *)p - _mem;
     // debug("diff = %lu", diff);
-    return uint64_t(diff >> _leaf_buddy_size_power);
+    return AddrUint(diff >> _leaf_buddy_size_power);
 }
 
-inline uint64_t BuddyAllocator::_leaves_contained(uint64_t level) const {
-    return uint64_t(1) << (_last_level() - level);
+inline AddrUint BuddyAllocator::_leaves_contained(AddrUint level) const {
+    return AddrUint(1) << (_last_level() - level);
 }
 
-BuddyHead *BuddyAllocator::_break_free(uint64_t level) {
+BuddyHead *BuddyAllocator::_break_free(AddrUint level) {
     TIMED_BLOCK;
 
-    const uint64_t new_level = level + 1;
+    const AddrUint new_level = level + 1;
 
     BuddyHead *h_level = _free_lists[level];
     BuddyHead *h1 = h_level;
@@ -453,7 +462,7 @@ BuddyHead *BuddyAllocator::_break_free(uint64_t level) {
     return h1;
 }
 
-void BuddyAllocator::_push_free(BuddyHead *h, uint64_t level) {
+void BuddyAllocator::_push_free(BuddyHead *h, AddrUint level) {
     TIMED_BLOCK;
 
     assert(h->is_meaningless() && "Must be meaningless");
@@ -465,17 +474,24 @@ void BuddyAllocator::_push_free(BuddyHead *h, uint64_t level) {
         _free_lists[level]->_prev = h;
     }
     _free_lists[level] = h;
-    const uint64_t index = _leaf_index(h);
-    const uint64_t last = index + _leaves_contained(level);
+    const AddrUint index = _leaf_index(h);
+    const AddrUint last = index + _leaves_contained(level);
 
-    debug("BuddyAlloc::Setting levels - h = %p, level = %lu, index = %lu, last = %lu", h, level, index, last);
+    debug("BuddyAlloc::Setting levels - h = %p, level = %lu, index = %lu, last = %lu",
+          h,
+          CAST_TO_LU(level),
+          CAST_TO_LU(index),
+          CAST_TO_LU(last));
 
     _level_of_leaf.set_range(index, last, level);
     _leaf_allocated.set_range(index, last, 0);
 
-    debug("Pushed free, done setting %lu to %lu to level %lu", index, last, level);
+    debug("Pushed free, done setting %lu to %lu to level %lu",
+          CAST_TO_LU(index),
+          CAST_TO_LU(last),
+          CAST_TO_LU(level));
     /*
-    for (uint64_t b = index; b < last; ++b) {
+    for (AddrUint b = index; b < last; ++b) {
         _leaf_allocated.set(b, 0);
     }
     */
@@ -483,16 +499,16 @@ void BuddyAllocator::_push_free(BuddyHead *h, uint64_t level) {
 
 void BuddyAllocator::_check_leaf_index(BuddyHead *p) const {
 #ifndef NDEBUG
-    uint64_t index = _leaf_index(p);
-    uint64_t level = _level_of_leaf.get(index);
-    uint64_t buddies_inside = _leaves_contained(level);
+    AddrUint index = _leaf_index(p);
+    AddrUint level = _level_of_leaf.get(index);
+    AddrUint buddies_inside = _leaves_contained(level);
 
-    uint64_t mod = index % buddies_inside;
+    AddrUint mod = index % buddies_inside;
     if (mod != 0) {
         log_err("Buddy block of size %lu can never begin at index %lu and be at level %lu",
-                buddies_inside << _leaf_buddy_size_power,
-                index,
-                level);
+                CAST_TO_LU(buddies_inside << _leaf_buddy_size_power),
+                CAST_TO_LU(index),
+                CAST_TO_LU(level));
         abort();
     }
 #else
@@ -500,7 +516,7 @@ void BuddyAllocator::_check_leaf_index(BuddyHead *p) const {
 #endif
 }
 
-void BuddyAllocator::_dbg_print_levels(uint64_t start, uint64_t end) const {
+void BuddyAllocator::_dbg_print_levels(AddrUint start, AddrUint end) const {
 #ifdef BUDDY_ALLOC_LEVEL_LOGGING
     using namespace string_stream;
     Buffer b(memory_globals::default_allocator());
@@ -519,7 +535,7 @@ void BuddyAllocator::_dbg_print_levels(uint64_t start, uint64_t end) const {
     }
     fprintf(stderr, "\n--\n");
 
-    for (uint64_t i = 0; i < _num_levels; ++i) {
+    for (AddrUint i = 0; i < _num_levels; ++i) {
         BuddyHead *h = _free_lists[i];
         fprintf(stderr, "Free indices at level %lu: ", i);
         while (h) {

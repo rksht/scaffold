@@ -106,7 +106,8 @@ class MallocAllocator : public Allocator {
         // Check that we don't have any memory leaks when allocator is destroyed.
 #if MALLOC_ALLOCATOR_DONT_TRACK_SIZE == 0
         if (_total_allocated != 0) {
-            log_err("MallocAllocator %s some memory still not deallocated - _total_allocated = %lu\n",
+            log_err("MallocAllocator %s some memory still not deallocated - _total_allocated = " ADDRUINT_FMT
+                    "\n",
                     name(),
                     _total_allocated);
         }
@@ -135,7 +136,7 @@ class MallocAllocator : public Allocator {
         }
 
         if ((ret = posix_memalign(&p, align, size)) != 0) {
-            log_err("MallocAllocator failed to allocate - error = %s, align = %lu",
+            log_err("MallocAllocator failed to allocate - error = %s, align = " ADDRUINT_FMT,
                     ret == EINVAL ? "EINVAL" : "ENOMEM",
                     align);
             abort();
@@ -316,6 +317,7 @@ class ScratchAllocator : public Allocator {
         std::lock_guard<std::mutex> lk(_mutex);
 
 #if 0
+        // Had to actually fix this class. Keeping the log-info.
         {
             auto s = p ? std::to_string(allocated_size(p)) : "<null>";
             log_info("Deallocated - %s bytes - pointer - %p", s.c_str(), p);
