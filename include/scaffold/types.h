@@ -28,6 +28,8 @@ using ulong = unsigned long;
 
 using bool32 = i32;
 
+using zu = size_t;
+
 #if defined(_MSC_VER) && !defined(__PRETTY_FUNCTION__)
 #define __PRETTY_FUNCTION__ __FUNCSIG__
 #endif
