@@ -31,13 +31,13 @@ template <typename K> struct QuadDefault {
 namespace fo {
 
 template <typename K, typename V, typename Params = QuadDefault<K>> struct OpenHash {
-    static_assert(std::is_trivially_destructible<K>::value, "");
-    static_assert(std::is_trivially_destructible<V>::value, "");
-    static_assert(std::is_default_constructible<K>::value, "");
-    static_assert(std::is_default_constructible<V>::value, "");
-    static_assert(std::is_trivially_copy_assignable<K>::value, "");
-    static_assert(std::is_trivially_copy_assignable<V>::value, "");
-    static_assert(alignof(V) >= alignof(uint32_t), "Need this");
+    static_assert(std::is_trivially_destructible<K>::value, "Must");
+    static_assert(std::is_trivially_destructible<V>::value, "Must");
+    static_assert(std::is_default_constructible<K>::value, "Must");
+    static_assert(std::is_default_constructible<V>::value, "Must");
+    static_assert(std::is_trivially_copy_assignable<K>::value, "Must");
+    static_assert(std::is_trivially_copy_assignable<V>::value, "Must");
+    static_assert(alignof(V) >= alignof(uint32_t), "Must");
 
     using KeyType = K;
     using ValueType = V;
