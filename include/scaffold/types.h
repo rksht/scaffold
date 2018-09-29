@@ -59,3 +59,6 @@ using zu = size_t;
 // thing first.
 #define CAST_TO_LU(n) (long unsigned int)(n)
 #define CAST_TO_U(n) (unsigned int)(n)
+
+// Just a seed to use when you are out of ideas
+#define SCAFFOLD_SEED 0xbadc0de

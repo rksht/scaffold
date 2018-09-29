@@ -18,6 +18,29 @@ struct Vector2 {
         , y(y) {}
 
     constexpr Vector2(const Vector3 &v);
+
+    constexpr float operator[](unsigned i) const {
+#if defined(_MSC_VER) || defined(__clang__)
+        if (i == 0)
+            return x;
+        if (i == 1)
+            return y;
+#else
+        return reinterpret_cast<const float *>(this)[i];
+
+#endif
+    }
+    constexpr float &operator[](unsigned i) {
+#if defined(_MSC_VER) || defined(__clang__)
+        if (i == 0)
+            return x;
+        if (i == 1)
+            return y;
+#else
+        return reinterpret_cast<const float *>(this)[i];
+
+#endif
+    }
 };
 
 struct Vector4;
@@ -42,8 +65,32 @@ struct Vector3 {
         , z(z) {}
 
     /// Array like accessor
-    constexpr float operator[](unsigned i) const { return reinterpret_cast<const float *>(this)[i]; }
-    constexpr float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
+    constexpr float operator[](unsigned i) const {
+#if defined(_MSC_VER) || defined(__clang__)
+        if (i == 0)
+            return x;
+        if (i == 1)
+            return y;
+        if (i == 2)
+            return z;
+#else
+        return reinterpret_cast<const float *>(this)[i];
+
+#endif
+    }
+    constexpr float &operator[](unsigned i) {
+#if defined(_MSC_VER) || defined(__clang__)
+        if (i == 0)
+            return x;
+        if (i == 1)
+            return y;
+        if (i == 2)
+            return z;
+#else
+        return reinterpret_cast<const float *>(this)[i];
+
+#endif
+    }
 };
 
 inline constexpr Vector2::Vector2(const Vector3 &v)
@@ -69,8 +116,36 @@ struct alignas(16) Vector4 {
         , w(w) {}
 
     /// Array like accessor
-    constexpr float operator[](unsigned i) const { return reinterpret_cast<const float *>(this)[i]; }
-    constexpr float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
+    constexpr float operator[](unsigned i) const {
+#if defined(_MSC_VER) || defined(__clang__)
+        if (i == 0)
+            return x;
+        if (i == 1)
+            return y;
+        if (i == 2)
+            return z;
+        if (i == 3)
+            return w;
+#else
+        return reinterpret_cast<const float *>(this)[i];
+
+#endif
+    }
+    constexpr float &operator[](unsigned i) {
+#if defined(_MSC_VER) || defined(__clang__)
+        if (i == 0)
+            return x;
+        if (i == 1)
+            return y;
+        if (i == 2)
+            return z;
+        if (i == 3)
+            return w;
+#else
+        return reinterpret_cast<const float *>(this)[i];
+
+#endif
+    }
 };
 
 static_assert(sizeof(Vector4) == 4 * sizeof(float), "");
@@ -127,7 +202,7 @@ struct IVector2 {
         : x(x)
         , y(y) {}
 
-    explicit operator Vector2() const { return Vector2 { (f32)x, (f32)y }; }
+    explicit operator Vector2() const { return Vector2{ (f32)x, (f32)y }; }
 };
 
 struct IVector3 {

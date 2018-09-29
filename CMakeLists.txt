@@ -4,6 +4,10 @@ project(scaffold)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(SCAFFOLD_ENABLE_STRING_ID_TABLE
+  "Enable runtime checking of unique StringID using a map. Disabled on Release build"
+  on)
+
 # Benchmark
 option(SCAFFOLD_ENABLE_BENCHMARKS "Build the benchmarks" off)
 if (SCAFFOLD_ENABLE_BENCHMARKS)
