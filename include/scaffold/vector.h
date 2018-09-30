@@ -210,6 +210,13 @@ Vector<T>::Vector(Vector<T> &&o)
     o._size = o._capacity = 0;
 }
 
+template <typename T>
+Vector<T>::Vector(fo::Allocator &a)
+    : _data(nullptr)
+    , _size(0)
+    , _capacity(0)
+    , _allocator(&a) {}
+
 template <typename T> Vector<T>::~Vector() {
     if (_data) {
         internal::destroy_elements(_data, _size);

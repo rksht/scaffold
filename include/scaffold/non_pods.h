@@ -20,6 +20,8 @@ template <typename T> struct Vector {
            const T &fill_element,
            fo::Allocator &a = fo::memory_globals::default_allocator());
 
+    Vector(fo::Allocator &a);
+
     Vector(std::initializer_list<T> init_list);
 
     Vector(const Vector &);
