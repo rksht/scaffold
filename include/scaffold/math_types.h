@@ -198,23 +198,32 @@ struct IVector2 {
     i32 x, y;
 
     IVector2() = default;
-    IVector2(i32 x, i32 y)
+    constexpr IVector2(i32 x, i32 y)
         : x(x)
         , y(y) {}
 
-    explicit operator Vector2() const { return Vector2{ (f32)x, (f32)y }; }
+    constexpr explicit IVector2(const Vector2 &v2)
+        : x((i32)v2.x)
+        , y((i32)v2.y) {}
+
+    constexpr explicit operator Vector2() const { return Vector2{ (f32)x, (f32)y }; }
 };
 
 struct IVector3 {
     i32 x, y, z;
 
     IVector3() = default;
-    IVector3(i32 x, i32 y, i32 z)
+    constexpr IVector3(i32 x, i32 y, i32 z)
         : x(x)
         , y(y)
         , z(z) {}
 
-    explicit operator Vector3() const { return { (f32)x, (f32)y, (f32)z }; }
+    constexpr explicit IVector3(const Vector3 &v3)
+        : x((i32)v3.x)
+        , y((i32)v3.y)
+        , z((i32)v3.z) {}
+
+    constexpr explicit operator Vector3() const { return { (f32)x, (f32)y, (f32)z }; }
 };
 
 struct alignas(16) IVector4 {
@@ -227,7 +236,13 @@ struct alignas(16) IVector4 {
         , z(z)
         , w(w) {}
 
-    explicit operator Vector4() const { return { (f32)x, (f32)y, (f32)z, (f32)w }; }
+    constexpr explicit IVector4(const Vector4 &v4)
+        : x((i32)v4.x)
+        , y((i32)v4.y)
+        , z((i32)v4.z)
+        , w((i32)v4.w) {}
+
+    constexpr explicit operator Vector4() const { return { (f32)x, (f32)y, (f32)z, (f32)w }; }
 };
 
 } // namespace fo
