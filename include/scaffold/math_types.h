@@ -30,17 +30,7 @@ struct Vector2 {
 
 #endif
     }
-    constexpr float &operator[](unsigned i) {
-#if defined(_MSC_VER) || defined(__clang__)
-        if (i == 0)
-            return x;
-        if (i == 1)
-            return y;
-#else
-        return reinterpret_cast<const float *>(this)[i];
-
-#endif
-    }
+    float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
 };
 
 struct Vector4;
@@ -78,19 +68,7 @@ struct Vector3 {
 
 #endif
     }
-    constexpr float &operator[](unsigned i) {
-#if defined(_MSC_VER) || defined(__clang__)
-        if (i == 0)
-            return x;
-        if (i == 1)
-            return y;
-        if (i == 2)
-            return z;
-#else
-        return reinterpret_cast<const float *>(this)[i];
-
-#endif
-    }
+    float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
 };
 
 inline constexpr Vector2::Vector2(const Vector3 &v)
@@ -131,21 +109,7 @@ struct alignas(16) Vector4 {
 
 #endif
     }
-    constexpr float &operator[](unsigned i) {
-#if defined(_MSC_VER) || defined(__clang__)
-        if (i == 0)
-            return x;
-        if (i == 1)
-            return y;
-        if (i == 2)
-            return z;
-        if (i == 3)
-            return w;
-#else
-        return reinterpret_cast<const float *>(this)[i];
-
-#endif
-    }
+    float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
 };
 
 static_assert(sizeof(Vector4) == 4 * sizeof(float), "");

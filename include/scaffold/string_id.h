@@ -59,7 +59,7 @@ inline StringId64::StringId64(const char *str) {
 } // namespace fo
 
 namespace std {
-template <> struct std::hash<fo::StringId64> {
+template <> struct hash<fo::StringId64> {
     using argument_type = fo::StringId64;
     std::size_t operator()(const fo::StringId64 &id) const { return (std::size_t)(id._string_id); }
 };
