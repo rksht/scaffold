@@ -24,6 +24,11 @@ template <typename T> T &front(Vector<T> &a);
 template <typename T> T *data(Vector<T> &a);
 template <typename T> const T *data(const Vector<T> &a);
 
+template <typename T> T *begin(Vector<T> &a) { return data(a); }
+template <typename T> T *end(Vector<T> &a) { return data(a) + a._size; }
+template <typename T> const T *begin(const Vector<T> &a) { return data(a); }
+template <typename T> const T *end(const Vector<T> &a) { return data(a) + a._size; }
+
 namespace internal {
 
 template <typename T> void grow(Vector<T> &a);
@@ -276,7 +281,7 @@ template <typename T> void set_capacity(Vector<T> &a, u32 new_capacity, bool is_
     // If storing non-pod-ish elements and resizing, store default constructed elements.
     if (is_resize && !std::is_trivially_constructible<T>::value) {
         for (u32 i = a._size; i < new_capacity; ++i) {
-            new (a._data + i) T{};
+            new (new_allocation + i) T{};
         }
     }
 

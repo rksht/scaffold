@@ -6,6 +6,8 @@
 #include <initializer_list>
 #include <type_traits>
 
+#define SCAFFOLD_IGNORE_DEF_CTOR static constexpr bool _scaffold_ignore_def_ctor = true
+
 /// All collection types assume that they are used to store POD objects. I.e.
 /// they:
 ///
@@ -16,8 +18,23 @@
 /// collection
 /// classes.
 namespace fo {
+
+namespace internal {
+
+template <typename T, typename Whatever = int> struct DefaultCtorTrivial {
+    static constexpr bool value = std::is_trivially_default_constructible<T>::value;
+};
+
+template <typename T> struct DefaultCtorTrivial<T, decltype(T::_scaffold_ignore_def_ctor, 0)> {
+    static constexpr bool value = true;
+};
+
+} // namespace internal
+
 /// Dynamically resizable array of POD objects.
 template <typename T> struct Array {
+    static_assert(internal::DefaultCtorTrivial<T>::value, "Use fo::Vector instead");
+
     static_assert(std::is_trivially_copy_assignable<T>::value,
                   "Only supports trivially copy-assignable elements");
 
