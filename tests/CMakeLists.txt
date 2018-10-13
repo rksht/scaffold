@@ -140,4 +140,4 @@ set_target_properties(non_pod_array_test PROPERTIES FOLDER scaffold_tests)
 add_executable(allocator_test allocator_test.cpp)
 test_link_libraries(allocator_test)
 
-set_target_properties(allocator_test  PROPERTIES FOLDER scaffold_tests)
+set_target_properties(allocator_test PROPERTIES FOLDER scaffold_tests)
