@@ -28,6 +28,27 @@ void Allocator::set_name(const char *name, uint64_t len) {
     assert(len < ALLOCATOR_NAME_SIZE && "Allocator name too large");
     memcpy(_name, name, len);
 }
+
+void *Allocator::reallocate(void *old_allocation, AddrUint new_size, AddrUint align) {
+    // TODO: The base implementation doesn't lock a mutex! Best to just not use the base implementation of
+    // reallocate.
+
+    void *new_allocation = allocate(new_size, align);
+
+    if (old_allocation == nullptr) {
+        return new_allocation;
+    }
+
+    auto old_size = allocated_size(old_allocation);
+    assert(old_size != SIZE_NOT_TRACKED &&
+           "Default reallocate only works for Allocator implementations that never return SIZE_NOT_TRACKED");
+
+    memcpy(new_allocation, old_allocation, old_size);
+    deallocate(old_allocation);
+
+    return new_allocation;
+}
+
 } // namespace fo
 
 namespace {
@@ -152,6 +173,35 @@ class MallocAllocator : public Allocator {
 #    else
         free(p);
 #    endif
+    }
+
+    void *reallocate(void *old_allocation, AddrUint new_size, AddrUint align) override {
+#    ifdef WIN32
+        void *new_allocation = _aligned_realloc(old_allocation, new_size, align);
+
+#    else
+        // There is no posix_memalign_realloc or something like that on posix. But usually realloc will
+        // allocated with enough alignment for most `align` values we will use. So we try to realloc first
+        // plainly. If the returned address is not aligned adequately, we will revert to
+        // posix_memalign'ing a new block, copying old data, deallocating old memory.
+
+        align = align < alignof(void *) ? alignof(void *) : align;
+
+        void *new_allocation = realloc(old_allocation, new_size);
+
+        if (AddrUint(new_allocation) % align != 0) {
+            log_warn("This is slow. realloc did not allocate with an alignment of %lu, requires double copy",
+                     (long unsigned int)align);
+
+            void *new_new = allocate(new_size, align);
+            memcpy(new_new, new_allocation, new_size);
+            free(new_allocation);
+            new_allocation = new_new;
+        }
+
+#    endif
+
+        return new_allocation;
     }
 
     uint64_t allocated_size(void *p) override {

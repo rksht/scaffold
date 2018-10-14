@@ -43,20 +43,20 @@ class SCAFFOLD_API Allocator {
     // Dtor
     virtual ~Allocator() {}
 
-    /// Allocates the specified amount of memory aligned to the specified
-    /// alignment.
+    /// Allocates the specified amount of memory aligned to the specified alignment.
     virtual void *allocate(AddrUint size, AddrUint align = DEFAULT_ALIGN) = 0;
+
+    /// Reallocate the region of memory. Invalidates every pointer pointing to locations inside the old
+    /// allocation. The default implementation simply calls a new `allocate`, copies to new memory, and then
+    /// deallocates old memory. This is here mainly because the MallocAllocator can use `realloc`. Of course,
+    /// other allocators can implement this and either raise some error when it doesn't make sense to
+    /// "reallocate larger region" (fixed-size allocator) or perhaps grow a region if there is enough space
+    /// following old allocation.
+    virtual void *reallocate(void *old_allocation, AddrUint new_size, AddrUint align = DEFAULT_ALIGN);
 
     /// Frees an allocation previously made with allocate(). If `p` is nullptr, then simply returns doing
     /// nothing.
     virtual void deallocate(void *p) = 0;
-
-    /// Allocates with a 32 bit integer given as token. What it does, depends on the specific allocator
-    /// implementation. Default implementation simply ignores it.
-    virtual void *allocate_with_info(AddrUint size, AddrUint align = DEFAULT_ALIGN, u32 info = 0) {
-        static_cast<void>(info);
-        return this->allocate(size, align);
-    }
 
     static constexpr uint64_t SIZE_NOT_TRACKED = ~uint64_t(0);
 

@@ -104,7 +104,7 @@ template <typename T> void resize(Array<T> &a, uint32_t new_size) {
         if (std::is_trivial<T>::value) {
             memset(&a._data[a._size], 0, (new_size - a._size) * sizeof(T));
         } else {
-            std::fill(&a._data[a._size], a._data + new_size, T {});
+            std::fill(&a._data[a._size], a._data + new_size, T{});
         }
 #endif
     }
@@ -116,6 +116,7 @@ template <typename T> inline void reserve(Array<T> &a, uint32_t new_capacity) {
         set_capacity(a, new_capacity);
 }
 
+#if 0
 template <typename T> void set_capacity(Array<T> &a, uint32_t new_capacity) {
     if (new_capacity == a._capacity)
         return;
@@ -129,6 +130,25 @@ template <typename T> void set_capacity(Array<T> &a, uint32_t new_capacity) {
         memcpy(new_data, a._data, sizeof(T) * a._size);
     }
     a._allocator->deallocate(a._data);
+    a._data = new_data;
+    a._capacity = new_capacity;
+}
+
+#endif
+
+template <typename T> void set_capacity(Array<T> &a, uint32_t new_capacity) {
+    if (new_capacity == a._capacity) {
+        return;
+    }
+
+    if (new_capacity < a._size) {
+        resize(a, new_capacity);
+    }
+
+    T *new_data = nullptr;
+    if (new_capacity > 0) {
+        new_data = (T *)a._allocator->reallocate(a._data, sizeof(T) * new_capacity, alignof(T));
+    }
     a._data = new_data;
     a._capacity = new_capacity;
 }
