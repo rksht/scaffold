@@ -9,7 +9,10 @@
 
 namespace fo {
 
-// Represents the type (u32 or u64) that can hold the largest memory size on the platform.
+static_assert(sizeof(void *) == 4 || sizeof(void *) == 8, "Just checking if 32 or 64 bit.");
+
+// Represents the type (u32 or u64) that can hold the largest memory size on the platform. Could use size_t,
+// but nah.
 using AddrUint = typename std::conditional<sizeof(void *) == 8, uint64_t, uint32_t>::type;
 
 #if !defined(PRIu64) || !defined(PRIu32)
@@ -46,16 +49,12 @@ class SCAFFOLD_API Allocator {
     /// Allocates the specified amount of memory aligned to the specified alignment.
     virtual void *allocate(AddrUint size, AddrUint align = DEFAULT_ALIGN) = 0;
 
-    /// Reallocate the region of memory. Invalidates every pointer pointing to locations inside the old
-    /// allocation. The default implementation simply calls a new `allocate`, copies to new memory, and then
-    /// deallocates old memory. This is here mainly because the MallocAllocator can use `realloc`. Of course,
-    /// other allocators can implement this and either raise some error when it doesn't make sense to
-    /// "reallocate larger region" (fixed-size allocator) or perhaps grow a region if there is enough space
-    /// following old allocation.
-    virtual void *reallocate(void *old_allocation, AddrUint new_size, AddrUint align = DEFAULT_ALIGN);
+    /// Reallocate the region of memory. If nullptr, should treat as a call to `allocate`. If new_size is 0,
+    /// should treat as a call to `deallocate`.
+    virtual void *reallocate(void *old_allocation, AddrUint new_size, AddrUint align = DEFAULT_ALIGN) = 0;
 
-    /// Frees an allocation previously made with allocate(). If `p` is nullptr, then simply returns doing
-    /// nothing.
+    /// Frees an allocation previously made with allocate() or reallocate(). If `p` is nullptr, then simply
+    /// returns doing nothing.
     virtual void deallocate(void *p) = 0;
 
     static constexpr uint64_t SIZE_NOT_TRACKED = ~uint64_t(0);
@@ -88,6 +87,17 @@ class SCAFFOLD_API Allocator {
     /// Allocators cannot be copied.
     Allocator(const Allocator &other) = delete;
     Allocator &operator=(const Allocator &other) = delete;
+
+protected:
+
+    struct DefaultReallocInfo {
+        void *new_allocation;
+        AddrUint size_difference;
+        bool32 size_increased;
+    };
+
+    void default_realloc(void *old_allocation, AddrUint new_size, AddrUint align, DefaultReallocInfo *out_info);
+
 
   private:
     /// The name of the allocator is stored in this array
@@ -122,9 +132,21 @@ template <typename T> void make_delete(Allocator &a, T *object) {
 /// Functions for accessing global memory data. See `memory.cpp` file for adding extra statically initialized
 /// allocators.
 namespace memory_globals {
+
+struct InitConfig {
+    // Size of the default scratch allocator's underlying buffer.
+    uint64_t scratch_buffer_size = 4 * 1024;
+
+    // Don't track leaks at all. This is a runtime option
+    bool dont_track_malloc_leak = false;
+
+    // If there is a 'leak', don't abort. Just notify with a print. 
+    bool dont_abort_if_leak = false;
+};
+
 /// Initializes the global memory allocators. scratch_buffer_size is the size of the memory buffer used by the
 /// scratch allocators.
-SCAFFOLD_API void init(uint64_t scratch_buffer_size = 4 << 20);
+SCAFFOLD_API void init(const InitConfig &config = InitConfig());
 
 /// Returns a default memory allocator that can be used for most allocations. You need to call init() for this
 /// allocator to be available.

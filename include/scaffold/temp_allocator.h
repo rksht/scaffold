@@ -29,17 +29,22 @@ template <int BUFFER_SIZE> class TempAllocator : public Allocator {
     TempAllocator(const TempAllocatorConfig &config = TempAllocatorConfig());
     virtual ~TempAllocator();
 
-    void *allocate(uint64_t size, uint64_t align = DEFAULT_ALIGN) override;
+    void *allocate(AddrUint size, AddrUint align = DEFAULT_ALIGN) override;
+
+    void *reallocate(void *old_allocation, AddrUint new_size, AddrUint align) override {
+        assert(false, "TempAllocator does not support reallocate().");
+        return nullptr;
+    }
 
     /// Deallocation is a NOP for the TempAllocator. The memory is automatically
     /// deallocated when the TempAllocator is destroyed.
     void deallocate(void *) override {}
 
     /// Returns SIZE_NOT_TRACKED.
-    uint64_t allocated_size(void *) override { return SIZE_NOT_TRACKED; }
+    AddrUint allocated_size(void *) override { return SIZE_NOT_TRACKED; }
 
     /// Returns SIZE_NOT_TRACKED.
-    uint64_t total_allocated() override { return SIZE_NOT_TRACKED; }
+    AddrUint total_allocated() override { return SIZE_NOT_TRACKED; }
 
   private:
     char _buffer[BUFFER_SIZE]; //< Local stack buffer for allocations.
@@ -92,11 +97,11 @@ template <int BUFFER_SIZE> TempAllocator<BUFFER_SIZE>::~TempAllocator() {
     }
 }
 
-template <int BUFFER_SIZE> void *TempAllocator<BUFFER_SIZE>::allocate(uint64_t size, uint64_t align) {
+template <int BUFFER_SIZE> void *TempAllocator<BUFFER_SIZE>::allocate(AddrUint size, AddrUint align) {
     _p = (char *)memory::align_forward(_p, align);
     if ((int)size > _end - _p) {
         // Sizeof next pointer + requested + aligment (safe estimate)
-        uint64_t to_allocate = sizeof(void *) + size + align;
+        AddrUint to_allocate = sizeof(void *) + size + align;
         if (to_allocate < _chunk_size)
             to_allocate = _chunk_size;
         _chunk_size *= 2;
@@ -109,7 +114,9 @@ template <int BUFFER_SIZE> void *TempAllocator<BUFFER_SIZE>::allocate(uint64_t s
         memory::align_forward(p, align);
 
         if (_first_time_exhausted == 1) {
-            log_info("TempAllocator - '%s' allocated from backing allocator (chunk_size = %u)", name(), _chunk_size);
+            log_info("TempAllocator - '%s' allocated from backing allocator (chunk_size = %u)",
+                     name(),
+                     _chunk_size);
             _first_time_exhausted = 2;
         }
     }

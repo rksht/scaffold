@@ -42,6 +42,11 @@ struct SCAFFOLD_API PoolAllocator : public Allocator {
 
     // Always returns `_node_size`. Doesn't check if `p` is valid.
     virtual uint64_t allocated_size(void *p) override;
+
+    virtual void *reallocate(void *, AddrUint, AddrUint) override {
+        log_assert(false && "PoolAllocator does not support reallocate()");
+        return nullptr;
+    }
 };
 
 } // namespace fo

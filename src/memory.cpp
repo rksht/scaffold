@@ -1,3 +1,5 @@
+// TODO - messy. clean up. make reallocate thread-safe.
+
 // For posix_memalign
 #if MALLOC_ALLOCATOR_DONT_TRACK_SIZE
 #    if !defined(_POSIX_C_SOURCE) || (_POSIX_C_SOURCE < 200112L)
@@ -29,37 +31,53 @@ void Allocator::set_name(const char *name, uint64_t len) {
     memcpy(_name, name, len);
 }
 
-void *Allocator::reallocate(void *old_allocation, AddrUint new_size, AddrUint align) {
+void Allocator::default_realloc(void *old_allocation,
+                                AddrUint new_size,
+                                AddrUint align,
+                                DefaultReallocInfo *out_info) {
     // TODO: The base implementation doesn't lock a mutex! Best to just not use the base implementation of
     // reallocate.
 
-    void *new_allocation = new_size != 0 ? allocate(new_size, align) : nullptr;
-
     if (old_allocation == nullptr) {
-        return new_allocation;
+        out_info->new_allocation = allocate(new_size, align);
+        out_info->size_difference = new_size;
+        out_info->size_increased = true;
+
+        return;
     }
 
-    auto old_size = allocated_size(old_allocation);
+    if (new_size == 0) {
+        deallocate(old_allocation);
+        out_info->new_allocation = nullptr;
+        out_info->size_difference = new_size;
+        out_info->size_increased = false;
+
+        return;
+    }
+
+    AddrUint old_size = (AddrUint)allocated_size(old_allocation);
     assert(old_size != SIZE_NOT_TRACKED &&
            "Default reallocate only works for Allocator implementations that never return SIZE_NOT_TRACKED");
 
     if (old_size == new_size) {
-        return old_allocation;
+        out_info->new_allocation = old_allocation;
+        out_info->size_increased = false;
+        out_info->size_difference = 0;
+        return;
     }
 
-#if 0
-    log_info("Realloc called with old size = %lu, new_size = %lu reallocptr = %p",
-             (ulong)old_size,
-             (ulong)new_size,
-             old_allocation);
+    out_info->new_allocation = allocate(new_size, align);
 
-#endif
+    if (old_size < new_size) {
+        out_info->size_increased = true;
+        out_info->size_difference = new_size - old_size;
+    } else {
+        out_info->size_increased = false;
+        out_info->size_difference = old_size - new_size;
+    }
 
-    memcpy(new_allocation, old_allocation, old_size < new_size ? old_size : new_size);
-
+    memcpy(out_info->new_allocation, old_allocation, out_info->size_increased ? old_size : new_size);
     deallocate(old_allocation);
-
-    return new_allocation;
 }
 
 } // namespace fo
@@ -122,15 +140,19 @@ class MallocAllocator : public Allocator {
 
     std::mutex _mutex;
 
+    // TODO: rksht - Not implemented. Tracking is set as a compile time option.
+    bool _tracking;
+
     // Returns the size to allocate from malloc() for a given size and align.
     static inline AddrUint size_with_padding(AddrUint size, AddrUint align) {
         return size + align + sizeof(HeaderNative);
     }
 
   public:
-    MallocAllocator()
+    MallocAllocator(bool tracking = true)
         : _total_allocated(0)
-        , _mutex{} {
+        , _mutex{}
+        , _tracking(tracking) {
 #if MALLOC_ALLOCATOR_DONT_TRACK_SIZE
         _total_allocated = SIZE_NOT_TRACKED;
 #endif
@@ -155,7 +177,7 @@ class MallocAllocator : public Allocator {
     }
 
 #if MALLOC_ALLOCATOR_DONT_TRACK_SIZE
-    void *allocate(uint64_t size, uint64_t align) override {
+    void *allocate(AddrUint size, AddrUint align) override {
         std::lock_guard<std::mutex> lk(_mutex);
 
         void *p = nullptr;
@@ -222,7 +244,7 @@ class MallocAllocator : public Allocator {
         return SIZE_NOT_TRACKED;
     }
 #else
-    void *allocate(uint64_t size, uint64_t align) override {
+    void *allocate(AddrUint size, AddrUint align) override {
         std::lock_guard<std::mutex> lk(_mutex);
 
         const AddrUint ts = size_with_padding(size, align);
@@ -241,6 +263,13 @@ class MallocAllocator : public Allocator {
 #    endif
 
         return p;
+    }
+
+    void *reallocate(void *old_allocation, AddrUint old_size, AddrUint align) override {
+        DefaultReallocInfo realloc_info = {};
+        default_realloc(old_allocation, old_size, align, &realloc_info);
+
+        return realloc_info.new_allocation;
     }
 
     void deallocate(void *p) override {
@@ -431,6 +460,14 @@ class ScratchAllocator : public Allocator {
         std::lock_guard<std::mutex> lk(_mutex);
         return _end - _begin;
     }
+
+    void *reallocate(void *old_allocation, AddrUint new_size, AddrUint align) {
+        // Don't think it's worth it to implement reallocate to handle growing the tail if old_allocation is
+        // at the tail
+        DefaultReallocInfo realloc_info = {};
+        default_realloc(old_allocation, new_size, align, &realloc_info);
+        return realloc_info.new_allocation;
+    }
 };
 
 /// This struct should contain all allocators required by the application/library/deathray etc. Put any extra
@@ -457,10 +494,10 @@ static const char default_allocator_name[] = "default_alloc";
 static const char default_scratch_allocator_name[] = "default_scratch_alloc";
 
 /// ... And add the initialization code here ...
-void init(uint64_t scratch_buffer_size) {
+void init(const InitConfig &config) {
     _memory_globals.default_allocator = new (_memory_globals._default_allocator) MallocAllocator{};
     _memory_globals.default_scratch_allocator = new (_memory_globals._default_scratch_allocator)
-        ScratchAllocator{ *(MallocAllocator *)_memory_globals.default_allocator, scratch_buffer_size };
+        ScratchAllocator{ *(MallocAllocator *)_memory_globals.default_allocator, config.scratch_buffer_size };
 
     default_allocator().set_name(default_allocator_name, sizeof(default_allocator_name));
     default_scratch_allocator().set_name(default_scratch_allocator_name,
@@ -479,5 +516,6 @@ void shutdown() {
     _memory_globals.default_allocator->~MallocAllocator();
     _memory_globals = MemoryGlobals{};
 }
+
 } // namespace memory_globals
 } // namespace fo
