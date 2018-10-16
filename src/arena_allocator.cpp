@@ -168,7 +168,7 @@ void *ArenaAllocator::reallocate(void *old_allocation, AddrUint new_data_size, A
 
     if (old8 < _mem || old8 >= _mem + _buffer_size) {
         log_assert(_child != nullptr,
-                   "old_allocation(= %p) seems to be an invalid pointer, searched all children buffers.");
+                   "old_allocation(= %p) seems to be an invalid pointer, searched all children buffers.", old8);
         return _child->reallocate(old_allocation, new_data_size, align);
     }
 
@@ -196,9 +196,9 @@ void *ArenaAllocator::reallocate(void *old_allocation, AddrUint new_data_size, A
             _top = (old8 + new_data_size) - _mem;
 
             log_info("Extended old allocation at (%lu) from %lu bytes to %lu bytes",
-                     old_offset,
-                     old_data_size,
-                     new_data_size);
+                     (ulong)old_offset,
+                     (ulong)old_data_size,
+                     (ulong)new_data_size);
 
             return old8;
         }
@@ -218,9 +218,9 @@ void *ArenaAllocator::reallocate(void *old_allocation, AddrUint new_data_size, A
         _top = old_header->previous_data_offset + previous_header->size;
         _latest_allocation_offset = old_offset;
 
-        log_info("Could not extend old allocation (%u). But freed up the tail due to it being the latest "
+        log_info("Could not extend old allocation (%lu). But freed up the tail due to it being the latest "
                  "allocation",
-                 old_offset);
+                 (ulong)old_offset);
 
         return new_allocation;
 
@@ -229,7 +229,7 @@ void *ArenaAllocator::reallocate(void *old_allocation, AddrUint new_data_size, A
         void *new_allocation = allocate_no_lock(new_data_size, align);
         memcpy(new_allocation, old_allocation, old_data_size);
 
-        log_info("Realloc of (%u) created hole", old_offset);
+        log_info("Realloc of (%lu) created hole", (ulong)old_offset);
 
         return new_allocation;
     }

@@ -33,7 +33,7 @@ void *Allocator::reallocate(void *old_allocation, AddrUint new_size, AddrUint al
     // TODO: The base implementation doesn't lock a mutex! Best to just not use the base implementation of
     // reallocate.
 
-    void *new_allocation = allocate(new_size, align);
+    void *new_allocation = new_size != 0 ? allocate(new_size, align) : nullptr;
 
     if (old_allocation == nullptr) {
         return new_allocation;
@@ -43,7 +43,17 @@ void *Allocator::reallocate(void *old_allocation, AddrUint new_size, AddrUint al
     assert(old_size != SIZE_NOT_TRACKED &&
            "Default reallocate only works for Allocator implementations that never return SIZE_NOT_TRACKED");
 
-    memcpy(new_allocation, old_allocation, old_size);
+    if (old_size == new_size) {
+        return old_allocation;
+    }
+
+    log_info("Realloc called with old size = %lu, new_size = %lu reallocptr = %p",
+             (ulong)old_size,
+             (ulong)new_size,
+             old_allocation);
+
+    memcpy(new_allocation, old_allocation, old_size < new_size ? old_size : new_size);
+
     deallocate(old_allocation);
 
     return new_allocation;
@@ -217,9 +227,14 @@ class MallocAllocator : public Allocator {
         HeaderNative *h = reinterpret_cast<HeaderNative *>(malloc(ts));
 
         void *p = data_pointer(h, align);
-        fill_with_padding(h, p, ts);
-        _total_allocated += ts;
+        fill_with_padding(h, p, size);
+        // ^Unlike the original version, we store the requested size, not plus the padding.
+
+        _total_allocated += size;
         assert((uintptr_t)p % align == 0);
+
+        log_info("allocate called with size: %lu - ptr = %p", (ulong)size, p);
+
         return p;
     }
 
