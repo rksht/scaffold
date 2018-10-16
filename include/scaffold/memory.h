@@ -41,6 +41,8 @@ class SCAFFOLD_API Allocator {
     /// Maximum name size for any allocator including the '\0' character
     static constexpr uint64_t ALLOCATOR_NAME_SIZE = 32;
 
+    static constexpr AddrUint DONT_CARE_OLD_SIZE = ~AddrUint(0);
+
     Allocator();
 
     // Dtor
@@ -50,8 +52,13 @@ class SCAFFOLD_API Allocator {
     virtual void *allocate(AddrUint size, AddrUint align = DEFAULT_ALIGN) = 0;
 
     /// Reallocate the region of memory. If nullptr, should treat as a call to `allocate`. If new_size is 0,
-    /// should treat as a call to `deallocate`.
-    virtual void *reallocate(void *old_allocation, AddrUint new_size, AddrUint align = DEFAULT_ALIGN) = 0;
+    /// should treat as a call to `deallocate`. `old_size` can be given when the user of the allocator keeps
+    /// track of size themselves. This is mandatory when using an allocator that does not track size per
+    /// allocation.
+    virtual void *reallocate(void *old_allocation,
+                             AddrUint new_size,
+                             AddrUint align = DEFAULT_ALIGN,
+                             AddrUint optional_old_size = DONT_CARE_OLD_SIZE) = 0;
 
     /// Frees an allocation previously made with allocate() or reallocate(). If `p` is nullptr, then simply
     /// returns doing nothing.
@@ -88,16 +95,18 @@ class SCAFFOLD_API Allocator {
     Allocator(const Allocator &other) = delete;
     Allocator &operator=(const Allocator &other) = delete;
 
-protected:
-
+  protected:
     struct DefaultReallocInfo {
         void *new_allocation;
         AddrUint size_difference;
         bool32 size_increased;
     };
 
-    void default_realloc(void *old_allocation, AddrUint new_size, AddrUint align, DefaultReallocInfo *out_info);
-
+    void default_realloc(void *old_allocation,
+                         AddrUint new_size,
+                         AddrUint align,
+                         AddrUint old_size,
+                         DefaultReallocInfo *out_info);
 
   private:
     /// The name of the allocator is stored in this array
@@ -140,7 +149,7 @@ struct InitConfig {
     // Don't track leaks at all. This is a runtime option
     bool dont_track_malloc_leak = false;
 
-    // If there is a 'leak', don't abort. Just notify with a print. 
+    // If there is a 'leak', don't abort. Just notify with a print.
     bool dont_abort_if_leak = false;
 };
 

@@ -71,7 +71,10 @@ class SCAFFOLD_API ArenaAllocator : public Allocator {
 
     void *allocate(AddrUint size, AddrUint align = DEFAULT_ALIGN) override;
 
-    void *reallocate(void *old_allocation, AddrUint new_size, AddrUint align = DEFAULT_ALIGN) override;
+    void *reallocate(void *old_allocation,
+                     AddrUint new_size,
+                     AddrUint align = DEFAULT_ALIGN,
+                     AddrUint old_size = DONT_CARE_OLD_SIZE) override;
 
     void deallocate(void *p) override;
 

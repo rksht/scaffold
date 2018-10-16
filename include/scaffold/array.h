@@ -147,7 +147,8 @@ template <typename T> void set_capacity(Array<T> &a, uint32_t new_capacity) {
 
     T *new_data = nullptr;
     if (new_capacity > 0) {
-        new_data = (T *)a._allocator->reallocate(a._data, sizeof(T) * new_capacity, alignof(T));
+        new_data = (T *)a._allocator->reallocate(
+            a._data, sizeof(T) * new_capacity, alignof(T), sizeof(T) * a._capacity);
     }
     a._data = new_data;
     a._capacity = new_capacity;

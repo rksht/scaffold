@@ -31,9 +31,11 @@ template <int BUFFER_SIZE> class TempAllocator : public Allocator {
 
     void *allocate(AddrUint size, AddrUint align = DEFAULT_ALIGN) override;
 
-    void *reallocate(void *old_allocation, AddrUint new_size, AddrUint align) override {
-        assert(false, "TempAllocator does not support reallocate().");
-        return nullptr;
+    void *
+    reallocate(void *old_allocation, AddrUint new_size, AddrUint align, AddrUint must_old_size) override {
+        DefaultReallocInfo realloc_info = {};
+        default_realloc(old_allocation, new_size, align, must_old_size, &realloc_info);
+        return realloc_info.new_allocation;
     }
 
     /// Deallocation is a NOP for the TempAllocator. The memory is automatically

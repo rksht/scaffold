@@ -34,6 +34,7 @@ void Allocator::set_name(const char *name, uint64_t len) {
 void Allocator::default_realloc(void *old_allocation,
                                 AddrUint new_size,
                                 AddrUint align,
+                                AddrUint old_size,
                                 DefaultReallocInfo *out_info) {
     // TODO: The base implementation doesn't lock a mutex! Best to just not use the base implementation of
     // reallocate.
@@ -55,9 +56,12 @@ void Allocator::default_realloc(void *old_allocation,
         return;
     }
 
-    AddrUint old_size = (AddrUint)allocated_size(old_allocation);
-    assert(old_size != SIZE_NOT_TRACKED &&
-           "Default reallocate only works for Allocator implementations that never return SIZE_NOT_TRACKED");
+    if (old_size == DONT_CARE_OLD_SIZE) {
+        old_size = (AddrUint)allocated_size(old_allocation);
+        assert(
+            old_size != SIZE_NOT_TRACKED &&
+            "Default reallocate only works for Allocator implementations that never return SIZE_NOT_TRACKED");
+    }
 
     if (old_size == new_size) {
         out_info->new_allocation = old_allocation;
@@ -210,7 +214,8 @@ class MallocAllocator : public Allocator {
 #    endif
     }
 
-    void *reallocate(void *old_allocation, AddrUint new_size, AddrUint align) override {
+    void *
+    reallocate(void *old_allocation, AddrUint new_size, AddrUint align, AddrUint maybe_old_size) override {
 #    ifdef WIN32
         void *new_allocation = _aligned_realloc(old_allocation, new_size, align);
 
@@ -265,9 +270,12 @@ class MallocAllocator : public Allocator {
         return p;
     }
 
-    void *reallocate(void *old_allocation, AddrUint old_size, AddrUint align) override {
+    void *reallocate(void *old_allocation,
+                     AddrUint new_size,
+                     AddrUint align,
+                     AddrUint optional_old_size = DONT_CARE_OLD_SIZE) override {
         DefaultReallocInfo realloc_info = {};
-        default_realloc(old_allocation, old_size, align, &realloc_info);
+        default_realloc(old_allocation, new_size, align, optional_old_size, &realloc_info);
 
         return realloc_info.new_allocation;
     }
@@ -461,11 +469,11 @@ class ScratchAllocator : public Allocator {
         return _end - _begin;
     }
 
-    void *reallocate(void *old_allocation, AddrUint new_size, AddrUint align) {
+    void *reallocate(void *old_allocation, AddrUint new_size, AddrUint align, AddrUint optional_old_size) {
         // Don't think it's worth it to implement reallocate to handle growing the tail if old_allocation is
         // at the tail
         DefaultReallocInfo realloc_info = {};
-        default_realloc(old_allocation, new_size, align, &realloc_info);
+        default_realloc(old_allocation, new_size, align, optional_old_size, &realloc_info);
         return realloc_info.new_allocation;
     }
 };

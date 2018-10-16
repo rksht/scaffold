@@ -155,7 +155,9 @@ uint64_t ArenaAllocator::allocated_size(void *p) {
     return allocated_size_no_lock(p);
 }
 
-void *ArenaAllocator::reallocate(void *old_allocation, AddrUint new_data_size, AddrUint align) {
+void *ArenaAllocator::reallocate(void *old_allocation, AddrUint new_data_size, AddrUint align, AddrUint old_size) {
+    (void)old_size; // This allocator tracks size per allocation
+
     if (old_allocation == nullptr) {
         return allocate(new_data_size, align);
     }
