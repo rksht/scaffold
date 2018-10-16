@@ -47,10 +47,13 @@ void *Allocator::reallocate(void *old_allocation, AddrUint new_size, AddrUint al
         return old_allocation;
     }
 
+#if 0
     log_info("Realloc called with old size = %lu, new_size = %lu reallocptr = %p",
              (ulong)old_size,
              (ulong)new_size,
              old_allocation);
+
+#endif
 
     memcpy(new_allocation, old_allocation, old_size < new_size ? old_size : new_size);
 
@@ -233,7 +236,9 @@ class MallocAllocator : public Allocator {
         _total_allocated += size;
         assert((uintptr_t)p % align == 0);
 
+#    if 0
         log_info("allocate called with size: %lu - ptr = %p", (ulong)size, p);
+#    endif
 
         return p;
     }
