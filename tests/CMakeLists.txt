@@ -141,3 +141,8 @@ add_executable(allocator_test allocator_test.cpp)
 test_link_libraries(allocator_test)
 
 set_target_properties(allocator_test PROPERTIES FOLDER scaffold_tests)
+
+add_executable(vector_test vector_test.cpp)
+test_link_libraries(vector_test)
+
+set_target_properties(vector_test PROPERTIES FOLDER scaffold_tests)

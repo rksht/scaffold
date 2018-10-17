@@ -16,6 +16,8 @@ template <typename T> u32 capacity(const Vector<T> &a);
 
 template <typename T> T &push_back(Vector<T> &a, const T &element);
 template <typename T> void pop_back(Vector<T> &a);
+template <typename T> void clear(Vector<T> &a);
+
 template <typename T> const T &back(const Vector<T> &a);
 template <typename T> const T &front(const Vector<T> &a);
 template <typename T> T &back(Vector<T> &a);
@@ -32,14 +34,94 @@ template <typename T> const T *end(const Vector<T> &a) { return data(a) + a._siz
 namespace internal {
 
 template <typename T> void grow(Vector<T> &a);
-template <typename T> void set_capacity(Vector<T> &a, u32 new_size, bool is_resize);
 template <typename T> void move(T *source, T *destination, u32 source_size);
 template <typename T> void copy(T *source, T *destination, u32 source_size);
 template <typename T> void destroy_elements(T *elements, u32 count);
 template <typename T> void fill_with_default(T *elements, u32 count);
 template <typename T> void fill_with_given(T *elements, u32 count, const T &element);
 
-} // namespace internal
+// With C++17 we can simply use an if-constexpr
+#if 0
+template <typename T, bool is_resize> void set_capacity(Vector<T> &a, u32 new_capacity) {
+    if (new_capacity == a._capacity) {
+        return;
+    }
+
+    T *new_allocation = reinterpret_cast<T *>(
+        a._allocator->allocate(new_capacity * sizeof(T), std::max(alignof(T), size_t(16))));
+
+    log_assert(new_allocation != nullptr, "Failed to allocate capacity: %u", new_capacity);
+
+    move(a._data, new_allocation, a._size);
+
+    // If storing non-pod-ish elements and resizing, store default constructed elements.
+    if constexpr (is_resize && !std::is_trivially_constructible<T>::value) {
+        for (u32 i = a._size; i < new_capacity; ++i) {
+            new (new_allocation + i) T{};
+        }
+    }
+
+    a._allocator->deallocate(a._data);
+    a._data = new_allocation;
+    a._capacity = new_capacity;
+}
+
+#endif
+
+// But since we want to be cool with C++14 too, we go through some chore.
+
+template <typename T, bool is_resize> struct FillWithDefaultIfResize;
+
+template <typename T> struct FillWithDefaultIfResize<T, true> {
+    static void call(T *mem, T *end) {
+        for (T *p = mem; p < end; ++p) {
+            new ((void *)p) T();
+        }
+    }
+};
+
+template <typename T> struct FillWithDefaultIfResize<T, false> {
+    static void call(T *mem, T *end) {
+        (void)mem;
+        (void)end;
+    }
+};
+
+template <typename T,
+          bool is_resize,
+          std::enable_if_t<!std::is_trivially_default_constructible<T>::value> *whatever = nullptr>
+void init_with_defaults_if_nonpod(T *mem, T *end) {
+    FillWithDefaultIfResize<T, is_resize>::call(mem, end);
+}
+
+template <typename T,
+          bool is_resize,
+          std::enable_if_t<std::is_trivially_default_constructible<T>::value> *whatever = nullptr>
+void init_with_defaults_if_nonpod(T *mem, T *end) {
+    (void)mem;
+    (void)end;
+}
+
+template <typename T, bool is_resize> void set_capacity(Vector<T> &a, u32 new_capacity) {
+    if (new_capacity == a._capacity) {
+        return;
+    }
+
+    T *new_allocation = reinterpret_cast<T *>(
+        a._allocator->allocate(new_capacity * sizeof(T), std::max(alignof(T), size_t(16))));
+
+    log_assert(new_allocation != nullptr, "Failed to allocate capacity: %u", new_capacity);
+
+    move(a._data, new_allocation, a._size);
+
+    init_with_defaults_if_nonpod<T, is_resize>(new_allocation + a._size, new_allocation + new_capacity);
+
+    a._allocator->deallocate(a._data);
+    a._data = new_allocation;
+    a._capacity = new_capacity;
+}
+
+}; // namespace internal
 
 } // namespace fo
 
@@ -51,7 +133,7 @@ template <typename T> u32 reserve(Vector<T> &a, u32 new_capacity) {
     if (new_capacity < a._capacity) {
         return a._capacity;
     }
-    internal::set_capacity(a, u32(1) << log2_ceil(new_capacity), false);
+    internal::set_capacity<T, false>(a, u32(1) << log2_ceil(new_capacity));
     return a._capacity;
 }
 
@@ -73,7 +155,7 @@ template <typename T> void resize(Vector<T> &a, u32 new_size) {
 
     // Means a._capacity <= new_size.
     u32 new_capacity = u32(1) << log2_ceil(new_size);
-    internal::set_capacity(a, new_capacity, true);
+    internal::set_capacity<T, true>(a, new_capacity);
     internal::fill_with_default(&a._data[a._size], new_size - a._size);
     a._size = new_size;
 }
@@ -92,8 +174,13 @@ template <typename T> void resize_with_given(Vector<T> &a, u32 new_size, const T
 
     // Means a._capacity <= new_size
     u32 new_capacity = u32(1) << log2_ceil(new_size);
-    internal::set_capacity(a, new_capacity);
-    internal::fill_with_given(&a._data[a._size], new_size - a._size, t);
+    internal::set_capacity<T, false>(a, new_capacity);
+
+    // Copy-construct each new element
+    for (u32 i = a._size; i < new_size; ++i) {
+        new (&a._data[i]) T(t);
+    }
+
     a._size = new_size;
 }
 
@@ -141,6 +228,12 @@ template <typename T, typename... Args> T &emplace_back(Vector<T> &a, Args &&...
 template <typename T> void pop_back(Vector<T> &a) {
     internal::destroy_elements(&a._data[a._size - 1], 1);
     --a._size;
+}
+
+template <typename T> void clear(Vector<T> &a) {
+    while (fo::size(a) != 0) {
+        fo::pop_back(a);
+    }
 }
 
 template <typename T> const T &back(const Vector<T> &a) { return a._data[a._size - 1]; }
@@ -263,31 +356,7 @@ namespace internal {
 
 template <typename T> void grow(Vector<T> &a) {
     u32 new_capacity = a._capacity == 0 ? 1 : a._capacity * 2;
-    set_capacity(a, new_capacity, false);
-}
-
-template <typename T> void set_capacity(Vector<T> &a, u32 new_capacity, bool is_resize) {
-    if (new_capacity == a._capacity) {
-        return;
-    }
-
-    T *new_allocation = reinterpret_cast<T *>(
-        a._allocator->allocate(new_capacity * sizeof(T), std::max(alignof(T), size_t(16))));
-
-    log_assert(new_allocation != nullptr, "Failed to allocate capacity: %u", new_capacity);
-
-    move(a._data, new_allocation, a._size);
-
-    // If storing non-pod-ish elements and resizing, store default constructed elements.
-    if (is_resize && !std::is_trivially_constructible<T>::value) {
-        for (u32 i = a._size; i < new_capacity; ++i) {
-            new (new_allocation + i) T{};
-        }
-    }
-
-    a._allocator->deallocate(a._data);
-    a._data = new_allocation;
-    a._capacity = new_capacity;
+    set_capacity<T, false>(a, new_capacity);
 }
 
 template <typename T> void move(T *source, T *destination, u32 source_size) {

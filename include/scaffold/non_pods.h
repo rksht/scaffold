@@ -8,6 +8,9 @@
 
 namespace fo {
 
+/// Pretty much like std::vector, but doesn't value-initialize elements on a resize() if element type is
+/// trivially default constructible. Provides a `resize_with_given` function instead. Use some caution
+/// therefore when using it since it's not a drop-in replacement for std::vector usually.
 template <typename T> struct Vector {
     T *_data;
     u32 _size;
