@@ -1,7 +1,8 @@
+// A hash table that stores POD (for the most part) types. Avoids calling any equals or hash function for keys
+// that are integers, or convertible to uint32_t if a particular tag is given. See below.
 #pragma once
 
 #include <scaffold/array.h>
-#include <scaffold/collection_types.h>
 #include <scaffold/debug.h>
 #include <scaffold/memory.h>
 
@@ -11,16 +12,33 @@
 #include <memory> // std::move
 #include <stdint.h>
 #include <stdio.h>
-#include <type_traits>
 
 namespace fo {
 
+namespace internal {
+
+// Here goes checking if the member function `operator u32(const T &)` is present or not.
+
+template <typename K, typename Whatever = uint32_t> struct ConvertibleToU32 {
+    static constexpr bool value = false;
+};
+
+template <typename K> struct ConvertibleToU32<K, decltype(static_cast<u32>(std::declval<K>()))> {
+    static constexpr bool value = true;
+};
+
+} // namespace internal
+
 // Passing this instead of a callable to `HashFnType` will simply use the value of the key as its hash.
-template <typename K> struct IdentityHashTag { static_assert(std::is_integral<K>::value, ""); };
+template <typename K> struct ConvertToInt {
+    static_assert(
+        std::is_integral<K>::value || internal::ConvertibleToU32<K>::value,
+        "Key must be convertible to an integer when using ConvertToInt<K> as the hash function type");
+};
 
 // Passing this instead of a callable "equal" comparison will simply make the table use operator== on the
 // keys.
-template <typename K> struct IdentityEqualTag {};
+template <typename K> struct CallEqualOperator {};
 
 namespace pod_hash_internal {
 
@@ -36,8 +54,8 @@ template <typename K, typename V> struct Entry {
 /// copyassignable' data type as key.
 template <typename K,
           typename V,
-          typename HashFnType = IdentityHashTag<K>,
-          typename EqualFnType = IdentityEqualTag<K>>
+          typename HashFnType = ConvertToInt<K>,
+          typename EqualFnType = CallEqualOperator<K>>
 struct PodHash {
     using Entry = pod_hash_internal::Entry<K, V>;
     using HashFn = HashFnType;
@@ -92,11 +110,11 @@ struct PodHash {
 // You can call like this - fo::make_pod_hash<u32, const char *>(alloc) - for example.
 template <typename K,
           typename V,
-          typename HashFnType = IdentityHashTag<K>,
-          typename EqualFnType = IdentityEqualTag<K>>
+          typename HashFnType = ConvertToInt<K>,
+          typename EqualFnType = CallEqualOperator<K>>
 PodHashSig make_pod_hash(fo::Allocator &alloc = fo::memory_globals::default_allocator(),
-                         HashFnType hash_func = IdentityHashTag<K>(),
-                         EqualFnType equal_func = IdentityEqualTag<K>()) {
+                         HashFnType hash_func = ConvertToInt<K>(),
+                         EqualFnType equal_func = CallEqualOperator<K>()) {
     return PodHashSig(alloc, alloc, std::move(hash_func), std::move(equal_func));
 }
 
@@ -161,10 +179,10 @@ template <TypeList> struct KeyHashSlot {
 };
 
 template <typename K, typename V, typename EqualFnType>
-struct KeyHashSlot<K, V, IdentityHashTag<K>, EqualFnType> {
-    static REALLY_INLINE uint32_t hash_slot(const PodHash<K, V, IdentityHashTag<K>, EqualFnType> &h,
+struct KeyHashSlot<K, V, ConvertToInt<K>, EqualFnType> {
+    static REALLY_INLINE uint32_t hash_slot(const PodHash<K, V, ConvertToInt<K>, EqualFnType> &h,
                                             const K &k) {
-        return k % fo::size(h._hashes);
+        return u32(k) % fo::size(h._hashes);
     }
 };
 
@@ -186,8 +204,9 @@ template <TypeList> struct KeyEqualCaller {
 };
 
 template <typename K, typename V, typename HashFnType>
-struct KeyEqualCaller<K, V, HashFnType, IdentityEqualTag<K>> {
-    static bool key_equal(const PodHash<K, V, HashFnType, IdentityEqualTag<K>> &h, const K &k1, const K &k2) {
+struct KeyEqualCaller<K, V, HashFnType, CallEqualOperator<K>> {
+    static bool
+    key_equal(const PodHash<K, V, HashFnType, CallEqualOperator<K>> &h, const K &k1, const K &k2) {
         return k1 == k2;
     }
 };

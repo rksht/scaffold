@@ -69,7 +69,7 @@ inline constexpr uint32_t ceil_div(uint32_t a, uint32_t b) {
     return a / b;
 }
 
-template <typename T1, typename T2, typename T3> inline constexpr auto clamp(T1 min, T2 max, T3 value) {
+template <typename T1, typename T2, typename T3> inline constexpr auto clamp(T3 value, T1 min, T2 max) {
     return std::min(max, std::max(min, value));
 }
 
