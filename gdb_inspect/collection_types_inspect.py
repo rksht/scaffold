@@ -1,4 +1,5 @@
 import gdb
+from gdb import printing as gdb_printing
 import re
 
 def array_info_string(size, capacity, start, end):
@@ -38,19 +39,52 @@ class ScaffoldArrayPrinter:
         return ScaffoldArrayIterator(self.value)
 
 
-array_regex = re.compile(r'^fo::Array<.*>$')        
+array_regex = re.compile(r'^fo::Array<.*>$')   
+podhash_regex = re.compile(r'^fo::PodHash<.*>$')
 
-def array_lookup_function(value):
-    lookup_tag = value.type.tag
-    
-    if not lookup_tag:
-        return None
-        
-    if re.match(array_regex, lookup_tag):
-        return ScaffoldArrayPrinter(value)
-        
-    return None
-    
-def register_scaffold_printers(objfile):
-    objfile.pretty_printers.append(array_lookup_function)
+def make_scaffold_printers():
+    pp = gdb_printing.RegexpCollectionPrettyPrinter('scaffold')
+
+    pp.add_printer('fo_Array', array_regex, ScaffoldArrayPrinter)
+    pp.add_printer('fo_PodHash', podhash_regex, ScaffoldPodHashPrinter)
+
+    return pp
+
+
+class ScaffoldPodHashPrinter:
+    def __init__(self, value):
+        self.value = value
+
+    def to_string(self):
+        hashes = self.value['_hashes']
+        entries = self.value['_entries']
+        max_load_factor = self.value['_load_factor']
+
+        num_entries = entries['_size']
+        num_hash_slots_allocated = hashes['_size']
+
+        s = 'fo::PodHash with num_entries = {}, num_hash_slots_allocated = {}.'
+        return s.format(num_entries, num_hash_slots_allocated)
+
+    def children(self):
+        return ScaffoldPodHashIterator(self.value['_entries'])
+
+class ScaffoldPodHashIterator:
+    def __init__(self, entries):
+        self.entries = entries
+        self.num_iterated = 0
+        self.count = entries['_size']
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.num_iterated == self.count:
+            raise StopIteration()
+
+        data = self.entries['_data']
+
+        ret = ('[{}]'.format(data[self.num_iterated]['key']), data[self.num_iterated]['value'])
+        self.num_iterated += 1
+        return ret
 

@@ -45,6 +45,7 @@ struct SCAFFOLD_API PoolAllocator : public Allocator {
 
     virtual void *reallocate(void *, AddrUint, AddrUint, AddrUint old_size = DONT_CARE_OLD_SIZE) override {
         log_assert(false, "PoolAllocator does not support reallocate()");
+        (void)old_size;
         return nullptr;
     }
 };
