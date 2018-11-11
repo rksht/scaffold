@@ -1,4 +1,3 @@
-import gdb
 from gdb import printing as gdb_printing
 import re
 
@@ -70,12 +69,14 @@ class ScaffoldPodHashIterator:
         return self
 
     def __next__(self):
-        if self.num_iterated == self.count or self.num_iterated == MAX_ENTRIES_SHOWN + 1:
+        if self.num_iterated == self.count or self.num_iterated > MAX_ENTRIES_SHOWN:
             raise StopIteration()
 
         if self.num_iterated == MAX_ENTRIES_SHOWN:
             remaining_items = self.count - self.num_iterated
-            return '[... {} more entries]'.format(remaining_items)
+            self.num_iterated += 1
+
+            return ('[... {} more entries]'.format(remaining_items), '')
 
         data = self.entries['_data']
 
@@ -87,7 +88,7 @@ class ScaffoldPodHashIterator:
 array_regex = re.compile(r'^fo::Array<.*>$')
 podhash_regex = re.compile(r'^fo::PodHash<.*>$')
 
-def make_scaffold_printers():
+def make_pretty_printer():
     pp = gdb_printing.RegexpCollectionPrettyPrinter('scaffold')
 
     pp.add_printer('fo_Array', array_regex, ScaffoldArrayPrinter)
