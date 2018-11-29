@@ -3,7 +3,9 @@
 #include <scaffold/array.h>
 #include <scaffold/collection_types.h>
 #include <scaffold/memory.h>
+#include <scaffold/murmur_hash.h>
 
+#include <functional> // std::less and std::hash specialization
 #include <stdio.h>
 #include <string.h>
 
@@ -38,6 +40,9 @@ SCAFFOLD_API Buffer &repeat(Buffer &b, uint32_t count, char c);
 /// Returns the stream as a C-string. There will always be a \0 character at the end of the returned string.
 /// You don't have to explicitly add it to the buffer.
 SCAFFOLD_API const char *c_str(Buffer &b);
+
+/// Just because.
+inline u32 length(Buffer &b) { return fo::size(b); }
 
 /// Sometimes you may want to steal the allocated string into a plain-old `char *`. Call `c_str_own` to do
 /// that. This of course means you are now in charge of freeing the memory...
@@ -99,3 +104,21 @@ inline const char *c_str(Buffer &b) {
 
 } // namespace string_stream
 } // namespace fo
+
+// Specialization of std::less and std::hash
+namespace std {
+
+template <> struct less<fo::string_stream::Buffer> {
+    bool operator()(const fo::string_stream::Buffer &str1, const fo::string_stream::Buffer &str2) const {
+        const u32 count = std::min(fo::size(str1), fo::size(str2));
+        return strncmp(fo::data(str1), fo::data(str2), count) < 0;
+    }
+};
+
+template <> struct hash<fo::string_stream::Buffer> {
+    std::size_t operator()(const fo::string_stream::Buffer &str1) const {
+        return (std::size_t)fo::murmur_hash_64(fo::data(str1), fo::size(str1), SCAFFOLD_SEED);
+    }
+};
+
+} // namespace std

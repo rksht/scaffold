@@ -58,8 +58,9 @@ template <typename Key, typename Value> struct OrderedMap {
     using iterator = fo::rbt::Iterator<Key, Value, false>;
     using const_iterator = fo::rbt::Iterator<Key, Value, true>;
 
-    OrderedMap(fo::Allocator &allocator)
-        : _rbt(allocator) {}
+    OrderedMap(fo::Allocator &allocator = fo::memory_globals::default_allocator(),
+               typename Rbt::is_less_fn less_fn = std::less<Key>{})
+        : _rbt(allocator, less_fn) {}
 
     ~OrderedMap() {}
 

@@ -53,6 +53,12 @@ template <typename Key, typename T> struct RBNode : public internal::ChildPointe
 
     RBNode(const RBNode<Key, T> &) = delete;
     RBNode(RBNode<Key, T> &&) = delete;
+
+    // These two functions are convenience when you want to switch to/from using RBT to std::map or
+    // std::unordered_map
+    const Key &first() const { return k; }
+    const T &second() const { return v; }
+    T &second() { return v; }
 };
 
 /// Represents a red-black tree based map.
@@ -70,6 +76,8 @@ template <typename Key, typename T> struct RBTree {
     RBNode<Key, T> *_root;
 
     is_less_fn _less;
+
+    bool _equal(const Key &k1, const Key &k2) const { return !(_less(k1, k2) || _less(k1, k2)); }
 
     /// Constructs a new RBTree where nodes will be allocated using given `allocator`.
     RBTree(Allocator &allocator, is_less_fn less = std::less<Key>{});
@@ -231,7 +239,7 @@ template <typename Key, typename T, bool is_const>
 KT<RBNode, Key, T, is_const> *find(KT<RBTree, Key, T, is_const> &rbt, const Key &k) {
     auto cur_node = rbt._root;
     while (!is_nil_node(rbt, cur_node)) {
-        if (cur_node->k == k) {
+        if (rbt._equal(cur_node->k, k)) {
             return cur_node;
         }
         if (rbt._less(cur_node->k, k)) {
@@ -655,7 +663,7 @@ template <typename Key, typename T> Result<Key, T, false> remove(RBTree<Key, T> 
         return Result<Key, T, false>{ false, end(t) };
     }
 
-    assert(n->k == k);
+    assert(t._equal(n->k == k));
 
     auto y = n;
     auto orig_color = n->_color;

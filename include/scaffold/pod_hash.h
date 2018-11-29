@@ -46,6 +46,10 @@ template <typename K, typename V> struct Entry {
     K key;
     mutable V value;
     uint32_t next;
+
+    const K &first() const { return key; }
+    const V &second() const { return value; }
+    V &second() { return value; }
 };
 
 } // namespace pod_hash_internal
