@@ -5,6 +5,7 @@
 #include <scaffold/array.h>
 #include <scaffold/debug.h>
 #include <scaffold/memory.h>
+#include <scaffold/vector.h>
 
 #include <algorithm> // std::swap
 #include <functional>
@@ -66,20 +67,17 @@ struct PodHash {
     using EqualFn = EqualFnType;
 
     /// Both are const_iterator to the underlying array because we don't allow changing keys.
-    using iterator = typename fo::Array<Entry>::const_iterator;
-    using const_iterator = typename fo::Array<Entry>::const_iterator;
+    using iterator = typename Vector<Entry>::const_iterator;
+    using const_iterator = typename Vector<Entry>::const_iterator;
 
-    fo::Array<uint32_t> _hashes; // Array mapping a hash to an entry index
-    fo::Array<Entry> _entries;   // Array of entries
-    HashFnType _hashfn;          // The hash function to use
-    EqualFnType _equalfn;        // The equal function to use
+    Array<uint32_t> _hashes; // Array mapping a hash to an entry index
+    Vector<Entry> _entries;  // Array of entries
+    HashFnType _hashfn;      // The hash function to use
+    EqualFnType _equalfn;    // The equal function to use
     float _load_factor = 0.7f;
 
     /// Constructor
-    PodHash(fo::Allocator &hash_alloc,
-            fo::Allocator &entry_alloc,
-            HashFnType hash_func,
-            EqualFnType equal_func)
+    PodHash(Allocator &hash_alloc, Allocator &entry_alloc, HashFnType hash_func, EqualFnType equal_func)
         : _hashes(hash_alloc)
         , _entries(entry_alloc)
         , _hashfn(std::move(hash_func))
@@ -111,12 +109,12 @@ struct PodHash {
 #define PodHashSig PodHash<K, V, HashFnType, EqualFnType>
 
 // A 'make_' function for convenience. Takes just one allocator used to allocate both the buckets and entries.
-// You can call like this - fo::make_pod_hash<u32, const char *>(alloc) - for example.
+// You can call like this - make_pod_hash<u32, const char *>(alloc) - for example.
 template <typename K,
           typename V,
           typename HashFnType = ConvertToInt<K>,
           typename EqualFnType = CallEqualOperator<K>>
-PodHashSig make_pod_hash(fo::Allocator &alloc = fo::memory_globals::default_allocator(),
+PodHashSig make_pod_hash(Allocator &alloc = memory_globals::default_allocator(),
                          HashFnType hash_func = ConvertToInt<K>(),
                          EqualFnType equal_func = CallEqualOperator<K>()) {
     return PodHashSig(alloc, alloc, std::move(hash_func), std::move(equal_func));
@@ -178,7 +176,8 @@ struct FindResult {
 
 template <TypeList> struct KeyHashSlot {
     static REALLY_INLINE uint32_t hash_slot(const PodHashSig &h, const K &k) {
-        return h._hashfn(k) % fo::size(h._hashes);
+        return std::invoke(h._hashfn, k) % size(h._hashes);
+        // return h._hashfn(k) % size(h._hashes);
     }
 };
 
@@ -186,7 +185,7 @@ template <typename K, typename V, typename EqualFnType>
 struct KeyHashSlot<K, V, ConvertToInt<K>, EqualFnType> {
     static REALLY_INLINE uint32_t hash_slot(const PodHash<K, V, ConvertToInt<K>, EqualFnType> &h,
                                             const K &k) {
-        return u32(k) % fo::size(h._hashes);
+        return u32(k) % size(h._hashes);
     }
 };
 
@@ -222,7 +221,7 @@ template <TypeList> REALLY_INLINE auto key_equal(const PodHashSig &h, const K &k
 template <TypeList> FindResult find(const PodHashSig &h, const K &key) {
     FindResult fr = { END_OF_LIST, END_OF_LIST, END_OF_LIST };
 
-    if (fo::size(h._hashes) == 0) {
+    if (size(h._hashes) == 0) {
         return fr;
     }
 
@@ -246,8 +245,8 @@ template <TypeList> struct PushEntry<K, V, HashFnType, EqualFnType, true> {
         typename PodHashSig::Entry e{};
         e.key = key;
         e.next = END_OF_LIST;
-        uint32_t ei = fo::size(h._entries);
-        fo::push_back(h._entries, e);
+        uint32_t ei = size(h._entries);
+        push_back(h._entries, e);
         return ei;
     }
 };
@@ -257,8 +256,8 @@ template <TypeList> struct PushEntry<K, V, HashFnType, EqualFnType, false> {
         typename PodHashSig::Entry e;
         e.key = key;
         e.next = END_OF_LIST;
-        uint32_t ei = fo::size(h._entries);
-        fo::push_back(h._entries, e);
+        uint32_t ei = size(h._entries);
+        push_back(h._entries, e);
         return ei;
     }
 };
@@ -308,9 +307,9 @@ template <TypeList> void rehash(PodHashSig &h, uint32_t new_size) {
     PodHashSig new_hash(*h._hashes._allocator, *h._entries._allocator, h._hashfn, h._equalfn);
 
     // Don't need the previous hashes.
-    fo::free(h._hashes);
-    fo::resize(new_hash._hashes, new_size);
-    fo::reserve(new_hash._entries, fo::size(h._entries));
+    free(h._hashes);
+    resize(new_hash._hashes, new_size);
+    reserve(new_hash._entries, size(h._entries));
 
     // Empty out hashes
     for (uint32_t &entry_i : new_hash._hashes) {
@@ -326,7 +325,7 @@ template <TypeList> void rehash(PodHashSig &h, uint32_t new_size) {
 }
 
 template <TypeList> void grow(PodHashSig &h) {
-    uint32_t new_size = fo::size(h._entries) * 2 + 10;
+    uint32_t new_size = size(h._entries) * 2 + 10;
     rehash(h, new_size);
 }
 
@@ -335,14 +334,14 @@ template <TypeList> void grow(PodHashSig &h) {
 /// that too.
 template <TypeList> bool full(const PodHashSig &h) {
     const float max_load_factor = h._load_factor;
-    return fo::size(h._entries) >= fo::size(h._hashes) * max_load_factor;
+    return size(h._entries) >= size(h._hashes) * max_load_factor;
 }
 
 /// Inserts an entry by simply appending to the chain, so if no chain already exists for the given key, it's
 /// same as creating a new entry. Otherwise, it just adds a new entry to the chain, and does not overwrite any
 /// entry having the same key
 template <TypeList> void insert(PodHashSig &h, const K &key, const V &value) {
-    if (fo::size(h._hashes) == 0) {
+    if (size(h._hashes) == 0) {
         grow(h);
     }
 
@@ -361,13 +360,13 @@ template <TypeList> void erase(PodHashSig &h, const FindResult &fr) {
         h._entries[fr.entry_prev].next = h._entries[fr.entry_i].next;
     }
 
-    if (fr.entry_i == fo::size(h._entries) - 1) {
-        fo::pop_back(h._entries);
+    if (fr.entry_i == size(h._entries) - 1) {
+        pop_back(h._entries);
         return;
     }
 
-    h._entries[fr.entry_i] = h._entries[fo::size(h._entries) - 1];
-    fo::pop_back(h._entries);
+    h._entries[fr.entry_i] = h._entries[size(h._entries) - 1];
+    pop_back(h._entries);
     FindResult last = find(h, h._entries[fr.entry_i].key);
 
     if (last.entry_prev == END_OF_LIST) {
@@ -393,7 +392,7 @@ namespace fo {
 template <TypeList> void reserve(PodHashSig &h, uint32_t size) { pod_hash_internal::rehash(h, size); }
 
 template <TypeList> void set(PodHashSig &h, const K &key, const V &value) {
-    if (fo::size(h._hashes) == 0) {
+    if (size(h._hashes) == 0) {
         pod_hash_internal::grow(h);
     }
     const uint32_t ei = pod_hash_internal::find_or_make(h, key, false);
@@ -417,7 +416,7 @@ template <TypeList> typename PodHashSig::iterator get(const PodHashSig &h, const
 }
 
 template <TypeList> V &PodHashSig::operator[](const K &key) {
-    if (fo::size(_hashes) == 0) {
+    if (size(_hashes) == 0) {
         pod_hash_internal::grow(*this);
     }
     auto ei = pod_hash_internal::find_or_make(*this, key, true);
@@ -427,7 +426,7 @@ template <TypeList> V &PodHashSig::operator[](const K &key) {
 template <TypeList> V &set_default(PodHashSig &h, const K &key, const V &deffault) {
     pod_hash_internal::FindResult fr = pod_hash_internal::find(h, key);
     if (fr.entry_i == pod_hash_internal::END_OF_LIST) {
-        if (fo::size(h._hashes) == 0) {
+        if (size(h._hashes) == 0) {
             pod_hash_internal::grow(h);
         }
         const uint32_t ei = pod_hash_internal::make(h, key);
@@ -461,7 +460,7 @@ template <TypeList> void remove(PodHashSig &h, float new_load_factor) {
 template <TypeList> uint32_t max_chain_length(const PodHashSig &h) {
     uint32_t max_length = 0;
 
-    for (uint32_t i = 0; i < fo::size(h._entries); ++i) {
+    for (uint32_t i = 0; i < size(h._entries); ++i) {
         if (h._hashes[i] == pod_hash_internal::END_OF_LIST) {
             continue;
         }

@@ -17,6 +17,9 @@ template <typename T> struct Vector {
     u32 _capacity;
     fo::Allocator *_allocator;
 
+    using iterator = T *;
+    using const_iterator = const T *;
+
     Vector(u32 initial_count = 0, fo::Allocator &a = fo::memory_globals::default_allocator());
 
     Vector(u32 initial_count,
