@@ -15,7 +15,7 @@ if (SCAFFOLD_ENABLE_BENCHMARKS)
 endif()
 
 # Options to propagate
-if (GNU)
+if (GNU OR Clang)
 	add_compile_options(-std=c++17)
 elseif(MSVC)
 	add_compile_options(-std:c++17)
