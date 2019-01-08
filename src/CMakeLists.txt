@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.4)
 
 # Compile flags
-if(MSVC)
+if(msvc)
   add_compile_options("-Wall")
     add_compile_options(/W1 /wd4100 /wd4201 /wd4189 /wd4514 /wd4820 /wd4710 /wd4571 /wd5027 /wd5045 /wd4625 /wd4626 /wd5026 /wd4623)
     add_compile_options(/wd4365)
@@ -14,7 +14,7 @@ if(MSVC)
     add_compile_options(/wd4061)
     add_compile_options(/wd4200)
 else()
-  add_compile_options("-Wall" "-Wextra" "-Werror" "-Wno-implicit-fallthrough" "-fmax-errors=1")
+  add_compile_options("-Wall" "-Wextra" "-Werror" "-Wno-implicit-fallthrough")
 endif()
 
 # sanitizer

@@ -3,6 +3,7 @@
 #include <scaffold/murmur_hash.h>
 #include <scaffold/types.h>
 
+#include <string>
 #include <functional>
 #include <unordered_map>
 

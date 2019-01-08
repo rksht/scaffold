@@ -183,8 +183,6 @@ inline const void *pointer_sub(const void *p, uint64_t bytes);
 // Aligns p to the specified alignment by moving it forward if necessary and returns the result.
 
 template <typename T> inline void *align_forward(void *p, T align) {
-    static_assert(std::is_same<T, uint32_t>::value || std::is_same<T, uint64_t>::value,
-                  "Must be unsigned 32 or 64 bit int");
     uintptr_t p_uint = uintptr_t(p);
     const uint64_t mod = p_uint % align;
     if (mod)

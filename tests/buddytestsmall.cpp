@@ -19,7 +19,7 @@ int main() {
     fo::memory_globals::init();
     {
         using BA = fo::BuddyAllocator;
-        BA ba(BUFFER_SIZE, SMALLEST_SIZE, fo::memory_globals::default_allocator());
+        BA ba(BUFFER_SIZE, SMALLEST_SIZE, true, fo::memory_globals::default_allocator());
         std::cout << "SIZE OF SMALLEST ARRAY = " << sizeof(SmallestBlock) << std::endl;
 
         auto b0 = ba.allocate(SMALLEST_SIZE, SMALLEST_SIZE);

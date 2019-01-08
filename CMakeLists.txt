@@ -14,22 +14,35 @@ if (SCAFFOLD_ENABLE_BENCHMARKS)
   add_subdirectory(bench)
 endif()
 
+set(gcc_or_clang FALSE)
+
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  set(gcc_or_clang TRUE)
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  set(msvc TRUE)
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  set(gcc_or_clang TRUE)
+endif()
+
+message("gcc_or_clang = ${gcc_or_clang}")
+
 # Options to propagate
-if (GNU OR Clang)
+if (gcc_or_clang)
+  message("Compiler is GNU or clang")
 	add_compile_options(-std=c++17)
-elseif(MSVC)
+elseif(msvc)
 	add_compile_options(-std:c++17)
 endif()
 
-option(BUDDY_ALLOC_LEVEL_LOGGING "Log buddy allocator" off)
-option(MALLOC_ALLOCATOR_DONT_TRACK_SIZE "Don't track size in MallocAllocator" off)
+option(SCAFFOLD_BUDDY_ALLOC_LEVEL_LOGGING "Log buddy allocator" off)
+option(SCAFFOLD_MALLOC_ALLOC_DONT_TRACK "Don't track size in MallocAllocator" off)
 
 if(BUDDY_ALLOC_LEVEL_LOGGING)
   message("Turning level logging on")
   add_definitions(-DBUDDY_ALLOC_LEVEL_LOGGING)
 endif()
 
-if(MALLOC_ALLOCATOR_DONT_TRACK_SIZE)
+if(SCAFFOLD_MALLOC_ALLOC_DONT_TRACK)
   message("MallocAllocator will NOT track size")
   add_compile_options(-DMALLOC_ALLOCATOR_DONT_TRACK_SIZE=1)
 else()

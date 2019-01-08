@@ -70,6 +70,13 @@ class SCAFFOLD_API BuddyAllocator : public Allocator {
     /// Deallocates the buddy. If p is null, then it's a nop.
     void deallocate(void *p) override;
 
+    void *reallocate(void *old_allocation, AddrUint new_size, AddrUint align, AddrUint optional_old_size) override
+    {
+        DefaultReallocInfo realloc_info = {};
+        default_realloc(old_allocation, new_size, align, optional_old_size, &realloc_info);
+        return realloc_info.new_allocation;
+    }
+
   private:
     /// Returns the size of any buddy that resides at the given `level`
     AddrUint _buddy_size_at_level(AddrUint level) const;

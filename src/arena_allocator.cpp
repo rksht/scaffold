@@ -113,7 +113,7 @@ void *ArenaAllocator::allocate(AddrUint size, AddrUint align) {
 
 void ArenaAllocator::deallocate(void *) {}
 
-uint64_t ArenaAllocator::total_allocated() { return _buffer_size + _child ? _child->total_allocated() : 0; }
+uint64_t ArenaAllocator::total_allocated() { return _buffer_size + (_child ? _child->total_allocated() : 0); }
 
 AllocationHeader *header_before_data(u8 *data) {
     AddrUint *pad = (AddrUint *)(data);

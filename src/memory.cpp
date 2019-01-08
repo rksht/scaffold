@@ -157,6 +157,8 @@ class MallocAllocator : public Allocator {
         : _total_allocated(0)
         , _mutex{}
         , _tracking(tracking) {
+            
+        (void)_tracking; // Unused private field.
 #if MALLOC_ALLOCATOR_DONT_TRACK_SIZE
         _total_allocated = SIZE_NOT_TRACKED;
 #endif
@@ -469,7 +471,7 @@ class ScratchAllocator : public Allocator {
         return _end - _begin;
     }
 
-    void *reallocate(void *old_allocation, AddrUint new_size, AddrUint align, AddrUint optional_old_size) {
+    void *reallocate(void *old_allocation, AddrUint new_size, AddrUint align, AddrUint optional_old_size) override {
         // Don't think it's worth it to implement reallocate to handle growing the tail if old_allocation is
         // at the tail
         DefaultReallocInfo realloc_info = {};
