@@ -57,10 +57,11 @@ def toposort(header_includes, states, current_header, chain):
         elif states[included_file] == 2:
             continue
         else:
-            raise RuntimeError('Cyclic dependency')
+            raise RuntimeError('Cyclic dependency for included file {}'.format(included_file))
 
     chain.append(current_header)
     states[current_header] = 2 # Done
+
 
 states = {}
 chain = []
