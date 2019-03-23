@@ -159,7 +159,10 @@ template <TypeList> const K &get_key(const PodHashSig &h, K const &key, K const 
 template <TypeList> void remove(PodHashSig &h, const K &key);
 
 /// Set the load factor
-template <TypeList> void set_load_factor(PodHashSig &h, float new_load_factor);
+template <TypeList> void set_load_factor(PodHashSig &h, float new_load_factor) {
+    assert(new_load_factor > 0);
+    h._load_factor = new_load_factor;
+}
 
 } // namespace fo
 

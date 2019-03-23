@@ -11,14 +11,12 @@ namespace fo {
 /// When items are removed, the array-list is repacked to always keep
 /// it tightly ordered.
 
-namespace hash {
 /// Returns true if the specified key exists in the hash.
 template <typename T> bool has(const Hash<T> &h, uint64_t key);
 
 /// Returns the value stored for the specified key, or deffault if the key
 /// does not exist in the hash.
-template <typename T>
-const T &get(const Hash<T> &h, uint64_t key, const T &deffault);
+template <typename T> const T &get(const Hash<T> &h, uint64_t key, const T &deffault);
 
 /// Sets the value for the key.
 template <typename T> void set(Hash<T> &h, uint64_t key, const T &value);
@@ -34,24 +32,20 @@ template <typename T> void reserve(Hash<T> &h, uint32_t size);
 /// efficiently iterate over the elements (in random order).
 template <typename T> const typename Hash<T>::Entry *begin(const Hash<T> &h);
 template <typename T> const typename Hash<T>::Entry *end(const Hash<T> &h);
-}
 
-namespace multi_hash {
 /// Finds the first entry with the specified key.
-template <typename T>
-const typename Hash<T>::Entry *find_first(const Hash<T> &h, uint64_t key);
+template <typename T> const typename Hash<T>::Entry *multi_hash_find_first(const Hash<T> &h, uint64_t key);
 
 /// Finds the next entry with the same key as e.
 template <typename T>
-const typename Hash<T>::Entry *find_next(const Hash<T> &h,
-                                         const typename Hash<T>::Entry *e);
+const typename Hash<T>::Entry *multi_hash_find_next(const Hash<T> &h, const typename Hash<T>::Entry *e);
 
 /// Returns the number of entries with the key.
-template <typename T> uint32_t count(const Hash<T> &h, uint64_t key);
+template <typename T> uint32_t multi_hash_count(const Hash<T> &h, uint64_t key);
 
 /// Returns all the entries with the specified key.
 /// Use a TempAllocator for the array to avoid allocating memory.
-template <typename T> void get(const Hash<T> &h, uint64_t key, Array<T> &items);
+template <typename T> void multi_hash_get(const Hash<T> &h, uint64_t key, Array<T> &items);
 
 /// Inserts the value as an aditional value for the key.
 template <typename T> void insert(Hash<T> &h, uint64_t key, const T &value);
@@ -61,7 +55,6 @@ template <typename T> void remove(Hash<T> &h, const typename Hash<T>::Entry *e);
 
 /// Removes all entries with the specified key.
 template <typename T> void remove_all(Hash<T> &h, uint64_t key);
-}
 
 namespace hash_internal {
 const uint32_t END_OF_LIST = 0xffffffffu;
@@ -121,8 +114,7 @@ template <typename T> void erase(Hash<T> &h, const FindResult &fr) {
         h._hash[last.hash_i] = fr.data_i;
 }
 
-template <typename T>
-FindResult find(const Hash<T> &h, const typename Hash<T>::Entry *e) {
+template <typename T> FindResult find(const Hash<T> &h, const typename Hash<T>::Entry *e) {
     FindResult fr;
     fr.hash_i = END_OF_LIST;
     fr.data_prev = END_OF_LIST;
@@ -142,9 +134,7 @@ FindResult find(const Hash<T> &h, const typename Hash<T>::Entry *e) {
     return fr;
 }
 
-template <typename T> uint32_t find_or_fail(const Hash<T> &h, uint64_t key) {
-    return find(h, key).data_i;
-}
+template <typename T> uint32_t find_or_fail(const Hash<T> &h, uint64_t key) { return find(h, key).data_i; }
 
 template <typename T> uint32_t find_or_make(Hash<T> &h, uint64_t key) {
     const FindResult fr = find(h, key);
@@ -205,15 +195,14 @@ template <typename T> void grow(Hash<T> &h) {
     const uint32_t new_size = size(h._data) * 2 + 10;
     rehash(h, new_size);
 }
-}
+} // namespace hash_internal
 
 namespace hash {
 template <typename T> bool has(const Hash<T> &h, uint64_t key) {
     return hash_internal::find_or_fail(h, key) != hash_internal::END_OF_LIST;
 }
 
-template <typename T>
-const T &get(const Hash<T> &h, uint64_t key, const T &deffault) {
+template <typename T> const T &get(const Hash<T> &h, uint64_t key, const T &deffault) {
     const uint32_t i = hash_internal::find_or_fail(h, key);
     return i == hash_internal::END_OF_LIST ? deffault : h._data[i].value;
 }
@@ -228,33 +217,22 @@ template <typename T> void set(Hash<T> &h, uint64_t key, const T &value) {
         hash_internal::grow(h);
 }
 
-template <typename T> void remove(Hash<T> &h, uint64_t key) {
-    hash_internal::find_and_erase(h, key);
-}
+template <typename T> void remove(Hash<T> &h, uint64_t key) { hash_internal::find_and_erase(h, key); }
 
-template <typename T> void reserve(Hash<T> &h, uint32_t size) {
-    hash_internal::rehash(h, size);
-}
+template <typename T> void reserve(Hash<T> &h, uint32_t size) { hash_internal::rehash(h, size); }
 
-template <typename T> const typename Hash<T>::Entry *begin(const Hash<T> &h) {
-    return begin(h._data);
-}
+template <typename T> const typename Hash<T>::Entry *begin(const Hash<T> &h) { return begin(h._data); }
 
-template <typename T> const typename Hash<T>::Entry *end(const Hash<T> &h) {
-    return end(h._data);
-}
-}
+template <typename T> const typename Hash<T>::Entry *end(const Hash<T> &h) { return end(h._data); }
+} // namespace hash
 
-namespace multi_hash {
-template <typename T>
-const typename Hash<T>::Entry *find_first(const Hash<T> &h, uint64_t key) {
+template <typename T> const typename Hash<T>::Entry *multi_hash_find_first(const Hash<T> &h, uint64_t key) {
     const uint32_t i = hash_internal::find_or_fail(h, key);
     return i == hash_internal::END_OF_LIST ? 0 : &h._data[i];
 }
 
 template <typename T>
-const typename Hash<T>::Entry *find_next(const Hash<T> &h,
-                                         const typename Hash<T>::Entry *e) {
+const typename Hash<T>::Entry *find_next(const Hash<T> &h, const typename Hash<T>::Entry *e) {
     uint32_t i = e->next;
     while (i != hash_internal::END_OF_LIST) {
         if (h._data[i].key == e->key)
@@ -264,9 +242,9 @@ const typename Hash<T>::Entry *find_next(const Hash<T> &h,
     return 0;
 }
 
-template <typename T> uint32_t count(const Hash<T> &h, uint64_t key) {
+template <typename T> uint32_t multi_hash_count(const Hash<T> &h, uint64_t key) {
     uint32_t i = 0;
-    const typename Hash<T>::Entry *e = find_first(h, key);
+    const typename Hash<T>::Entry *e = multi_hash_find_first(h, key);
     while (e) {
         ++i;
         e = find_next(h, e);
@@ -274,9 +252,8 @@ template <typename T> uint32_t count(const Hash<T> &h, uint64_t key) {
     return i;
 }
 
-template <typename T>
-void get(const Hash<T> &h, uint64_t key, Array<T> &items) {
-    const typename Hash<T>::Entry *e = find_first(h, key);
+template <typename T> void multi_hash_get(const Hash<T> &h, uint64_t key, Array<T> &items) {
+    const typename Hash<T>::Entry *e = multi_hash_find_first(h, key);
     while (e) {
         push_back(items, e->value);
         e = find_next(h, e);
@@ -293,8 +270,7 @@ template <typename T> void insert(Hash<T> &h, uint64_t key, const T &value) {
         hash_internal::grow(h);
 }
 
-template <typename T>
-void remove(Hash<T> &h, const typename Hash<T>::Entry *e) {
+template <typename T> void remove(Hash<T> &h, const typename Hash<T>::Entry *e) {
     const hash_internal::FindResult fr = hash_internal::find(h, e);
     if (fr.data_i != hash_internal::END_OF_LIST)
         hash_internal::erase(h, fr);
@@ -304,11 +280,14 @@ template <typename T> void remove_all(Hash<T> &h, uint64_t key) {
     while (hash::has(h, key))
         hash::remove(h, key);
 }
-}
+} // namespace fo
 
-template <typename T> Hash<T>::Hash(Allocator &a) : _hash(a), _data(a) {}
+template <typename T>
+Hash<T>::Hash(Allocator &a)
+    : _hash(a)
+    , _data(a) {}
 
 template <typename T>
 Hash<T>::Hash(Hash<T> &&other)
-    : _hash(std::move(other._hash)), _data(std::move(other._data)) {}
-}
+    : _hash(std::move(other._hash))
+    , _data(std::move(other._data)) {}
