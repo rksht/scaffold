@@ -24,6 +24,11 @@ Buffer &operator<<(Buffer &b, uint32_t i);
 Buffer &operator<<(Buffer &b, uint64_t i);
 Buffer &operator<<(Buffer &b, double r);
 
+// Mac related bs
+#if defined __APPLE__
+Buffer &operator<<(Buffer &b, size_t r);
+#endif
+
 /// Uses printf to print formatted data to the stream.
 SCAFFOLD_API Buffer &printf(Buffer &b, const char *format, ...);
 
@@ -86,6 +91,10 @@ inline Buffer &operator<<(Buffer &b, uint64_t i) {
 }
 
 inline Buffer &operator<<(Buffer &b, double r) { return string_stream_internal::printf_small(b, "%.5f", r); }
+
+#if defined __APPLE__
+inline Buffer &operator<<(Buffer &b, size_t r) { return string_stream_internal::printf_small(b, "%zu", r); }
+#endif
 
 inline Buffer &push(Buffer &b, const char *data, uint32_t n) {
     unsigned int end = size(b);
