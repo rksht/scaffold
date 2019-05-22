@@ -150,6 +150,7 @@ template <typename T> void resize(Vector<T> &a, u32 new_size) {
 
     if (a._size < new_size && new_size < a._capacity) {
         internal::fill_with_default(&a._data[a._size], new_size - a._size);
+        a._size = new_size;
         return;
     }
 
