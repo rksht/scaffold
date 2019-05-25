@@ -7,11 +7,13 @@
 
 namespace fo {
 
+struct SCAFFOLD_API PoolAllocator;
+
 /// Currently only returns allocations aligned to 16 bytes. Pools are just buffers total ussable size
 /// `_node_size * _num_nodes`, and each allocation returns a free node of size `_node_size`. If pool is
 /// exhausted, the backing allocator provided will be used to create another pool of the same size. This will
 /// go on indefinitely as more and more allocations are done, without deallocations.
-struct SCAFFOLD_API alignas(16) PoolAllocator : public Allocator {
+struct alignas(16) PoolAllocator : public Allocator {
     uint32_t _node_size; // = 0 implies allocator doesn't own any buffer
     uint32_t _num_nodes;
     uint32_t _nodes_allocated;
