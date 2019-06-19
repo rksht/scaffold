@@ -31,6 +31,8 @@ template <typename T> T *end(Vector<T> &a) { return data(a) + a._size; }
 template <typename T> const T *begin(const Vector<T> &a) { return data(a); }
 template <typename T> const T *end(const Vector<T> &a) { return data(a) + a._size; }
 
+template <typename T> void resize_and_set(Vector<T> &a, u32 i, const T &element, const T& default_element = T{});
+
 namespace internal {
 
 template <typename T> void grow(Vector<T> &a);
@@ -183,6 +185,14 @@ template <typename T> void resize_with_given(Vector<T> &a, u32 new_size, const T
     }
 
     a._size = new_size;
+}
+
+template <typename T> void resize_and_set(Vector<T> &a, u32 i, const T &element, const T&default_element) {
+    if (size(a) <= i) {
+        fo::resize_with_given(a, i + 1, default_element);
+    }
+
+    a[i] = element;
 }
 
 template <typename T> T &push_back(Vector<T> &a, const T &element) {
