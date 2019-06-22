@@ -20,16 +20,14 @@ struct Vector2 {
     constexpr Vector2(const Vector3 &v);
 
     constexpr float operator[](unsigned i) const {
-#if defined(_MSC_VER) || defined(__clang__)
         if (i == 0)
             return x;
         if (i == 1)
             return y;
-#else
-        return reinterpret_cast<const float *>(this)[i];
 
-#endif
+        return 0;
     }
+
     float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
 };
 
@@ -56,17 +54,14 @@ struct Vector3 {
 
     /// Array like accessor
     constexpr float operator[](unsigned i) const {
-#if defined(_MSC_VER) || defined(__clang__)
         if (i == 0)
             return x;
         if (i == 1)
             return y;
         if (i == 2)
             return z;
-#else
-        return reinterpret_cast<const float *>(this)[i];
 
-#endif
+        return 0;
     }
     float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
 };
@@ -95,7 +90,6 @@ struct alignas(16) Vector4 {
 
     /// Array like accessor
     constexpr float operator[](unsigned i) const {
-#if defined(_MSC_VER) || defined(__clang__)
         if (i == 0)
             return x;
         if (i == 1)
@@ -104,10 +98,8 @@ struct alignas(16) Vector4 {
             return z;
         if (i == 3)
             return w;
-#else
-        return reinterpret_cast<const float *>(this)[i];
 
-#endif
+        return 0;
     }
     float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
 };
@@ -136,19 +128,11 @@ struct Matrix4x4 {
     Vector4 x, y, z, t;
 };
 
-static_assert(alignof(Matrix4x4) >= 16, "");
+static_assert(alignof(Matrix4x4) >= 16, "Require Matrix4x4 to be aligned to at least 16 bytes");
 
 struct AABB {
     Vector3 min, max;
 };
-
-#if 0
-// This... idk, never gonna use this representation.
-struct OOBB {
-    Matrix4x4 tm;
-    AABB aabb;
-};
-#endif
 
 struct OBB {
     Vector3 center; // center
@@ -160,7 +144,6 @@ struct OBB {
 
 struct IVector2 {
     i32 x, y;
-
     IVector2() = default;
     constexpr IVector2(i32 x, i32 y)
         : x(x)
