@@ -5,6 +5,11 @@
 namespace fo {
 
 // returns iterator
+template <typename Key, typename Value> auto get(const OrderedMap<Key, Value> &m, const Key &k) {
+    return rbt::get(m._rbt, k).i;
+}
+
+// returns iterator
 template <typename Key, typename Value> auto get(OrderedMap<Key, Value> &m, const Key &k) {
     return rbt::get(m._rbt, k).i;
 }
@@ -27,12 +32,12 @@ auto set_default(OrderedMap<Key, Value> &m, Key k, Value default_value) {
 
 template <typename Key, typename Value> Value &OrderedMap<Key, Value>::operator[](const Key &k) {
     static_assert(std::is_default_constructible<Value>::value, "");
-    return set_default(*this, k, Value())->value;
+    return set_default(*this, k, Value())->v;
 }
 
 template <typename Key, typename Value> const Value &OrderedMap<Key, Value>::operator[](const Key &k) const {
     static_assert(std::is_default_constructible<Value>::value, "");
-    return set_default(*this, k, Value())->value;
+    return set_default(*this, k, Value())->v;
 }
 
 #if 0
