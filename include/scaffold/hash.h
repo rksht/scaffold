@@ -177,7 +177,7 @@ template <typename T> void rehash(Hash<T> &h, uint32_t new_size) {
         nh._hash[i] = END_OF_LIST;
     for (uint32_t i = 0; i < size(h._data); ++i) {
         const typename Hash<T>::Entry &e = h._data[i];
-        multi_hash::insert(nh, e.key, e.value);
+        multi_hash_insert(nh, e.key, e.value);
     }
 
     Hash<T> empty(*h._hash._allocator);
@@ -260,7 +260,7 @@ template <typename T> void multi_hash_get(const Hash<T> &h, uint64_t key, Array<
     }
 }
 
-template <typename T> void insert(Hash<T> &h, uint64_t key, const T &value) {
+template <typename T> void multi_hash_insert(Hash<T> &h, uint64_t key, const T &value) {
     if (size(h._hash) == 0)
         hash_internal::grow(h);
 
@@ -282,6 +282,8 @@ template <typename T> void remove_all(Hash<T> &h, uint64_t key) {
 }
 } // namespace fo
 
+namespace fo {
+
 template <typename T>
 Hash<T>::Hash(Allocator &a)
     : _hash(a)
@@ -291,3 +293,5 @@ template <typename T>
 Hash<T>::Hash(Hash<T> &&other)
     : _hash(std::move(other._hash))
     , _data(std::move(other._data)) {}
+
+} // namespace fo

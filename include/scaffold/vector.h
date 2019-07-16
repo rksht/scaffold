@@ -14,7 +14,8 @@ template <typename T> u32 reserve(Vector<T> &a, u32 new_capacity);
 template <typename T> u32 size(const Vector<T> &a);
 template <typename T> u32 capacity(const Vector<T> &a);
 
-template <typename T> T &push_back(Vector<T> &a, const T &element);
+template <typename T, typename E> T &push_back(Vector<T> &a, const E &element);
+template <typename T, typename... CtorArgs> T &emplace_back(Vector<T> &a, CtorArgs &&... ctor_args);
 template <typename T> void pop_back(Vector<T> &a);
 template <typename T> void clear(Vector<T> &a);
 
@@ -31,7 +32,8 @@ template <typename T> T *end(Vector<T> &a) { return data(a) + a._size; }
 template <typename T> const T *begin(const Vector<T> &a) { return data(a); }
 template <typename T> const T *end(const Vector<T> &a) { return data(a) + a._size; }
 
-template <typename T> void resize_and_set(Vector<T> &a, u32 i, const T &element, const T& default_element = T{});
+template <typename T>
+void resize_and_set(Vector<T> &a, u32 i, const T &element, const T &default_element = T{});
 
 namespace internal {
 
@@ -187,7 +189,7 @@ template <typename T> void resize_with_given(Vector<T> &a, u32 new_size, const T
     a._size = new_size;
 }
 
-template <typename T> void resize_and_set(Vector<T> &a, u32 i, const T &element, const T&default_element) {
+template <typename T> void resize_and_set(Vector<T> &a, u32 i, const T &element, const T &default_element) {
     if (size(a) <= i) {
         fo::resize_with_given(a, i + 1, default_element);
     }
@@ -195,7 +197,7 @@ template <typename T> void resize_and_set(Vector<T> &a, u32 i, const T &element,
     a[i] = element;
 }
 
-template <typename T> T &push_back(Vector<T> &a, const T &element) {
+template <typename T, typename E> T &push_back(Vector<T> &a, const E &element) {
     if (a._size == a._capacity) {
         internal::grow(a);
     }
@@ -210,7 +212,7 @@ template <typename T> T &push_back(Vector<T> &a, const T &element) {
     return a._data[a._size - 1];
 }
 
-template <typename T> T &push_back(Vector<T> &a, T &&element) {
+template <typename T, typename E> T &push_back(Vector<T> &a, E &&element) {
     if (a._size == a._capacity) {
         internal::grow(a);
     }
@@ -226,12 +228,13 @@ template <typename T> T &push_back(Vector<T> &a, T &&element) {
     return a._data[a._size - 1];
 }
 
-template <typename T, typename... Args> T &emplace_back(Vector<T> &a, Args &&... args) {
-    static_assert(std::is_constructible<T, decltype(std::forward<Args>(args))...>::value, "");
+template <typename T, typename... CtorArgs> T &emplace_back(Vector<T> &a, CtorArgs &&... args) {
+    static_assert(std::is_constructible<T, decltype(std::forward<CtorArgs>(args))...>::value,
+                  "Element type not constructible from given arguments");
     if (a._size == a._capacity) {
         internal::grow(a);
     }
-    new (&a._data[a._size]) T(std::forward<Args>(args)...);
+    new (&a._data[a._size]) T(std::forward<CtorArgs>(args)...);
     ++a._size;
     return a._data[a._size - 1];
 }
