@@ -138,6 +138,10 @@ template <TypeList> void reserve(PodHashSig &h, uint32_t size);
 /// exist)
 template <TypeList> void set(PodHashSig &h, const K &key, const V &value);
 
+/// Sets the given key's value and returns reference to the value in the table. Do not use the returned
+/// reference if you modify the table afterwards.
+template <TypeList> V &set_then_ref(PodHashSig &h, const K &key, const V &value);
+
 /// Returns true if an entry with the given key is present.
 template <TypeList> bool has(const PodHashSig &h, const K &key);
 
@@ -395,13 +399,31 @@ namespace fo {
 template <TypeList> void reserve(PodHashSig &h, uint32_t size) { pod_hash_internal::rehash(h, size); }
 
 template <TypeList> void set(PodHashSig &h, const K &key, const V &value) {
-    if (size(h._hashes) == 0) {
+    if (size(h._hashes) == 0 || pod_hash_internal::full(h)) {
         pod_hash_internal::grow(h);
     }
+
     const uint32_t ei = pod_hash_internal::find_or_make(h, key, false);
     h._entries[ei].value = value;
     if (pod_hash_internal::full(h)) {
         pod_hash_internal::grow(h);
+    }
+}
+
+template <TypeList> V &set_then_ref(PodHashSig &h, const K &key, const V &value) {
+    // @rksht - Duplicate code with above `set` function. But don't want to do any extra work in `set`.
+    if (size(h._hashes) == 0 || pod_hash_internal::full(h)) {
+        pod_hash_internal::grow(h);
+    }
+
+    const uint32_t ei = pod_hash_internal::find_or_make(h, key, false);
+    h._entries[ei].value = value;
+
+    if (pod_hash_internal::full(h)) {
+        pod_hash_internal::grow(h);
+        return get(h, key)->value;
+    } else {
+        return h._entries[ei].value;
     }
 }
 
