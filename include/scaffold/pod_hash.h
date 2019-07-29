@@ -136,7 +136,9 @@ template <TypeList> void reserve(PodHashSig &h, uint32_t size);
 
 /// Sets the given key's value (Can trigger a rehash if `key` doesn't already
 /// exist)
-template <TypeList> void set(PodHashSig &h, const K &key, const V &value);
+// template <TypeList> void set(PodHashSig &h, const K &key, const V &value);
+
+template <TypeList> void set(PodHashSig &h, const K &key, V &&value);
 
 /// Sets the given key's value and returns reference to the value in the table. Do not use the returned
 /// reference if you modify the table afterwards.
@@ -217,11 +219,12 @@ template <typename K, typename V, typename HashFnType>
 struct KeyEqualCaller<K, V, HashFnType, CallEqualOperator<K>> {
     static bool
     key_equal(const PodHash<K, V, HashFnType, CallEqualOperator<K>> &h, const K &k1, const K &k2) {
+        (void)h;
         return k1 == k2;
     }
 };
 
-template <TypeList> REALLY_INLINE auto key_equal(const PodHashSig &h, const K &key1, const K &key2) {
+template <TypeList> REALLY_INLINE bool key_equal(const PodHashSig &h, const K &key1, const K &key2) {
     return KeyEqualCaller<K, V, HashFnType, EqualFnType>::key_equal(h, key1, key2);
 };
 
@@ -398,13 +401,13 @@ namespace fo {
 
 template <TypeList> void reserve(PodHashSig &h, uint32_t size) { pod_hash_internal::rehash(h, size); }
 
-template <TypeList> void set(PodHashSig &h, const K &key, const V &value) {
+template <TypeList> void set(PodHashSig &h, const K &key, V &&value) {
     if (size(h._hashes) == 0 || pod_hash_internal::full(h)) {
         pod_hash_internal::grow(h);
     }
 
     const uint32_t ei = pod_hash_internal::find_or_make(h, key, false);
-    h._entries[ei].value = value;
+    h._entries[ei].value = std::forward<V>(value);
     if (pod_hash_internal::full(h)) {
         pod_hash_internal::grow(h);
     }

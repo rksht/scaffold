@@ -14,7 +14,8 @@ template <typename T> u32 reserve(Vector<T> &a, u32 new_capacity);
 template <typename T> u32 size(const Vector<T> &a);
 template <typename T> u32 capacity(const Vector<T> &a);
 
-template <typename T, typename E> T &push_back(Vector<T> &a, const E &element);
+// template <typename T, typename E> T &push_back(Vector<T> &a, const E &element);
+template <typename T, typename E> T &push_back(Vector<T> &a, E &&element);
 template <typename T, typename... CtorArgs> T &emplace_back(Vector<T> &a, CtorArgs &&... ctor_args);
 template <typename T> void pop_back(Vector<T> &a);
 template <typename T> void clear(Vector<T> &a);
@@ -197,6 +198,7 @@ template <typename T> void resize_and_set(Vector<T> &a, u32 i, const T &element,
     a[i] = element;
 }
 
+#if 0
 template <typename T, typename E> T &push_back(Vector<T> &a, const E &element) {
     if (a._size == a._capacity) {
         internal::grow(a);
@@ -211,6 +213,8 @@ template <typename T, typename E> T &push_back(Vector<T> &a, const E &element) {
     }
     return a._data[a._size - 1];
 }
+
+#endif
 
 template <typename T, typename E> T &push_back(Vector<T> &a, E &&element) {
     if (a._size == a._capacity) {

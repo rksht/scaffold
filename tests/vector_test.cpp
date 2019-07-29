@@ -20,8 +20,8 @@ int main() {
 
     fo::memory_globals::init();
     {
-        // Pollute the stack with a recurse function call like this
-        recurse(0);
+        // Pollute the stack with a recurse function call like this ??
+        recurse(10);
 
         fo::TempAllocator1024 ta;
 
@@ -31,6 +31,11 @@ int main() {
         for (auto &e : vec) {
             printf("%i| ", e.a);
         }
+    }
+
+    {
+    	fo::Vector<int> v;
+    	fo::push_back(v, 1);
     }
 
     fo::memory_globals::shutdown();
