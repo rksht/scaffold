@@ -136,9 +136,9 @@ template <TypeList> void reserve(PodHashSig &h, uint32_t size);
 
 /// Sets the given key's value (Can trigger a rehash if `key` doesn't already
 /// exist)
-// template <TypeList> void set(PodHashSig &h, const K &key, const V &value);
+template <TypeList> void set(PodHashSig &h, const K &key, const V &value);
 
-template <TypeList> void set(PodHashSig &h, const K &key, V &&value);
+// template <TypeList> void set(PodHashSig &h, const K &key, V &&value);
 
 /// Sets the given key's value and returns reference to the value in the table. Do not use the returned
 /// reference if you modify the table afterwards.
@@ -401,13 +401,13 @@ namespace fo {
 
 template <TypeList> void reserve(PodHashSig &h, uint32_t size) { pod_hash_internal::rehash(h, size); }
 
-template <TypeList> void set(PodHashSig &h, const K &key, V &&value) {
+template <TypeList> void set(PodHashSig &h, const K &key, const V &value) {
     if (size(h._hashes) == 0 || pod_hash_internal::full(h)) {
         pod_hash_internal::grow(h);
     }
 
     const uint32_t ei = pod_hash_internal::find_or_make(h, key, false);
-    h._entries[ei].value = std::forward<V>(value);
+    h._entries[ei].value = value;
     if (pod_hash_internal::full(h)) {
         pod_hash_internal::grow(h);
     }

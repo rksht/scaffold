@@ -88,7 +88,8 @@ int main() {
                      usual_equal<char>);
 
         for (char i = 'a'; i < 'z'; ++i) {
-            set(h1, i, (uint64_t)(i * i));
+            uint64_t v = i * i;
+            set(h1, i, v);
         }
 
         for (char i = 'a'; i < 'z'; ++i) {

@@ -14,7 +14,7 @@ template <typename T> u32 reserve(Vector<T> &a, u32 new_capacity);
 template <typename T> u32 size(const Vector<T> &a);
 template <typename T> u32 capacity(const Vector<T> &a);
 
-// template <typename T, typename E> T &push_back(Vector<T> &a, const E &element);
+template <typename T, typename E> T &push_back(Vector<T> &a, const E &element);
 template <typename T, typename E> T &push_back(Vector<T> &a, E &&element);
 template <typename T, typename... CtorArgs> T &emplace_back(Vector<T> &a, CtorArgs &&... ctor_args);
 template <typename T> void pop_back(Vector<T> &a);
@@ -227,6 +227,22 @@ template <typename T, typename E> T &push_back(Vector<T> &a, E &&element) {
         }
     else {
         new (a._data + (a._size++)) T(std::forward<T>(element));
+    }
+
+    return a._data[a._size - 1];
+}
+
+template <typename T, typename E> T &push_back(Vector<T> &a, const E &element) {
+    if (a._size == a._capacity) {
+        internal::grow(a);
+    }
+
+    if
+        SCAFFOLD_IF_CONSTEXPR(std::is_trivially_move_constructible<T>::value) {
+            a._data[a._size++] = element;
+        }
+    else {
+        new (a._data + (a._size++)) T(element);
     }
 
     return a._data[a._size - 1];
