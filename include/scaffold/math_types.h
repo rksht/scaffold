@@ -29,6 +29,10 @@ struct Vector2 {
     }
 
     float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
+
+    static constexpr Vector2 unit_x() { return { 1.0f, 0.0f }; }
+
+    static constexpr Vector2 unit_y() { return { 0.0f, 1.0f }; }
 };
 
 struct Vector4;
@@ -64,6 +68,12 @@ struct Vector3 {
         return 0;
     }
     float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
+
+    static constexpr Vector3 splat(f32 f) { return fo::Vector3(f, f, f); }
+
+    static constexpr Vector3 unit_x() { return { 1.0f, 0.0f, 0.0f }; }
+    static constexpr Vector3 unit_y() { return { 0.0f, 1.0f, 0.0f }; }
+    static constexpr Vector3 unit_z() { return { 0.0f, 0.0f, 1.0f }; }
 };
 
 inline constexpr Vector2::Vector2(const Vector3 &v)
@@ -102,6 +112,14 @@ struct alignas(16) Vector4 {
         return 0;
     }
     float &operator[](unsigned i) { return reinterpret_cast<float *>(this)[i]; }
+
+    static constexpr Vector4 splat(f32 f) { return Vector4(f, f, f, f); }
+
+    static constexpr Vector4 splat(f32 f, f32 w) { return Vector4(f, f, f, w); }
+
+    static constexpr Vector4 unit_x(f32 w = 0.0f) { return { 1.0f, 0.0f, 0.0f, w }; }
+    static constexpr Vector4 unit_y(f32 w = 0.0f) { return { 0.0f, 1.0f, 0.0, w }; }
+    static constexpr Vector4 unit_z(f32 w = 0.0f) { return { 0.0f, 0.0f, 1.0, w }; }
 };
 
 static_assert(sizeof(Vector4) == 4 * sizeof(float), "");
@@ -140,7 +158,7 @@ struct OBB {
     Vector3 he;     // half-extents along local axes
 };
 
-// Integer vectors
+// --- Integer vectors
 
 struct IVector2 {
     i32 x, y;
@@ -154,6 +172,9 @@ struct IVector2 {
         , y((i32)v2.y) {}
 
     constexpr explicit operator Vector2() const { return Vector2{ (f32)x, (f32)y }; }
+
+    static constexpr IVector2 unit_x() { return { 1, 0 }; }
+    static constexpr IVector2 unit_y() { return { 0, 1 }; }
 };
 
 struct IVector3 {
@@ -171,13 +192,18 @@ struct IVector3 {
         , z((i32)v3.z) {}
 
     constexpr explicit operator Vector3() const { return { (f32)x, (f32)y, (f32)z }; }
+
+    static constexpr IVector3 unit_x() { return { 1, 0, 0 }; }
+    static constexpr IVector3 unit_y() { return { 0, 1, 0 }; }
+    static constexpr IVector3 unit_z() { return { 0, 0, 1 }; }
 };
 
 struct alignas(16) IVector4 {
     i32 x, y, z, w;
 
     IVector4() = default;
-    IVector4(i32 x, i32 y, i32 z, i32 w)
+
+    constexpr IVector4(i32 x, i32 y, i32 z, i32 w)
         : x(x)
         , y(y)
         , z(z)
@@ -190,6 +216,10 @@ struct alignas(16) IVector4 {
         , w((i32)v4.w) {}
 
     constexpr explicit operator Vector4() const { return { (f32)x, (f32)y, (f32)z, (f32)w }; }
+
+    static constexpr IVector4 unit_x(i32 w = 0) { return { 1, 0, 0, w }; }
+    static constexpr IVector4 unit_y(i32 w = 0) { return { 0, 1, 0, w }; }
+    static constexpr IVector4 unit_z(i32 w = 0) { return { 0, 0, 1, w }; }
 };
 
 } // namespace fo
