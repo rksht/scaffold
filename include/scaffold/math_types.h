@@ -71,6 +71,8 @@ struct Vector3 {
 
     static constexpr Vector3 splat(f32 f) { return fo::Vector3(f, f, f); }
 
+    static constexpr Vector3 zero() { return Vector3{ 0, 0, 0 }; }
+
     static constexpr Vector3 unit_x() { return { 1.0f, 0.0f, 0.0f }; }
     static constexpr Vector3 unit_y() { return { 0.0f, 1.0f, 0.0f }; }
     static constexpr Vector3 unit_z() { return { 0.0f, 0.0f, 1.0f }; }
