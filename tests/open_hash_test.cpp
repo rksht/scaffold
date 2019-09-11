@@ -4,31 +4,25 @@
 #include <iostream>
 #include <scaffold/open_hash.h>
 
-namespace fo {
-
-// OpenNil for our uint64_t
-template <> struct OpenNil<uint64_t> {
-    static uint64_t get() { return 8888; }
+struct GetNilAndDeleted__uint64_t {
+    static constexpr uint64_t get_nil() { return 8888; }
+    static constexpr uint64_t get_deleted() { return 8888; }
 };
-
-// OpenDeleted for our uint64_t
-template <> struct OpenDeleted<uint64_t> {
-    static uint64_t get() { return 9999; }
-};
-} // namespace fo
 
 TEST_CASE("OpenHash find", "[OpenHash_find]") {
     fo::memory_globals::init();
 
     auto &alloc = fo::memory_globals::default_allocator();
 
-    using hash_type = fo::OpenHash<uint64_t, uint64_t>;
+    using hash_type = fo::OpenHash<uint64_t, uint64_t, GetNilAndDeleted__uint64_t>;
 
     namespace open_hash = fo::open_hash;
 
     {
-        hash_type h{alloc, 16, [](const auto &i) { return i & 0xffffffffu; },
-                    [](const auto &i, const auto &j) { return i == j; }};
+        hash_type h{ alloc,
+                     16,
+                     [](const auto &i) { return i & 0xffffffffu; },
+                     [](const auto &i, const auto &j) { return i == j; } };
 
         for (uint64_t k = 0; k < 1024; ++k) {
             for (uint64_t prev_k = 0; prev_k < k; ++prev_k) {
@@ -38,7 +32,7 @@ TEST_CASE("OpenHash find", "[OpenHash_find]") {
             }
             open_hash::set(h, k, 1024 - k);
         }
-    }
+    } // namespace open_hash=fo::open_hash;
 
     fo::memory_globals::shutdown();
 }
@@ -48,14 +42,15 @@ TEST_CASE("OpenHash remove", "[OpenHash_remove_rehash]") {
 
     auto &alloc = fo::memory_globals::default_allocator();
 
-    using hash_type = fo::OpenHash<uint64_t, uint64_t>;
+    using hash_type = fo::OpenHash<uint64_t, uint64_t, GetNilAndDeleted__uint64_t>;
 
     namespace open_hash = fo::open_hash;
-    namespace array = fo::array;
 
     {
-        hash_type h{alloc, 16, [](const auto &i) { return i & 0xffffffffu; },
-                    [](const auto &i, const auto &j) { return i == j; }};
+        hash_type h{ alloc,
+                     16,
+                     [](const auto &i) { return i & 0xffffffffu; },
+                     [](const auto &i, const auto &j) { return i == j; } };
 
         for (uint64_t k = 0; k < 1024; ++k) {
             open_hash::set(h, k, 1024 - k);
@@ -77,7 +72,7 @@ TEST_CASE("OpenHash remove", "[OpenHash_remove_rehash]") {
             REQUIRE(i != open_hash::NOT_FOUND);
             REQUIRE(open_hash::value(h, i) == 1024 - k);
         }
-    }
+    } // namespace open_hash=fo::open_hash;
 
     fo::memory_globals::shutdown();
 }
@@ -87,14 +82,14 @@ TEST_CASE("OpenHash key insert only", "[OpenHash_insert_key]") {
 
     auto &alloc = fo::memory_globals::default_allocator();
 
-    using hash_type = fo::OpenHash<uint64_t, uint64_t>;
+    using hash_type = fo::OpenHash<uint64_t, uint64_t, GetNilAndDeleted__uint64_t>;
 
     namespace open_hash = fo::open_hash;
-    namespace array = fo::array;
-
     {
-        hash_type h{alloc, 16, [](const auto &i) { return i & 0xffffffffu; },
-                    [](const auto &i, const auto &j) { return i == j; }};
+        hash_type h{ alloc,
+                     16,
+                     [](const auto &i) { return i & 0xffffffffu; },
+                     [](const auto &i, const auto &j) { return i == j; } };
 
         for (uint64_t k = 0; k < 1024; ++k) {
             auto index = open_hash::insert_key(h, k);
@@ -117,7 +112,7 @@ TEST_CASE("OpenHash key insert only", "[OpenHash_insert_key]") {
             REQUIRE(i != open_hash::NOT_FOUND);
             REQUIRE(open_hash::value(h, i) == 1024 - k);
         }
-    }
+    } // namespace open_hash=fo::open_hash;
 
     fo::memory_globals::shutdown();
 }
@@ -127,14 +122,15 @@ TEST_CASE("Copy,Move,Assign", "[OpenHash_copy_move_assign]") {
     {
         auto &alloc = fo::memory_globals::default_allocator();
 
-        using hash_type = fo::OpenHash<uint64_t, uint64_t>;
+        using hash_type = fo::OpenHash<uint64_t, uint64_t, GetNilAndDeleted__uint64_t>;
 
         namespace open_hash = fo::open_hash;
-        namespace array = fo::array;
 
         {
-            hash_type h{alloc, 16, [](const auto &i) { return i & 0xffffffffu; },
-                        [](const auto &i, const auto &j) { return i == j; }};
+            hash_type h{ alloc,
+                         16,
+                         [](const auto &i) { return i & 0xffffffffu; },
+                         [](const auto &i, const auto &j) { return i == j; } };
 
             for (uint64_t k = 0; k < 1024; ++k) {
                 auto index = open_hash::insert_key(h, k);
@@ -155,7 +151,7 @@ TEST_CASE("Copy,Move,Assign", "[OpenHash_copy_move_assign]") {
             for (uint64_t k = 1024 / 2; k < 1024; ++k) {
                 REQUIRE(open_hash::must_value(h1, k) == 1024 - k);
             }
-        }
+        } // namespace open_hash=fo::open_hash;
         fo::memory_globals::shutdown();
     }
 }
@@ -165,14 +161,15 @@ TEST_CASE("value_default", "[value_default]") {
     {
         auto &alloc = fo::memory_globals::default_allocator();
 
-        using hash_type = fo::OpenHash<uint64_t, uint64_t>;
+        using hash_type = fo::OpenHash<uint64_t, uint64_t, GetNilAndDeleted__uint64_t>;
 
         namespace open_hash = fo::open_hash;
-        namespace array = fo::array;
 
         {
-            hash_type h{alloc, 16, [](const auto &i) { return i & 0xffffffffu; },
-                        [](const auto &i, const auto &j) { return i == j; }};
+            hash_type h{ alloc,
+                         16,
+                         [](const auto &i) { return i & 0xffffffffu; },
+                         [](const auto &i, const auto &j) { return i == j; } };
 
             constexpr u32 count = 10;
 
@@ -211,7 +208,7 @@ TEST_CASE("value_default", "[value_default]") {
                 // std::cout << "k = " << k << " => " << open_hash::must_value(h, k) << "\n";
                 REQUIRE(open_hash::must_value(h, k) == count - k);
             }
-        }
+        } // namespace open_hash=fo::open_hash;
         fo::memory_globals::shutdown();
     }
 }
@@ -221,14 +218,15 @@ TEST_CASE("OpenHash iterator", "[OpenHash_iterator]") {
     {
         auto &alloc = fo::memory_globals::default_allocator();
 
-        using hash_type = fo::OpenHash<uint64_t, uint64_t>;
+        using hash_type = fo::OpenHash<uint64_t, uint64_t, GetNilAndDeleted__uint64_t>;
 
         namespace open_hash = fo::open_hash;
-        namespace array = fo::array;
 
         {
-            hash_type h{alloc, 16, [](const auto &i) { return i & 0xffffffffu; },
-                        [](const auto &i, const auto &j) { return i == j; }};
+            hash_type h{ alloc,
+                         16,
+                         [](const auto &i) { return i & 0xffffffffu; },
+                         [](const auto &i, const auto &j) { return i == j; } };
 
             constexpr u32 count = 10;
 
@@ -273,7 +271,7 @@ TEST_CASE("OpenHash iterator", "[OpenHash_iterator]") {
                 // std::cout << "k = " << k << " => " << open_hash::must_value(h, k) << "\n";
                 REQUIRE(open_hash::must_value(h, k) == count - k);
             }
-        }
+        } // namespace open_hash=fo::open_hash;
     }
     fo::memory_globals::shutdown();
 }
