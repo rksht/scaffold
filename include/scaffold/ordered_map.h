@@ -4,6 +4,10 @@
 
 namespace fo {
 
+template <typename Key, typename Value> auto size(const OrderedMap<Key, Value> &m) {
+    return rbt::count_nodes(m._rbt);
+}
+
 // returns iterator
 template <typename Key, typename Value> auto get(const OrderedMap<Key, Value> &m, const Key &k) {
     return rbt::get(m._rbt, k).i;

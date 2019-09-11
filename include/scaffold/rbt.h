@@ -77,7 +77,7 @@ template <typename Key, typename T> struct RBTree {
 
     is_less_fn _less;
 
-    bool _equal(const Key &k1, const Key &k2) const { return !(_less(k1, k2) || _less(k1, k2)); }
+    bool _equal(const Key &k1, const Key &k2) const { return !(_less(k1, k2) || _less(k2, k1)); }
 
     /// Constructs a new RBTree where nodes will be allocated using given `allocator`.
     RBTree(Allocator &allocator, is_less_fn less = std::less<Key>{});
@@ -153,6 +153,19 @@ namespace rbt {
 template <typename Key, typename T>
 inline bool is_nil_node(const RBTree<Key, T> &rbt, const RBNode<Key, T> *node) {
     return static_cast<const internal::ChildPointers<Key, T> *>(node) == rbt._nil;
+}
+
+template <typename Key, typename T>
+u32 count_nodes(const RBTree<Key, T> &tree, const RBNode<Key, T> *current_node, u32 parent_count) {
+    if (!is_nil_node(tree, current_node)) {
+        parent_count += 1 + count_nodes(tree, current_node->_childs[0], 0);
+        return count_nodes(tree, current_node->_childs[1], parent_count);
+    }
+    return parent_count;
+}
+
+template <typename Key, typename T> u32 count_nodes(const RBTree<Key, T> &tree) {
+    return count_nodes(tree, tree._root, 0);
 }
 
 namespace internal {
@@ -578,6 +591,7 @@ template <typename Key, typename T> Result<Key, T, false> set(RBTree<Key, T> &rb
             cur->v = std::move(v);
             result.key_was_present = true;
             result.i = Iterator<Key, T, false>(rbt, cur);
+
             return result;
         }
     }
@@ -598,7 +612,9 @@ template <typename Key, typename T> Result<Key, T, false> set(RBTree<Key, T> &rb
             n = internal::insert_fix<RIGHT, LEFT>(rbt, n);
         }
     }
+
     rbt._root->_color = BLACK;
+
     return result;
 }
 
@@ -610,6 +626,7 @@ template <typename Key, typename T> Result<Key, T, false> set_default(RBTree<Key
         rbt._root->_childs[0] = reinterpret_cast<RBNode<Key, T> *>(rbt._nil);
         rbt._root->_childs[1] = reinterpret_cast<RBNode<Key, T> *>(rbt._nil);
         rbt._root->_parent = reinterpret_cast<RBNode<Key, T> *>(rbt._nil);
+
         return Result<Key, T, false>{ false, Iterator<Key, T, false>(rbt, rbt._root) };
     }
 
@@ -663,7 +680,7 @@ template <typename Key, typename T> Result<Key, T, false> remove(RBTree<Key, T> 
         return Result<Key, T, false>{ false, end(t) };
     }
 
-    assert(t._equal(n->k == k));
+    assert(t._equal(n->k, k));
 
     auto y = n;
     auto orig_color = n->_color;
