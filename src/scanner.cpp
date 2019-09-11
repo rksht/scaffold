@@ -19,14 +19,11 @@ Scanner::Scanner(Buffer text, int mode)
     , token_start(-1)
     , current_tok(INVALID) {}
 
-Scanner::Scanner(Scanner &&sc)
-    : _text(std::move(sc._text))
-    , mode(sc.mode)
-    , line(sc.line)
-    , col(sc.col)
-    , offset(sc.offset)
-    , token_start(sc.token_start)
-    , current_tok(sc.current_tok) {}
+void init_from_cstring(Scanner &scanner, const char *cstring, int mode) {
+    Buffer text;
+    text << cstring;
+    scanner = Scanner(text, mode);
+}
 
 #define SET_TOK_AND_RET(s, tok)                                                                              \
     do {                                                                                                     \
@@ -92,7 +89,7 @@ int next(Scanner &s) {
             ++s.col;
         } while (p != e && *p != '"');
         if (p == e) {
-            return INVALID + STRING;
+            return INVALID;
         }
         ++s.col;
         ++s.offset;

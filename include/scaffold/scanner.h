@@ -44,15 +44,19 @@ struct SCAFFOLD_API Scanner {
     int line;             // Contains the line number if the *next* token. Starts with 1.
     int col;              // Contains the column of the current line
     int offset;           // Contains the length in characters of the last scanned token
-    int token_start;      // Contains the index of the starting position of the next token
+    int token_start;      // Contains the index of the starting position of the last scanned token
     int current_tok;      // Contains the last token-class that next() returned
     long current_int;     // If next() returns INT, then contains that integer
     double current_float; // If next() returns FLOAT, then contains that float
 
+    Scanner() = default;
+
     Scanner(Buffer text, int mode = DEFAULT_MODE);
 
-    Scanner(Scanner &&sc);
+    // @copassmov default
 };
+
+void init_from_cstring(Scanner &scanner, const char *cstring, int mode = DEFAULT_MODE);
 
 /// Returns a number, which, if negative, denotes the next token's class. If positive, it is equal to the next
 /// character. This happens when none of the classes match.
