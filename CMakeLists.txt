@@ -8,12 +8,6 @@ option(SCAFFOLD_ENABLE_STRING_ID_TABLE
   "Enable runtime checking of unique StringID using a map. Disabled on Release build"
   on)
 
-# Benchmark
-option(SCAFFOLD_ENABLE_BENCHMARKS "Build the benchmarks" off)
-if (SCAFFOLD_ENABLE_BENCHMARKS)
-  add_subdirectory(bench)
-endif()
-
 set(gcc_or_clang FALSE)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -26,13 +20,7 @@ endif()
 
 message("gcc_or_clang = ${gcc_or_clang}")
 
-# Options to propagate
-if (gcc_or_clang)
-  message("Compiler is GNU or clang")
-	add_compile_options(-std=c++17)
-elseif(msvc)
-	add_compile_options(-std:c++17)
-endif()
+set(CMAKE_CXX_STANDARD 17)
 
 option(SCAFFOLD_BUDDY_ALLOC_LEVEL_LOGGING "Log buddy allocator" off)
 option(SCAFFOLD_MALLOC_ALLOC_DONT_TRACK "Don't track size in MallocAllocator" off)
@@ -62,4 +50,10 @@ option(SCAFFOLD_ENABLE_TESTS "Build the tests" off)
 
 if (SCAFFOLD_ENABLE_TESTS)
 	add_subdirectory(tests)
+endif()
+
+# Benchmark
+option(SCAFFOLD_ENABLE_BENCHMARKS "Build the benchmarks" off)
+if (SCAFFOLD_ENABLE_BENCHMARKS)
+  add_subdirectory(bench)
 endif()

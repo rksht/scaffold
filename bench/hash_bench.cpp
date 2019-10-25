@@ -19,16 +19,17 @@
 
 namespace fo {
 
-// OpenNil for our u64
-template <> struct OpenNil<u64> {
-    static u64 get() { return 8888; }
+template <> struct GetNilAndDeleted<u64> {
+    static u64 get_nil() {
+        return 8888;
+    }
+
+    static u64 get_deleted() {
+        return 9999;
+    }
 };
 
-// OpenDeleted for our u64
-template <> struct OpenDeleted<u64> {
-    static u64 get() { return 9999; }
-};
-} // namespace fo
+}
 
 using namespace fo;
 
